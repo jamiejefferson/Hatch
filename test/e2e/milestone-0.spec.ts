@@ -23,8 +23,7 @@ const sizes = (): Promise<{ w: number; h: number; id: string; y: number }[]> => 
 test.describe.configure({ mode: 'serial' });
 
 test('an empty tab offers New Hatch, and a bad link shows an error', async () => {
-  // A fresh install opens on the connection screen, with New Hatch still in reach.
-  await expect(win.getByTestId('first-run')).toBeVisible();
+  await expect(win.getByText('This tab has no pages yet.')).toBeVisible();
   await win.getByTestId('new-hatch').click();
   await win.getByTestId('new-hatch-url').fill('not a link');
   await win.getByTestId('new-hatch-url').press('Enter');

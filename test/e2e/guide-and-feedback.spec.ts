@@ -46,7 +46,7 @@ test('the guide runs once, points at the real controls and opens again from the 
       await win.getByTestId('guide-next').click();
       titles.push((await guide.getByRole('heading').textContent()) ?? '');
     }
-    expect(titles).toEqual(['Move around the canvas', 'Pin a comment to an element', 'Run a local project', 'Connect your agent', 'Tell us what you find']);
+    expect(titles).toEqual(['Move around the canvas', 'Pin a comment to an element', 'Run a local project', 'Hand Hatch to your agent', 'Tell us what you find']);
     await win.getByTestId('guide-next').click();
     await expect(guide).toHaveCount(0);
     await app.close();

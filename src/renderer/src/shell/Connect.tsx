@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import wordmark from '../assets/hatch-wordmark.svg';
 import { CheckIcon, CloseIcon, CopyIcon } from '../icons';
 import { actions, useStore } from '../state/store';
 import type { ConnectionInfo } from '../../../preload/api';
@@ -43,7 +42,7 @@ const agentNote = (connection: ConnectionInfo): string =>
     .filter(Boolean)
     .join('\n');
 
-/** One button covers most agents: it copies a note the agent acts on. The single lines sit behind a disclosure. The first-run screen and Settings share this. */
+/** One button covers most agents: it copies a note the agent acts on. The single lines sit behind a disclosure. */
 export function ConnectSteps({ connection }: { connection: ConnectionInfo }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -57,9 +56,9 @@ export function ConnectSteps({ connection }: { connection: ConnectionInfo }) {
         }}
         data-testid="connect-copy"
       >
-        {copied ? <CheckIcon /> : <CopyIcon />} {copied ? 'Copied. Paste it to your agent.' : 'Copy the connection for your agent'}
+        {copied ? <CheckIcon /> : <CopyIcon />} {copied ? 'Copied. Paste them to your agent.' : 'Copy the details for your agent'}
       </button>
-      <p className="hint">Paste it into your agent and it connects itself.</p>
+      <p className="hint">Hatch needs no setup. Paste these details to your agent when you want it to use Hatch.</p>
       {connection.error && <p className="field-error">{connection.error}</p>}
       <details className="connect-manual">
         <summary>Set it up by hand</summary>
@@ -83,23 +82,6 @@ export function ConnectSteps({ connection }: { connection: ConnectionInfo }) {
           Open the setup file for each app
         </button>
       </details>
-    </div>
-  );
-}
-
-/** The first screen a new user meets. It leaves when the first agent calls. */
-export function FirstRun() {
-  const connection = useStore((s) => s.connection);
-  if (!connection) return null;
-  return (
-    <div className="first-run" data-testid="first-run">
-      <img className="wordmark" src={wordmark} alt="Hatch" height="40" />
-      <h1>Connect an agent</h1>
-      <p className="lede">Hatch holds no AI. Your agent drives this browser, and you watch, comment and design beside it.</p>
-      <ConnectSteps connection={connection} />
-      <p className="waiting" role="status">
-        <span className="working-dot" /> Hatch is waiting for the first agent. This screen closes when one connects.
-      </p>
     </div>
   );
 }

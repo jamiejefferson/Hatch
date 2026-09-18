@@ -30,10 +30,10 @@ Hatch has no automatic update. The install line above fetches whichever version 
 
 Hatch opens with a six-step guide that points at the real controls. Help > Show the Guide runs it again.
 
-1. **Connect an agent.** The first screen has one button, "Copy the connection for your agent". Paste what it copies into the agent, and the agent connects itself. Settings keeps the same button. `connect/README.md` holds the setup for Claude Code, Claude Desktop, Cursor, VS Code and Codex CLI by hand.
-2. **Open a page.** The plus button in the Hatch panel opens a Hatch, and so does a double tap on empty canvas.
-3. **Add a project.** The Projects panel takes a folder. Hatch starts its dev server and serves it at `hatch:<name>`.
-4. **Pin a comment.** Select a Hatch, choose the comment tool and pick an element. Ask the agent to read the comments.
+1. **Open a page.** The plus button in the Hatch panel opens a Hatch, and so does a double tap on empty canvas.
+2. **Add a project.** The Projects panel takes a folder. Hatch starts its dev server and serves it at `hatch:<name>`.
+3. **Pin a comment.** Select a Hatch, choose the comment tool and pick an element.
+4. **Hand Hatch to your agent.** Hatch needs no setup. When you want your agent to use it, press "Copy the details for your agent" in Settings and paste them to the agent. `connect/README.md` holds the setup by hand for Claude Code, Claude Desktop, Cursor, VS Code and Codex CLI.
 
 ## Send feedback
 

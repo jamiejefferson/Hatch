@@ -1,4 +1,4 @@
-// The two ways an agent connects, as the first-run screen and Settings show them.
+// The two ways an agent reaches Hatch, as Settings shows them.
 import { join } from 'node:path';
 import { app } from 'electron';
 import { DEFAULT_PORT, mcpError, mcpPort } from './mcp/http';

@@ -16,7 +16,6 @@ function repairSettings(raw: unknown): Settings {
     askBeforeViewSwitch: typeof source.askBeforeViewSwitch === 'boolean' ? source.askBeforeViewSwitch : DEFAULT_SETTINGS.askBeforeViewSwitch,
     allowEvaluate: typeof source.allowEvaluate === 'boolean' ? source.allowEvaluate : DEFAULT_SETTINGS.allowEvaluate,
     showComments: typeof source.showComments === 'boolean' ? source.showComments : DEFAULT_SETTINGS.showComments,
-    agentSeen: source.agentSeen === true,
     guideSeen: source.guideSeen === true,
     linksFolder: cleanFolder(source.linksFolder),
     commentsFolder: cleanFolder(source.commentsFolder),

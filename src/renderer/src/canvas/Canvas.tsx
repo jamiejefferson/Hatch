@@ -5,7 +5,6 @@ import type { Hatch, Tab } from '@shared/types';
 import { PlusIcon } from '../icons';
 import { actions, fitHatch, useStore } from '../state/store';
 import { startDrag } from './drag';
-import { FirstRun } from '../shell/Connect';
 import { HatchOverlay } from './HatchOverlay';
 import { HatchPage } from './HatchPage';
 
@@ -24,7 +23,6 @@ function viewFor(tab: Tab, fit: Hatch | null): View {
 }
 
 export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
-  const firstRun = useStore((s) => !s.settings.agentSeen && s.activity.length === 0);
   const ref = useRef<HTMLDivElement>(null);
   // The first tap selects a Hatch, which would take its shield away before the second tap lands. The shield stays for the length of a double tap.
   const [armed, setArmed] = useState<string | null>(null);
@@ -118,17 +116,14 @@ export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
             <HatchOverlay key={h.id} tabId={tab.id} hatch={h} size={rectOf(h)} screen={toScreen(rectOf(h), view.pan, view.zoom)} zoom={view.zoom} selected={h.id === tab.selectedHatchId} docked={h === fit} />
           ),
         )}
-        {tab.hatches.length === 0 &&
-          (firstRun ? (
-            <FirstRun />
-          ) : (
-            <div className="canvas-empty">
-              <p>This tab has no pages yet.</p>
-              <button className="button primary" onClick={actions.requestNewHatch}>
-                <PlusIcon /> New Hatch
-              </button>
-            </div>
-          ))}
+        {tab.hatches.length === 0 && (
+          <div className="canvas-empty">
+            <p>This tab has no pages yet.</p>
+            <button className="button primary" onClick={actions.requestNewHatch}>
+              <PlusIcon /> New Hatch
+            </button>
+          </div>
+        )}
       </div>
 
     </div>

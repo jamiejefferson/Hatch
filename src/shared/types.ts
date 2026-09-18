@@ -52,8 +52,6 @@ export interface Settings {
   allowEvaluate: boolean;
   /** Comment pins show on every Hatch. */
   showComments: boolean;
-  /** An agent has connected at least once, so the first-run screen stays away. */
-  agentSeen: boolean;
   /** The user has finished or skipped the guide, so it stays away until Help opens it again. */
   guideSeen: boolean;
   /** The folder that holds links.json. Empty means Hatch's own data folder. */
@@ -62,7 +60,7 @@ export interface Settings {
   commentsFolder: string;
 }
 
-export const DEFAULT_SETTINGS: Settings = { newHatchPage: '', askBeforeViewSwitch: true, allowEvaluate: false, showComments: true, agentSeen: false, guideSeen: false, linksFolder: '', commentsFolder: '' };
+export const DEFAULT_SETTINGS: Settings = { newHatchPage: '', askBeforeViewSwitch: true, allowEvaluate: false, showComments: true, guideSeen: false, linksFolder: '', commentsFolder: '' };
 
 export interface ActivityEntry {
   id: string;

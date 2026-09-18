@@ -49,7 +49,6 @@ export function registerIpc(): void {
       askBeforeViewSwitch: typeof settings.askBeforeViewSwitch === 'boolean' ? settings.askBeforeViewSwitch : current.askBeforeViewSwitch,
       allowEvaluate: typeof settings.allowEvaluate === 'boolean' ? settings.allowEvaluate : current.allowEvaluate,
       showComments: typeof settings.showComments === 'boolean' ? settings.showComments : current.showComments,
-      agentSeen: current.agentSeen || settings.agentSeen === true,
       guideSeen: current.guideSeen || settings.guideSeen === true,
       linksFolder: typeof settings.linksFolder === 'string' ? cleanFolder(settings.linksFolder) : current.linksFolder,
       commentsFolder: typeof settings.commentsFolder === 'string' ? cleanFolder(settings.commentsFolder) : current.commentsFolder,

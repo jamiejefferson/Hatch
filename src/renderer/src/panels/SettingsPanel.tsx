@@ -30,7 +30,7 @@ export function SettingsPanel() {
     </header>
     {connection && (
       <section>
-        <h2>Connect an agent</h2>
+        <h2>Details for your agent</h2>
         <ConnectSteps connection={connection} />
       </section>
     )}

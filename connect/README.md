@@ -1,8 +1,8 @@
-# Connect an agent to Hatch
+# Give an agent Hatch's details
 
 Hatch holds no AI. An agent drives it through MCP, the Model Context Protocol. Hatch listens on this Mac only, so nothing here opens a port to the network.
 
-Open Hatch first. In Settings, "Copy the connection for your agent" copies a note that an agent can act on by itself. "Set it up by hand" shows each connection line with a Copy button, and it shows the real port if 42824 was busy. The running Hatch also writes its address to `~/.hatch/server.json`, so an agent reads the real port from that file.
+Hatch needs no setup of its own. In Settings, "Copy the details for your agent" copies a note that an agent can act on by itself, and the user pastes it whenever they want the agent to use Hatch. "Set it up by hand" shows each connection line with a Copy button, and it shows the real port if 42824 was busy. The running Hatch also writes its address to `~/.hatch/server.json`, so an agent reads the real port from that file.
 
 ## The two connections
 

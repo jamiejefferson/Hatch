@@ -16,7 +16,7 @@ const STEPS: Step[] = [
   { title: 'Move around the canvas', body: 'Two fingers pan the canvas and a pinch zooms it. Select a Hatch to scroll its page. The bar above a selected Hatch holds back, forward and Fit to view, which fills the window with that one page.' },
   { title: 'Pin a comment to an element', body: 'Select a Hatch and this panel holds its controls. The comment tool pins a note to any element on the page. Your agent reads the note and replies with what it changed.', target: '[data-testid="panel-hatch"]' },
   { title: 'Run a local project', body: 'Projects takes a folder from your Mac. Hatch starts its dev server and gives it a short address, such as hatch:my-site.', target: '[data-testid="panel-projects"]' },
-  { title: 'Connect your agent', body: 'Hatch holds no AI. Settings has one button that copies the connection, and you paste it to Claude Code or any other agent that speaks MCP.', target: '[data-testid="panel-settings"]' },
+  { title: 'Hand Hatch to your agent', body: 'Hatch holds no AI and needs no setup. When you want your agent to use Hatch, Settings has one button that copies the details, and you paste them to the agent.', target: '[data-testid="panel-settings"]' },
   { title: 'Tell us what you find', body: 'This icon sends feedback to the people who make Hatch. The Help menu opens this guide again.', target: '[data-testid="panel-feedback"]' },
 ];
 

@@ -186,8 +186,6 @@ export function listen(): () => void {
       set((s) => {
         const known = s.activity.findIndex((e) => e.id === entry.id);
         const activity = known === -1 ? [...s.activity, entry].slice(-300) : s.activity.map((e) => (e.id === entry.id ? entry : e));
-        // The first agent call ends the first-run screen for good.
-        if (!s.settings.agentSeen) void actions.updateSettings({ agentSeen: true });
         return { activity };
       }),
     ),

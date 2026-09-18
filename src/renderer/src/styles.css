@@ -344,10 +344,6 @@ h2 .count { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0
 .signin-edit .switch-row { width: 100%; }
 
 /* ---- connecting an agent ---- */
-.first-run { position: absolute; inset: 0; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 32px max(32px, 8%); max-width: 640px; box-sizing: content-box; pointer-events: auto; cursor: default; }
-.first-run .wordmark { align-self: flex-start; margin-bottom: 24px; }
-.first-run h1 { margin: 0; font-size: 32px; line-height: 40px; font-weight: 600; letter-spacing: -0.02em; }
-.first-run .lede { margin: 0 0 12px; font-size: 15px; line-height: 22px; color: var(--ink-2); }
 .connect-steps { display: flex; flex-direction: column; gap: 10px; }
 .button.left { align-self: flex-start; }
 .connect-manual { display: flex; flex-direction: column; }
@@ -362,7 +358,6 @@ h2 .count { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0
 .connect-step .copy-line { margin-top: 4px; }
 .copy-line { display: flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 6px 0 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--pill); }
 .copy-line .mono { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; user-select: text; cursor: text; }
-.waiting { display: flex; align-items: center; gap: 10px; margin: 20px 0 0; color: var(--ink-2); }
 .banner { display: flex; align-items: center; gap: 16px; min-height: 32px; padding: 0 12px 0 16px; background: var(--accent-soft); color: var(--ink); font-size: 12px; }
 .banner span { flex: 1; }
 .banner .text-button { color: var(--ink); }

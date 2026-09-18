@@ -1,4 +1,4 @@
-// A new user meets the two ways to connect an agent. The screen leaves for good once an agent calls.
+// Hatch needs no setup before an agent uses it. Settings holds the details the user hands to the agent.
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
@@ -6,31 +6,28 @@ import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/cli
 import { expect, test } from '@playwright/test';
 import { capture, freshHome, launch } from './helpers';
 
-test('first run shows both connections and closes when the first agent calls', async () => {
+test('a fresh Hatch opens on its canvas, and Settings holds the details an agent needs', async () => {
   const home = freshHome();
-  let { app, win } = await launch(home, 0);
+  const { app, win } = await launch(home, 0);
   try {
-    await expect(win.getByTestId('first-run')).toBeVisible();
+    // Hatch asks for no setup. The empty canvas is the first thing a new user meets.
+    await expect(win.getByText('This tab has no pages yet.')).toBeVisible();
+    await expect(win.getByText('Connect an agent')).toHaveCount(0);
+
+    await win.getByRole('tab', { name: 'Settings' }).click();
+    await expect(win.getByRole('heading', { name: 'Details for your agent' })).toBeVisible();
+    await win.getByText('Set it up by hand').click();
     const { url } = JSON.parse(readFileSync(join(home, 'server.json'), 'utf8'));
     await expect(win.getByTestId('connect-url')).toHaveText(`${url}?agent=your-agent-name`);
     await expect(win.getByTestId('connect-command')).toContainText('hatch-mcp');
-    await capture(app, 'test-results/screens/16-first-run.png');
-
-    const agent = new Client({ name: 'first', version: '1.0.0' });
-    await agent.connect(new StreamableHTTPClientTransport(new URL(`${url}?agent=first`)));
-    await agent.callTool({ name: 'status', arguments: {} });
-    await expect(win.getByTestId('first-run')).toHaveCount(0);
-    await expect(win.getByText('This tab has no pages yet.')).toBeVisible();
-
-    await win.getByRole('tab', { name: 'Settings' }).click();
-    await expect(win.getByRole('heading', { name: 'Connect an agent' })).toBeVisible();
     await win.waitForTimeout(300);
     await capture(app, 'test-results/screens/17-settings.png');
-    await app.close();
 
-    ({ app, win } = await launch(home, 0));
-    await expect(win.getByText('This tab has no pages yet.')).toBeVisible();
-    await expect(win.getByTestId('first-run')).toHaveCount(0);
+    // An agent that was handed the address works with no step inside Hatch.
+    const agent = new Client({ name: 'first', version: '1.0.0' });
+    await agent.connect(new StreamableHTTPClientTransport(new URL(`${url}?agent=first`)));
+    const status = await agent.callTool({ name: 'status', arguments: {} });
+    expect(status.isError).toBeFalsy();
   } finally {
     await app.close();
   }
