@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Contact sales | Acme</title>
+<style>
+  body { margin: 0; font: 16px system-ui, sans-serif; color: #111; }
+  header { height: 56px; padding: 0 40px; display: flex; align-items: center; border-bottom: 1px solid #eee; }
+  main { padding: 40px; max-width: 560px; }
+  label { display: block; margin: 16px 0 6px; font-weight: 600; }
+  input[type=email], select, textarea { width: 100%; height: 40px; padding: 0 10px; border: 1px solid #888; font: inherit; box-sizing: border-box; }
+  textarea { height: 96px; padding: 10px; }
+  .check { display: flex; gap: 8px; align-items: center; font-weight: 400; }
+  button { height: 44px; padding: 0 20px; margin-top: 20px; border: 1px solid #111; background: #111; color: #fff; font: inherit; }
+  button.plain { background: #fff; color: #111; }
+  #spacer { height: 1600px; }
+  #cover { position: fixed; left: 0; right: 0; bottom: 0; height: 120px; background: #ffe600; display: none; align-items: center; justify-content: center; }
+  #cover.on { display: flex; }
+</style>
+</head>
+<body>
+<header><strong>Acme</strong></header>
+<main>
+  <h1>Contact sales</h1>
+  <form action="thanks.html" method="get" aria-label="Contact sales">
+    <label for="email">Work email</label>
+    <input id="email" name="email" type="email" required>
+    <label for="size">Team size</label>
+    <select id="size" name="size"><option value="">Choose one</option><option value="s">1 to 10</option><option value="m">11 to 50</option><option value="l">More than 50</option></select>
+    <label for="notes">What do you need?</label>
+    <textarea id="notes" name="notes"></textarea>
+    <label class="check"><input type="checkbox" name="updates" value="yes"> Send me product updates</label>
+    <button type="submit">Send</button>
+  </form>
+
+  <h2>Dialogs</h2>
+  <p id="dialog-result">No dialog answered yet.</p>
+  <button class="plain" onclick="document.getElementById('dialog-result').textContent = confirm('Delete the draft?') ? 'Draft deleted.' : 'Draft kept.'">Delete draft</button>
+  <button class="plain" onclick="document.getElementById('dialog-result').textContent = 'Name: ' + prompt('Name this draft', 'Untitled')">Rename draft</button>
+
+  <div id="spacer"></div>
+  <button class="plain" id="covered" onclick="this.textContent = 'Clicked'">Below the banner</button>
+  <button class="plain" onclick="document.getElementById('cover').classList.toggle('on')">Show the cookie banner</button>
+</main>
+<div id="cover"><span>We use cookies.</span></div>
+</body>
+</html>

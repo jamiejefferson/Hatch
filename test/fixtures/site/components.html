@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Components — Fixture Studio</title>
+  </head>
+  <body>
+    <h1>Components</h1>
+    <!-- A web component whose controls live in a shadow root, as the search on developer.mozilla.org does. -->
+    <studio-search></studio-search>
+    <p id="said"></p>
+    <script>
+      customElements.define('studio-search', class extends HTMLElement {
+        connectedCallback() {
+          const root = this.attachShadow({ mode: 'open' });
+          root.innerHTML = '<label>Find <input name="q" /></label> <button type="button">Search</button>';
+          root.querySelector('button').addEventListener('click', () => {
+            document.getElementById('said').textContent = 'Searched for ' + root.querySelector('input').value;
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

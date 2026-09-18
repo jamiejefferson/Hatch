@@ -1,0 +1,4 @@
+#!/bin/sh
+# Starts Hatch's stdio door for agent apps. It runs the shim with Hatch's own runtime, so the Mac needs no Node install.
+DIR="$(cd "$(dirname "$0")" && pwd)"
+ELECTRON_RUN_AS_NODE=1 exec "$DIR/../MacOS/Hatch" "$DIR/app.asar/out/main/hatch-mcp.js" "$@"

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spike host</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #f2f2f2; }
+  #canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  webview { position: absolute; left: 0; top: 0; width: 960px; height: 752px; background: #fff; }
+  .shield { position: absolute; left: 0; top: 0; width: 960px; height: 752px; }
+</style>
+</head>
+<body>
+<div id="canvas"></div>
+<script>
+  // Spike host: the main process drives this page through executeJavaScript.
+  window.__wheel = 0;
+  addEventListener('wheel', () => { window.__wheel += 1; }, { passive: true });
+
+  window.setCanvas = (x, y, scale) => {
+    document.getElementById('canvas').style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+  };
+
+  window.addGuest = (id, src, opts = {}) => new Promise((resolve) => {
+    const w = document.createElement('webview');
+    w.id = id;
+    w.setAttribute('partition', 'persist:hatch-spike');
+    w.setAttribute('webpreferences', 'backgroundThrottling=no');
+    if (opts.preload) w.setAttribute('preload', opts.preload);
+    w.style.left = (opts.x ?? 0) + 'px';
+    w.style.top = (opts.y ?? 0) + 'px';
+    w.src = src;
+    w.addEventListener('dom-ready', () => resolve(w.getWebContentsId()), { once: true });
+    document.getElementById('canvas').appendChild(w);
+  });
+
+  // Spike 4: animate pan and zoom for a while and report the frame times.
+  window.runPerf = (seconds, mode) => new Promise((resolve) => {
+    const deltas = [];
+    const stalls = [];
+    const start = performance.now();
+    let last = start;
+    const tick = (now) => {
+      deltas.push(now - last);
+      const t = (now - start) / 1000;
+      if (now - last > 50) stalls.push({ atS: Math.round(t * 10) / 10, ms: Math.round(now - last) });
+      last = now;
+      const scale = mode === 'pan' ? 0.45 : 0.45 + 0.2 * Math.sin(t * 1.7);
+      setCanvas(-300 + 300 * Math.sin(t * 2.3), -150 + 150 * Math.cos(t * 1.9), scale);
+      if (t < seconds) return requestAnimationFrame(tick);
+      deltas.shift();
+      const sorted = [...deltas].sort((a, b) => a - b);
+      const round = (n) => Math.round(n * 10) / 10;
+      resolve({
+        mode,
+        fps: round(deltas.length / seconds),
+        medianMs: round(sorted[Math.floor(sorted.length / 2)]),
+        p95Ms: round(sorted[Math.floor(sorted.length * 0.95)]),
+        worstMs: round(sorted.at(-1)),
+        over33ms: deltas.filter((d) => d > 33.4).length,
+        over100ms: deltas.filter((d) => d > 100).length,
+        stalls,
+      });
+    };
+    requestAnimationFrame(tick);
+  });
+
+  // Spike 6: a host-drawn pin follows scroll reports from the guest preload.
+  window.trackPin = (id, pageX, pageY, scale, originX, originY) => {
+    const w = document.getElementById(id);
+    const pin = document.createElement('div');
+    pin.id = 'pin';
+    pin.style.cssText = 'position:absolute;width:24px;height:24px;border-radius:12px;background:#f5c518;z-index:10;left:0;top:0;';
+    document.body.appendChild(pin);
+    window.__lags = [];
+    let latest = null;
+    w.addEventListener('ipc-message', (e) => { if (e.channel === 'scroll') latest = e.args[0]; });
+    const tick = () => {
+      if (latest) {
+        const y = originY + (pageY - latest.y) * scale;
+        pin.style.transform = `translate(${originX + pageX * scale}px, ${y}px)`;
+        window.__lags.push(performance.timeOrigin + performance.now() - latest.t);
+        window.__pinY = y;
+        latest = null;
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  };
+
+  window.drawHighlight = (rect) => {
+    let h = document.getElementById('highlight');
+    if (!h) {
+      h = document.createElement('div');
+      h.id = 'highlight';
+      h.style.cssText = 'position:absolute;outline:2px solid #2f6bff;pointer-events:none;z-index:9;';
+      document.body.appendChild(h);
+    }
+    Object.assign(h.style, { left: rect.x + 'px', top: rect.y + 'px', width: rect.w + 'px', height: rect.h + 'px' });
+  };
+
+  window.removeGuest = (id) => { document.getElementById(id)?.remove(); };
+  window.sizeGuest = (id, width, height) => {
+    const w = document.getElementById(id);
+    w.style.width = width + 'px';
+    w.style.height = height + 'px';
+  };
+  window.setShield = (on) => {
+    document.querySelector('.shield')?.remove();
+    if (!on) return;
+    const s = document.createElement('div');
+    s.className = 'shield';
+    document.getElementById('canvas').appendChild(s);
+  };
+</script>
+</body>
+</html>

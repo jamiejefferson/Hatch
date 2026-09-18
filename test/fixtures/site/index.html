@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pricing | Acme</title>
+<style>
+  body { margin: 0; font: 16px system-ui, sans-serif; color: #111; }
+  header { display: flex; justify-content: space-between; align-items: center; height: 56px; padding: 0 40px; border-bottom: 1px solid #eee; }
+  nav a { margin-left: 24px; color: #666; }
+  main { padding: 40px; }
+  h1 { font-size: 44px; letter-spacing: -0.02em; margin: 0 0 24px; }
+  .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .plan { border: 1px solid #ccc; padding: 24px; }
+  .plan button { width: 100%; height: 44px; margin-top: 16px; border: 1px solid #111; background: #fff; font: inherit; }
+  #tall { height: 3000px; }
+  #size { position: fixed; right: 8px; bottom: 8px; font: 12px monospace; background: #ffe600; padding: 2px 6px; }
+</style>
+</head>
+<body>
+<header><strong>Acme</strong><nav><a href="index.html">Pricing</a><a href="docs.html">Docs</a><a href="contact.html">Contact sales</a></nav></header>
+<main>
+  <h1>Simple pricing</h1>
+  <div class="plans">
+    <div class="plan"><h2>Solo</h2><p>£6 per month</p><button>Start free trial</button></div>
+    <div class="plan"><h2>Team</h2><p>£12 per seat</p><button>Start free trial</button></div>
+    <div class="plan"><h2>Company</h2><p>Talk to us</p><button>Contact sales</button></div>
+  </div>
+  <div id="tall"></div>
+</main>
+<div id="size"></div>
+<script>
+  window.__loadId = Math.random().toString(36).slice(2);
+  const show = () => { document.getElementById('size').textContent = innerWidth + ' x ' + innerHeight; };
+  addEventListener('resize', show); show();
+</script>
+</body>
+</html>

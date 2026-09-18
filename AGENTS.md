@@ -1,0 +1,60 @@
+# Hatch — notes for agents working in this repository
+
+Hatch is a stripped-down macOS browser that any MCP-capable agent can drive. Live pages sit as frames, called Hatches, on a canvas that pans and zooms.
+
+The product spec, the build plan, the spike results and the project status live outside this repository, in the maintainer's documentation folder (`Projects/Hatch/`). An agent with access to that folder reads the build plan before changing the architecture. This repository keeps code and the files the code ships with.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Runs Hatch with hot reload for the interface. |
+| `pnpm build` | Builds main, preload and renderer into `out/`. |
+| `pnpm typecheck` | Checks the main-process and renderer TypeScript projects. |
+| `pnpm test` | Runs the unit tests (vitest). |
+| `pnpm e2e` | Builds, then drives the real app with Playwright. The window stays hidden; set `HATCH_SHOW=1` to watch. |
+| `pnpm package` | Builds, then packages `release/mac-arm64/Hatch.app` with electron-builder. Unsigned. |
+| `pnpm release` | Packages, then writes `release/Hatch-<version>-mac-arm64.zip` with an ad-hoc signature (`build/release.sh`). This zip is what a GitHub release carries. |
+| `pnpm spike <name>` | Runs a Phase 0 probe from `spikes/`. Throwaway code. |
+
+Run `pnpm typecheck`, `pnpm test` and `pnpm e2e` before calling a change finished. The end-to-end suite drives Hatch with a scripted MCP client, once per protocol version. `pnpm e2e` writes images of the main states to `test-results/screens/`; compare them with the design screens after any interface change.
+
+## Layout
+
+- `src/shared/` holds the workspace model and pure functions (address parsing, canvas maths, workspace repair). Main and renderer both import it as `@shared/*`. Unit tests cover it.
+- `src/main/` is the Electron main process: window, menu, IPC, JSON stores and the Hatch registry. `cdp/` drives pages (session, agent-view outline, references, actions, capture). `agents/` holds agent identity, tab ownership, per-tab queues and the activity log. `mcp/` holds the HTTP endpoint and its guard, the tools and the guide; `mcp/server.ts` is the only file that imports the MCP SDK. Every tool schema is strict, so an argument a tool does not take is refused by name. `mcp/tools/extract.ts` holds `grab_element`, `get_css` and `save_image`; they need the "Let agents run script in pages" setting and write to `~/.hatch/grabs/` and `~/.hatch/assets/`. `get_guide` with the topic `tools` lists every tool with its arguments. The Help menu in `menu.ts` opens the guide, the feedback form and the repository. The running Hatch writes its address to `~/.hatch/server.json`, which is where an agent or a test finds the real port.
+- `src/main/servers/` runs local projects: `manager.ts` (registry, stable ports from 4300, start and stop through a login shell, logs), `lsof.ts` (finds servers already running), `frameworks.ts` (dev command and port flag per framework), `proxy.ts` (`<name>.localhost:4282`, static files, websocket pass-through) and `watch.ts` (reloads static projects). `HATCH_PROXY_PORT=0` picks a free proxy port, which the tests use.
+- `src/shim/mcp-stdio.ts` is the stdio door for agent apps that start a command. It imports nothing from Electron or the MCP SDK, builds to `out/main/hatch-mcp.js`, and answers from `~/.hatch/tools.json` while Hatch is closed. `connect/hatch-mcp` is the launcher the packaged app ships in `Contents/Resources`; it runs the shim with Hatch's own binary and `ELECTRON_RUN_AS_NODE=1`. `connect/README.md` ships too, and the first-run screen opens it.
+- `src/guest-preload/grab.ts` turns an element into self-contained markup for Paper, and `src/main/paper.ts` writes it to the clipboard inside `<x-paper-html>`.
+- `src/main/credentials/` holds saved sign-ins: `store.ts` (site and username in `credentials.json`, the `safeStorage` cipher in `secrets.json`) and `fill.ts` (field finding, the consent question, the fill). A password leaves `passwordOf` for the fill and goes nowhere else. `src/main/cdp/inspect.ts` measures an element for `get_element`.
+- `src/main/comments/store.ts` reads and writes comment files; `src/shared/comments.ts` holds the file format. Hatch re-reads a file for every operation and never writes one it fails to parse. `src/main/store/folders.ts` answers where saved links and site comments live; the user may choose both folders in Settings, and project comments stay inside the project. A pin whose element is missing stays on its Hatch as a detached pin at the top right corner. The interface sends `settings:set` only the fields that changed.
+- `src/guest-preload/` runs inside every live page: dialog stand-ins, change reports and `anchors.ts`, the one resolver behind picking, re-anchoring and pin tracking. The interface talks to it with `webview.send` and `ipc-message`; the main process uses `askGuest` in `hatches/registry.ts`.
+- The interface owns the workspace. The main process changes tabs and Hatches for an agent through `src/main/renderer-rpc.ts`, which the store answers in `serve()`.
+- `src/preload/host.ts` is the bridge for Hatch's own interface. `src/preload/api.ts` types it.
+- `src/renderer/src/` is the React interface: `shell/` (top strip, sidebar), `canvas/` (canvas, live pages, overlay, New Hatch modal), `panels/`, `state/store.ts`. The top strip is one row: tabs, the seven panel icons (the seventh sends feedback) and the sidebar switch. The selected Hatch carries a control bar (back, forward, title, size, Fit to view) and every other Hatch carries its title alone; in Fit to view the bar sits inside the tab. Reload, the view switch, Fit to view and Close sit in the Hatch panel. With no Hatch selected that panel lists the tab's Hatches and holds the zoom control. `styles.css` holds the tokens: one accent (`#E9C534`, with white icons and text on it), Libre Franklin, pills and circles for every button, one radius for containers. `build/icon.icns` comes from `build/icon.svg`, and the logo files sit in `gfx/`. Below 50% zoom, or on a Hatch narrower than the bar, the selected Hatch shows its title and the bar appears under the pointer. `shell/ContextMenu.tsx` is the right-click menu, which copies a `hatch:@<id>` link (`src/shared/hatch-link.ts`); `hatchFor` in `agents/agents.ts` follows that link into the tab that holds it. `shell/Intro.tsx` is the start-up sequence, which the tests skip unless `HATCH_INTRO=1`. `App.tsx` mounts it once, above the shell, so the boot never restarts it. `shell/Guide.tsx` is the six-step guide to the interface: each step names the control it points at by `data-testid`, so a renamed test id needs the same change there. It shows until `guideSeen` is saved in settings, Help > Show the Guide runs it again, and the test helpers switch it off with `HATCH_GUIDE=0`.
+- `src/main/feedback/` sends feedback: `config.ts` holds the service address and its publishable key, and `send.ts` captures the window with `capturePage`, uploads the JPEG, adds the row and keeps a failed send in `~/.hatch/feedback-outbox/` for the next start. The database lets that key insert and nothing else, so the key is safe in a public repository; a secret key never belongs in this code. `panels/FeedbackPanel.tsx` is the form, and the capture happens before the panel opens so the picture leaves the form out. `HATCH_FEEDBACK_URL` points the tests at a stand-in service, and no test writes to the real one.
+- Hatch stores its data in `~/.hatch/`. `HATCH_HOME` moves it, and also moves the Electron profile, which the tests rely on.
+
+## Rules that came from the spikes. Breaking one breaks the app.
+
+1. Never send CDP `Page.reload` to a page. It reloads Hatch's own window and destroys every Hatch. Reload with `webContents.reload()` or the webview's `reload()`.
+2. Never remove or re-parent a `<webview>`, and never let React rewrite its `src`. Each of those reloads the page. Every tab's canvas stays mounted. A hidden tab or Hatch uses `opacity: 0` with `pointer-events: none`, because CDP answers "Unable to capture screenshot" for a webview under `visibility: hidden`. The page still attaches and reads there, so the failure shows up only when an agent asks for a screenshot of a background tab.
+3. Never override device metrics on the host window (`Emulation.setDeviceMetricsOverride`, which Playwright's `page.screenshot()` uses). The override resizes every live page to the window's width. Capture the window with `webContents.capturePage()` and a page with CDP `Page.captureScreenshot` on its own guest.
+4. `DOM.getNodeForLocation` takes document coordinates. Add the page's scroll offset before the lookup. `DOM.getBoxModel` answers in viewport coordinates.
+5. Electron throws on `prompt()` inside a page. The guest preload must install a stand-in that blocks on a synchronous IPC call.
+6. A `<webview>` needs the `allowpopups` attribute, as the string `"true"`, before `setWindowOpenHandler` ever runs. The handler loads a link that asks for a new window in the same Hatch. A pop-up (`disposition: 'new-window'`, which is how "Sign in with Google" opens) never loads in the Hatch, because the page and its pop-up talk to each other. It opens as a real window for a Hatch in Fit to view, which the interface reports through `hatch:fit`. On the canvas Hatch refuses it and shows a notice with a Fit to view button. `test/e2e/links-and-bar.spec.ts` guards this.
+7. The default Electron menu must stay replaced. Its Reload item reloads Hatch's window.
+8. Electron 44 has the `ClipboardItem` clipboard API only.
+9. Never call `scrollIntoView` in Hatch's own interface. It crashed the interface's renderer process when it ran while a webview was attaching. Set `scrollTop` on the scrolling container instead. Pages themselves may use it freely.
+10. Hatch answers `alert`, `confirm` and `prompt` through stand-ins in the guest preload. Electron settles the native ones on its own when the window sits in the background.
+11. Everything the main process knows about a page keys on `webContents.id` through `src/main/hatches/registry.ts`, so a different rendering surface could replace webviews later.
+12. Send keys and typed text to a page through Electron: `webContents.sendInputEvent` and `webContents.insertText`. Chrome drops CDP's `Input.dispatchKeyEvent` and `Input.insertText` with no error for a page that lacks input focus, which is every page before its first click and every page after the user clicks in Hatch's own interface. CDP mouse events carry coordinates and always land. `test/e2e/input-focus.spec.ts` guards this.
+13. The interface answers the main process only after the saved workspace has loaded (`booted` in `state/store.ts`), and `callInterface` waits for `interface:ready`. An agent that started before Hatch calls the instant the port opens, and an earlier answer would change a workspace that boot then replaces.
+14. Quitting never waits on an agent. `stopMcp` closes open connections first and the quit sequence ends after two seconds whatever happens, because a connected agent holds a stream open.
+15. A page Hatch serves while a dev server starts must never reload on a timer. A timed refresh fires while the Hatch is navigating elsewhere and drags it back. The waiting page checks with a `HEAD` request and reloads once the server answers.
+16. Any check that asks the page what sits at a point must look through shadow roots. `document.elementFromPoint` answers with the shadow host, and `contains` stops at the boundary, so a plain check refuses every click on a web component. `test/e2e/shadow-dom.spec.ts` guards this.
+17. A Hatch registers with the main process on the webview's `did-attach`. `dom-ready` waits for the first answer from the server, and a dev server's first compile holds that back for longer than `open_hatch` waits. `test/e2e/slow-open.spec.ts` guards this.
+
+## Writing
+
+Documentation, interface copy and commit messages address "the user" and never a named person. Use British English and plain words. Every interface string is a full statement with a verb.

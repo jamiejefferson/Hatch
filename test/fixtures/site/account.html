@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Account | Acme</title>
+<h1>Your account</h1>
+<p id="who"></p>
+<script>document.getElementById('who').textContent = 'Signed in as ' + (sessionStorage.getItem('signed-in') || 'nobody');</script>

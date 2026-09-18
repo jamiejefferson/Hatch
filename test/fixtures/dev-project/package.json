@@ -1,0 +1,1 @@
+{ "name": "dev-project", "private": true, "scripts": { "dev": "node server.mjs" } }

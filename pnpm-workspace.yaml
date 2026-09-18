@@ -1,0 +1,6 @@
+nodeLinker: hoisted
+allowBuilds:
+  electron: true
+  # A Windows installer helper that electron-builder pulls in. Hatch builds for macOS only.
+  electron-winstaller: false
+  esbuild: true

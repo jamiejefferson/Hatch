@@ -1,0 +1,25 @@
+appId: app.hatch.browser
+productName: Hatch
+directories:
+  output: release
+files:
+  - out/**
+  - package.json
+extraResources:
+  # The launcher agent apps start, and the setup examples the first-run screen opens.
+  - from: connect/hatch-mcp
+    to: hatch-mcp
+  - from: connect/README.md
+    to: connect/README.md
+protocols:
+  - name: Hatch project address
+    schemes: [hatch]
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dir
+  # electron-builder signs nothing. build/release.sh gives the trial build its ad-hoc signature, outside any folder macOS syncs.
+  # A signed and notarised build needs a Developer ID, which goes here.
+  identity: null
+  extendInfo:
+    NSLocalNetworkUsageDescription: Hatch shows your local development sites.

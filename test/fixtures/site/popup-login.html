@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sign in — Fixture Studio</title>
+  </head>
+  <body>
+    <h1>Sign in</h1>
+    <!-- "Sign in with Google" opens a sized window and waits for it to answer, which a page loaded in the same frame cannot do. -->
+    <button id="provider" type="button">Sign in with a provider</button>
+    <p id="said"></p>
+    <script>
+      document.getElementById('provider').addEventListener('click', () => {
+        const child = window.open('/popup-provider.html', 'provider', 'width=480,height=600');
+        document.getElementById('said').textContent = child ? 'The pop-up opened' : 'The pop-up was blocked';
+      });
+      window.addEventListener('message', (e) => (document.getElementById('said').textContent = 'Signed in as ' + e.data));
+    </script>
+  </body>
+</html>

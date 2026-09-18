@@ -1,0 +1,31 @@
+/**
+ * References such as e12 name elements in the agent view. One element keeps one reference for the life of its document,
+ * so a second snapshot of the same page reads the same. A navigation clears the table.
+ */
+export class RefTable {
+  private readonly byNode = new Map<number, string>();
+  private readonly byRef = new Map<string, number>();
+  private next = 1;
+  /** Counts documents, so an error can tell a stale reference from one that never existed. */
+  generation = 0;
+
+  refFor(backendNodeId: number): string {
+    const known = this.byNode.get(backendNodeId);
+    if (known) return known;
+    const ref = `e${this.next++}`;
+    this.byNode.set(backendNodeId, ref);
+    this.byRef.set(ref, backendNodeId);
+    return ref;
+  }
+
+  nodeFor(ref: string): number | undefined {
+    return this.byRef.get(ref.trim().replace(/^\[|\]$/g, ''));
+  }
+
+  clear(): void {
+    this.byNode.clear();
+    this.byRef.clear();
+    this.next = 1;
+    this.generation += 1;
+  }
+}

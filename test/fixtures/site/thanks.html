@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Thanks | Acme</title>
+<style>body { margin: 0; padding: 40px; font: 16px system-ui, sans-serif; color: #111; }</style>
+</head>
+<body>
+<main>
+  <h1>Thanks, we will be in touch</h1>
+  <p id="summary"></p>
+  <a href="index.html">Back to pricing</a>
+</main>
+<script>
+  const q = new URLSearchParams(location.search);
+  document.getElementById('summary').textContent = `We will write to ${q.get('email')}. Team size: ${q.get('size')}. Updates: ${q.get('updates') ?? 'no'}. Notes: ${q.get('notes')}`;
+</script>
+</body>
+</html>

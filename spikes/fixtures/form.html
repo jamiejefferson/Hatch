@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spike fixture</title>
+<style>
+  body { margin: 0; font: 16px system-ui, sans-serif; }
+  header { height: 56px; border-bottom: 1px solid #ccc; padding: 0 40px; display: flex; align-items: center; }
+  main { padding: 40px; }
+  #target { position: absolute; left: 600px; top: 300px; width: 200px; height: 48px; }
+  #email { position: absolute; left: 40px; top: 300px; width: 300px; height: 36px; }
+  #plan { position: absolute; left: 40px; top: 400px; width: 300px; height: 36px; }
+  #tall { height: 4000px; }
+  #size { position: fixed; right: 8px; bottom: 8px; font: 12px monospace; }
+</style>
+</head>
+<body>
+<header>Acme</header>
+<main>
+  <h1>Spike fixture</h1>
+  <input id="email" placeholder="Work email">
+  <select id="plan"><option>Solo</option><option>Team</option><option>Company</option></select>
+  <button id="target">Start free trial</button>
+  <div id="tall"></div>
+</main>
+<div id="size"></div>
+<script>
+  window.__loadId = Math.random().toString(36).slice(2);
+  window.__clicks = 0;
+  window.__lastClick = null;
+  document.getElementById('target').addEventListener('click', (e) => {
+    window.__clicks += 1;
+    window.__lastClick = { x: e.clientX, y: e.clientY, trusted: e.isTrusted };
+  });
+  const show = () => { document.getElementById('size').textContent = innerWidth + ' x ' + innerHeight; };
+  addEventListener('resize', show); show();
+</script>
+</body>
+</html>
