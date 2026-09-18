@@ -80,8 +80,27 @@ export function askGuest<T>(guest: WebContents, kind: string, payload: unknown, 
   });
 }
 
+/**
+ * Hatch 0.1.1 and earlier ran pages in the default session, because the partition was set too late to take effect.
+ * The first start after that moves those cookies into the pages session, so nobody is signed out by the update.
+ */
+async function adoptOldCookies(): Promise<void> {
+  const old = await session.defaultSession.cookies.get({});
+  const jar = session.fromPartition(PAGES_PARTITION).cookies;
+  for (const c of old) {
+    const host = (c.domain ?? '').replace(/^\./, '');
+    if (!host) continue;
+    await jar
+      .set({ url: `${c.secure ? 'https' : 'http'}://${host}${c.path ?? '/'}`, name: c.name, value: c.value, path: c.path, secure: c.secure, httpOnly: c.httpOnly, sameSite: c.sameSite, ...(c.hostOnly ? {} : { domain: c.domain }), ...(c.session ? {} : { expirationDate: c.expirationDate }) })
+      .catch(() => {});
+    await session.defaultSession.cookies.remove(`${c.secure ? 'https' : 'http'}://${host}${c.path ?? '/'}`, c.name).catch(() => {});
+  }
+  if (old.length > 0) await jar.flushStore();
+}
+
 export function setUpPagesSession(): void {
   const partition = session.fromPartition(PAGES_PARTITION);
+  void adoptOldCookies();
   partition.setPermissionRequestHandler((_wc, permission, grant) => grant(GRANTED_PERMISSIONS.has(permission)));
   partition.setPermissionCheckHandler((_wc, permission) => GRANTED_PERMISSIONS.has(permission));
 
@@ -122,7 +141,11 @@ export function watchHost(host: WebContents): void {
     webPreferences.contextIsolation = true;
     webPreferences.sandbox = true;
     webPreferences.backgroundThrottling = false;
-    params.partition = PAGES_PARTITION;
+    // The interface names the pages session on the element. A guest that asks for any other session never attaches.
+    if (params.partition !== PAGES_PARTITION) {
+      event.preventDefault();
+      return;
+    }
   });
 
   host.on('did-attach-webview', (_event, guest) => {

@@ -1,4 +1,5 @@
 import type { Anchor, CommentStatus, PageComments } from '@shared/comments';
+import type { BrowserProfile, ImportOutcome } from '@shared/cookie-import';
 import type { FeedbackDetails, FeedbackInput } from '@shared/feedback';
 import type { ConsentAnswer, ConsentRequest, SignIn } from '@shared/signins';
 import type { ActivityEntry, AgentWorkState, DialogState, Project, ProjectsState, ProjectState, SavedLink, Settings, Workspace } from '@shared/types';
@@ -85,6 +86,10 @@ export interface HatchApi {
   addSignIn(input: { site: string; username: string; password: string }): Promise<Outcome<SignIn[]>>;
   removeSignIn(id: string): Promise<Outcome<SignIn[]>>;
   setSignInAllow(id: string, allow: SignIn['allow']): Promise<Outcome<SignIn[]>>;
+  /** The browser profiles on this Mac whose cookies Hatch can read. */
+  browserProfiles(): Promise<BrowserProfile[]>;
+  /** Copies the cookies for the page's site from that profile into Hatch's session. macOS asks the user for the browser's Keychain key first. */
+  importSignIn(pageUrl: string, profileId: string): Promise<Outcome<ImportOutcome>>;
   answerConsent(hatchId: string, answer: ConsentAnswer): Promise<void>;
   connection(): Promise<ConnectionInfo>;
   openSetupExamples(): Promise<string>;

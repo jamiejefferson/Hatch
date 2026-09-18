@@ -12,6 +12,7 @@ import { connectionInfo } from './connection';
 import { answerConsent } from './credentials/fill';
 import { defaultBrowserState, makeDefaultBrowser } from './default-browser';
 import { captureForFeedback, feedbackDetails, sendFeedback } from './feedback/send';
+import { importSignIn, listBrowserProfiles } from './credentials/import-cookies';
 import { addSignIn, listSignIns, removeSignIn, setAllow } from './credentials/store';
 import { bindHatch, onPageBound, pageFor, setFitHatches } from './hatches/registry';
 import { mcpPort } from './mcp/http';
@@ -121,6 +122,9 @@ export function registerIpc(): void {
   ipcMain.handle('signins:add', safely((input: { site: string; username: string; password: string }) => addSignIn(input)));
   ipcMain.handle('signins:remove', safely((id: string) => removeSignIn(String(id))));
   ipcMain.handle('signins:allow', safely((id: string, allow: 'ask' | 'always') => setAllow(String(id), allow)));
+  // Cookies travel from the other browser's file into Hatch's session inside the main process. The interface learns the count alone.
+  ipcMain.handle('signins:browsers', () => listBrowserProfiles());
+  ipcMain.handle('signins:import', safely((pageUrl: string, profileId: string) => importSignIn(String(pageUrl), String(profileId))));
   ipcMain.handle('consent:answer', (_e, hatchId: string, answer: 'once' | 'always' | 'refuse') => answerConsent(String(hatchId), answer === 'once' || answer === 'always' ? answer : 'refuse'));
 
   ipcMain.handle('connection:info', () => connectionInfo());

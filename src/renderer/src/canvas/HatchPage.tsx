@@ -74,6 +74,9 @@ export function HatchPage({ hatch, rect, hidden }: Props) {
   return (
     <webview
       ref={ref}
+      // Every page shares one session of its own, apart from Hatch's interface. The attribute must sit on the element before the first load:
+      // the main process cannot move a guest to another session once it attaches. The name matches PAGES_PARTITION in src/main/paths.ts.
+      {...({ partition: 'persist:hatch-pages' } as object)}
       src={firstUrl}
       // Without this the guest blocks window.open outright. The main process still denies every new window and loads the link in this Hatch.
       // React drops a bare boolean on this element, so the attribute goes in as a string.

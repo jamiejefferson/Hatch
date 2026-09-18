@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { siteOf, type BrowserProfile } from '@shared/cookie-import';
+import { pages } from '../canvas/webviews';
 import { BinIcon, PlusIcon } from '../icons';
-import { useStore } from '../state/store';
+import { selectedHatch, useStore } from '../state/store';
 
 /** Saved sign-ins. The password goes to the main process once, on save, and never comes back. */
 export function SignInsPanel() {
@@ -48,6 +50,7 @@ export function SignInsPanel() {
           <PlusIcon /> Save this sign-in
         </button>
       </form>
+      <BringSignIn />
       {signIns.length > 0 && (
         <ul className="signin-list">
           {signIns.map((s) => (
@@ -75,5 +78,66 @@ export function SignInsPanel() {
         </ul>
       )}
     </>
+  );
+}
+
+/**
+ * Google refuses to sign anyone in inside Hatch, so a site that offers Google alone needs another way in.
+ * The user signs in to the site in their own browser, and Hatch copies that one site's cookies across.
+ */
+function BringSignIn() {
+  const hatch = useStore(selectedHatch);
+  const [profiles, setProfiles] = useState<BrowserProfile[] | null>(null);
+  const [chosen, setChosen] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [said, setSaid] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => void window.hatch.browserProfiles().then((found) => (setProfiles(found), setChosen(found[0]?.id ?? null))), []);
+
+  const url = hatch?.url ?? '';
+  const site = URL.canParse(url) && /^https?:$/.test(new URL(url).protocol) ? siteOf(new URL(url).hostname) : null;
+  const profile = profiles?.find((p) => p.id === chosen) ?? null;
+  const several = (browser: string): boolean => (profiles ?? []).filter((p) => p.browser === browser).length > 1;
+
+  const bring = async (): Promise<void> => {
+    if (!hatch || !profile) return;
+    setBusy(true);
+    setSaid(null);
+    const result = await window.hatch.importSignIn(url, profile.id);
+    setBusy(false);
+    if (!result.ok) return setSaid({ ok: false, text: result.error });
+    pages.reload(hatch.id);
+    setSaid({ ok: true, text: `Hatch copied ${result.value.count} ${result.value.count === 1 ? 'cookie' : 'cookies'} for ${result.value.site} from ${result.value.browser} and reloaded the page.` });
+  };
+
+  return (
+    <section data-testid="bring-signin">
+      <h2>Bring a sign-in from another browser</h2>
+      <p className="hint">Google refuses to sign anyone in inside Hatch. Sign in to the site in your usual browser, open the same site in a Hatch, then copy the sign-in across. Hatch copies the cookies for that one site.</p>
+      {profiles !== null && profiles.length === 0 && <p className="hint">Hatch found no Chrome, Arc, Brave or Edge on this Mac.</p>}
+      {profiles !== null && profiles.length > 1 && (
+        <div className="chips" role="radiogroup" aria-label="Browser">
+          {profiles.map((p) => (
+            <button key={p.id} type="button" role="radio" aria-checked={chosen === p.id} className={`chip${chosen === p.id ? ' active' : ''}`} onClick={() => setChosen(p.id)}>
+              {several(p.browser) ? `${p.browser} · ${p.profile}` : p.browser}
+            </button>
+          ))}
+        </div>
+      )}
+      {profile && (
+        <p className="status-line" data-testid="bring-signin-site">{site ? <>The selected Hatch shows&nbsp;<strong>{site}</strong>.</> : 'Select a Hatch that shows the site.'}</p>
+      )}
+      {profile && (
+        <button className="button left" disabled={busy || !site} onClick={() => void bring()} data-testid="bring-signin-go">
+          {busy ? `Hatch is reading ${profile.browser}` : `Bring my sign-in from ${profile.browser}`}
+        </button>
+      )}
+      {profile && site && !said && <p className="hint">macOS asks for your password the first time, because {profile.browser} keeps its cookie key in the Keychain.</p>}
+      {said && (
+        <p className={said.ok ? 'hint' : 'field-error'} role={said.ok ? 'status' : 'alert'} data-testid="bring-signin-said">
+          {said.text}
+        </p>
+      )}
+    </section>
   );
 }

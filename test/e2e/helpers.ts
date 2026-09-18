@@ -10,6 +10,12 @@ const TYPES: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.c
 export function serveSite(): Promise<{ url: string; close(): Promise<void> }> {
   const server: Server = createServer((req, res) => {
     const path = new URL(req.url ?? '/', 'http://x').pathname;
+    if (path === '/whoami') {
+      // A page behind a sign-in: it names the session cookie the browser sent, which the cookie import test reads.
+      const session = /(?:^|; )session=([^;]+)/.exec(req.headers.cookie ?? '')?.[1];
+      res.writeHead(200, { 'content-type': 'text/html' }).end(`<title>Account</title><h1 id="who">${session ? `Signed in as ${session}` : 'Signed out'}</h1>`);
+      return;
+    }
     if (path === '/slow') {
       // A page that takes three seconds, for the timeout tests.
       setTimeout(() => res.writeHead(200, { 'content-type': 'text/html' }).end('<title>Slow page</title><h1>Slow page arrived</h1>'), 3000);
