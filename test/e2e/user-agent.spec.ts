@@ -1,4 +1,4 @@
-// Google refuses a sign-in from a browser that names Electron, so a page and its pop-up must both see an ordinary Chrome.
+// A site that reads the user agent must see an ordinary Chrome, from a page and from the pop-up it opens.
 import { expect, test } from '@playwright/test';
 import { freshHome, inPages, launch, openHatch, serveSite } from './helpers';
 

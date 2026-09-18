@@ -54,7 +54,7 @@ Run `pnpm typecheck`, `pnpm test` and `pnpm e2e` before calling a change finishe
 15. A page Hatch serves while a dev server starts must never reload on a timer. A timed refresh fires while the Hatch is navigating elsewhere and drags it back. The waiting page checks with a `HEAD` request and reloads once the server answers.
 16. Any check that asks the page what sits at a point must look through shadow roots. `document.elementFromPoint` answers with the shadow host, and `contains` stops at the boundary, so a plain check refuses every click on a web component. `test/e2e/shadow-dom.spec.ts` guards this.
 17. A Hatch registers with the main process on the webview's `did-attach`. `dom-ready` waits for the first answer from the server, and a dev server's first compile holds that back for longer than `open_hatch` waits. `test/e2e/slow-open.spec.ts` guards this.
-18. Pages and pop-ups must see a user agent with no `Electron/` and no `hatch/` token. `main/index.ts` strips both from `app.userAgentFallback` before any window opens. Google refuses a sign-in from a browser that names an embedded framework. `test/e2e/user-agent.spec.ts` guards this.
+18. Pages and pop-ups must see a user agent with no `Electron/` and no `hatch/` token. `main/index.ts` strips both from `app.userAgentFallback` before any window opens. Sites that sniff the user agent then treat Hatch as Chrome. This does not get a Google sign-in through: Google rejects Electron itself at the email step, whatever the user agent says. `test/e2e/user-agent.spec.ts` guards the user agent.
 
 ## Writing
 
