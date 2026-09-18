@@ -89,6 +89,10 @@ export interface HatchApi {
   connection(): Promise<ConnectionInfo>;
   openSetupExamples(): Promise<string>;
   openDataFolder(): Promise<string>;
+  /** Whether Hatch is the Mac's default browser. 'unavailable' in a checkout, where macOS knows no Hatch app. */
+  defaultBrowser(): Promise<'default' | 'other' | 'unavailable'>;
+  /** Asks macOS to make Hatch the default browser. macOS confirms with the user, so the state may change a moment later. */
+  makeDefaultBrowser(): Promise<'default' | 'other' | 'unavailable'>;
   feedbackDetails(): Promise<FeedbackDetails>;
   /** Captures Hatch's window for the feedback form and resolves to a data URL for the preview. Null when the capture fails. */
   captureForFeedback(): Promise<string | null>;

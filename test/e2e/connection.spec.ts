@@ -16,6 +16,8 @@ test('a fresh Hatch opens on its canvas, and Settings holds the details an agent
 
     await win.getByRole('tab', { name: 'Settings' }).click();
     await expect(win.getByRole('heading', { name: 'Details for your agent' })).toBeVisible();
+    // A build run from source has no place in the macOS browser list, so the button waits for the installed app.
+    await expect(win.getByTestId('make-default')).toBeDisabled();
     await win.getByText('Set it up by hand').click();
     const { url } = JSON.parse(readFileSync(join(home, 'server.json'), 'utf8'));
     await expect(win.getByTestId('connect-url')).toHaveText(`${url}?agent=your-agent-name`);

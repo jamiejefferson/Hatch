@@ -12,6 +12,15 @@ export function SettingsPanel() {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => setText(page), [page]);
 
+  // macOS confirms the change in its own dialog, so the answer is read again whenever the window regains focus.
+  const [browser, setBrowser] = useState<'default' | 'other' | 'unavailable' | null>(null);
+  useEffect(() => {
+    const read = (): void => void window.hatch.defaultBrowser().then(setBrowser);
+    read();
+    window.addEventListener('focus', read);
+    return () => window.removeEventListener('focus', read);
+  }, []);
+
   const save = (e: React.FormEvent): void => {
     e.preventDefault();
     const value = text.trim();
@@ -47,6 +56,19 @@ export function SettingsPanel() {
         )}
       </form>
       <p className="hint">Every new Hatch opens this page. Leave the field empty and Hatch asks which page to open.</p>
+    </section>
+    <section data-testid="default-browser">
+      <h2>Default browser</h2>
+      {browser === 'default' ? (
+        <p className="status-line">
+          <span className="dot on" /> Hatch is your default browser.
+        </p>
+      ) : (
+        <button className="button left" disabled={browser !== 'other'} onClick={() => void window.hatch.makeDefaultBrowser().then(setBrowser)} data-testid="make-default">
+          Make Hatch the default browser
+        </button>
+      )}
+      <p className="hint">{browser === 'unavailable' ? 'This works in the installed app. A build run from source has no place in the macOS browser list.' : browser === 'default' ? 'A link you click in another app opens in a new Hatch. System Settings, under Desktop & Dock, changes it back.' : 'A link you click in another app then opens in a new Hatch. macOS asks you to confirm.'}</p>
     </section>
     <section>
       <h2>Folders</h2>

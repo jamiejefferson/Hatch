@@ -49,6 +49,7 @@ Feedback goes to a database that the app can write to and cannot read. A send th
 - **Comments.** The user pins a comment to an element. An agent reads it, acts on it, replies and resolves it. A project's comments are markdown files in `<project>/.hatch/comments/`.
 - **Sign-ins.** Hatch fills a saved sign-in for an agent after the user agrees. The agent never receives the password.
 - **Grab for Paper.** The user picks an element and pastes it into the Paper design tool. The clipboard holds the form Paper's own Chrome extension writes; a paste into Paper still needs one check by a person.
+- **Default browser.** Settings has a button that makes Hatch the Mac's default browser, so a link clicked in another app opens in a new Hatch.
 - **Extraction.** With "Let agents run script in pages" switched on, an agent takes an element's markup, its computed styles and its images out of a page.
 
 Hatch keeps its data in `~/.hatch/`. It listens on this Mac only, so no port opens to the network.

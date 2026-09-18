@@ -10,6 +10,7 @@ import { handleDialog, snapshot } from './cdp/actions';
 import * as comments from './comments/store';
 import { connectionInfo } from './connection';
 import { answerConsent } from './credentials/fill';
+import { defaultBrowserState, makeDefaultBrowser } from './default-browser';
 import { captureForFeedback, feedbackDetails, sendFeedback } from './feedback/send';
 import { addSignIn, listSignIns, removeSignIn, setAllow } from './credentials/store';
 import { bindHatch, onPageBound, pageFor, setFitHatches } from './hatches/registry';
@@ -125,6 +126,9 @@ export function registerIpc(): void {
   ipcMain.handle('connection:info', () => connectionInfo());
   ipcMain.handle('connection:examples', () => shell.openPath(connectionInfo().examples));
   ipcMain.handle('data:open-folder', () => shell.openPath(hatchHome()));
+
+  ipcMain.handle('browser:state', () => defaultBrowserState());
+  ipcMain.handle('browser:make-default', () => makeDefaultBrowser());
 
   ipcMain.handle('feedback:details', () => feedbackDetails());
   ipcMain.handle('feedback:capture', (event) => captureForFeedback(event.sender));

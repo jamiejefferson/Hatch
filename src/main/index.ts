@@ -40,13 +40,16 @@ if (!app.requestSingleInstanceLock()) {
     mainWindow.focus();
   });
 
-  // hatch:name/page links from other apps open in a new Hatch. macOS registers the scheme for the packaged app only.
+  // hatch:name/page links from other apps open in a new Hatch, and so does every web link once Hatch is the default browser. macOS registers the schemes for the packaged app only.
   // A link can arrive while Hatch is still starting, so the call repeats until the interface answers.
   const openLink = (link: string, triesLeft = 20): void => {
     void callInterface('openForUser', { input: link }).catch(() => triesLeft > 0 && setTimeout(() => openLink(link, triesLeft - 1), 500));
   };
   app.on('open-url', (event, link) => {
     event.preventDefault();
+    // A link from another app brings Hatch forward, as any browser would.
+    if (mainWindow?.isMinimized()) mainWindow.restore();
+    mainWindow?.show();
     openLink(link);
   });
 
