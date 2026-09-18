@@ -17,6 +17,9 @@ import { createWindow } from './window';
 // A test run keeps its own Electron profile, so it never collides with the user's Hatch.
 if (process.env.HATCH_HOME) app.setPath('userData', join(process.env.HATCH_HOME, 'electron'));
 
+// Pages and pop-ups see an ordinary Chrome. Google refuses a sign-in from a browser whose user agent names Electron or an app built on it.
+app.userAgentFallback = app.userAgentFallback.replace(/ (?:hatch|electron)\/\S+/gi, '');
+
 let mainWindow: BrowserWindow | null = null;
 
 function open(): void {
