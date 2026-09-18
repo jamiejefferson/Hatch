@@ -8,7 +8,15 @@ Hatch is a trial build. It changes often, and the feedback button inside it is t
 
 ## Install it
 
-Hatch needs a Mac with Apple silicon.
+Hatch needs a Mac with Apple silicon. Paste this line into Terminal:
+
+```
+curl -fsSL https://raw.githubusercontent.com/jamiejefferson/hatch/main/install.sh | sh
+```
+
+It downloads the latest release, puts `Hatch.app` in Applications and opens it. macOS shows no warning, because a download made this way carries no quarantine mark. The same line installs a newer version over an older one, and the workspace stays as it was.
+
+To install by hand instead:
 
 1. Download `Hatch-<version>-mac-arm64.zip` from the [latest release](https://github.com/jamiejefferson/hatch/releases/latest), unzip it and move `Hatch.app` to Applications.
 2. Open Hatch. macOS says it cannot check the app, because the trial build carries no Apple Developer ID. Choose Done.
@@ -16,7 +24,7 @@ Hatch needs a Mac with Apple silicon.
 
 A terminal does the same in one line: `xattr -dr com.apple.quarantine /Applications/Hatch.app`.
 
-Hatch has no automatic update. A new version is a new download from the same page.
+Hatch has no automatic update. The install line above fetches whichever version is newest.
 
 ## Start using it
 
