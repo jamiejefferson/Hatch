@@ -1,6 +1,6 @@
 {
   "name": "hatch",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "A stripped-down macOS browser that any MCP-capable agent can drive",
   "license": "MIT",
