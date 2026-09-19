@@ -15,6 +15,7 @@ function repairSettings(raw: unknown): Settings {
     newHatchPage: typeof source.newHatchPage === 'string' ? source.newHatchPage : DEFAULT_SETTINGS.newHatchPage,
     askBeforeViewSwitch: typeof source.askBeforeViewSwitch === 'boolean' ? source.askBeforeViewSwitch : DEFAULT_SETTINGS.askBeforeViewSwitch,
     allowEvaluate: typeof source.allowEvaluate === 'boolean' ? source.allowEvaluate : DEFAULT_SETTINGS.allowEvaluate,
+    describeElements: typeof source.describeElements === 'boolean' ? source.describeElements : DEFAULT_SETTINGS.describeElements,
     showComments: typeof source.showComments === 'boolean' ? source.showComments : DEFAULT_SETTINGS.showComments,
     guideSeen: source.guideSeen === true,
     linksFolder: cleanFolder(source.linksFolder),

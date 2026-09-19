@@ -3,29 +3,45 @@ import { click, ensureNoDialog, fill, handleDialog, hover, pressKey, scroll, sel
 import { HatchError } from '../../cdp/session';
 import { settingsStore } from '../../store/stores';
 import { onPage } from './page';
-import { hatch, intent, ref, tool } from './types';
+import { elementFor, optionalRef as ref, target, withPick } from './target';
+import { hatch, intent, tool } from './types';
+
+/** The element as the Activity panel names it: the reference, or the description in quotes. */
+const named = (a: { ref?: string; target?: string }): string => a.ref ?? JSON.stringify(a.target ?? '');
 
 export const actTools = [
   tool({
     name: 'click',
-    description: 'Clicks an element by reference with a real mouse event. Hatch scrolls it into view first and refuses when another element covers it.',
-    shape: { ref, double: z.boolean().default(false).describe('Double-click.'), hatch, intent },
-    summary: (a) => `click ${a.ref}`,
-    run: (a, ctx) => onPage(ctx, a.hatch, (page) => click(page, a.ref, { double: a.double })),
+    description: 'Clicks an element with a real mouse event. Name it by ref, or by target in plain words. Hatch scrolls it into view first and refuses when another element covers it. The reply says what changed in the agent view.',
+    shape: { ref, target, double: z.boolean().default(false).describe('Double-click.'), hatch, intent },
+    summary: (a) => `click ${named(a)}`,
+    run: (a, ctx) =>
+      onPage(ctx, a.hatch, async (page) => {
+        const found = await elementFor(page, a, 'any', 'click');
+        return withPick(found, await click(page, found.ref, { double: a.double, seen: found.seen }));
+      }),
   }),
   tool({
     name: 'fill',
     description: 'Replaces the text in a field. Works with fields that a framework controls. An empty string clears the field.',
-    shape: { ref, text: z.string().describe('The text the field should hold.'), hatch, intent },
-    summary: (a) => `fill ${a.ref}`,
-    run: (a, ctx) => onPage(ctx, a.hatch, (page) => fill(page, a.ref, a.text)),
+    shape: { ref, target, text: z.string().describe('The text the field should hold.'), hatch, intent },
+    summary: (a) => `fill ${named(a)}`,
+    run: (a, ctx) =>
+      onPage(ctx, a.hatch, async (page) => {
+        const found = await elementFor(page, a, 'field', 'type into');
+        return withPick(found, await fill(page, found.ref, a.text));
+      }),
   }),
   tool({
     name: 'select_option',
     description: 'Chooses an option in a native dropdown by its label or value. A custom dropdown is a button: click it, take a snapshot, then click the option.',
-    shape: { ref, option: z.string().describe('The option\'s label, or its value.'), hatch, intent },
-    summary: (a) => `select_option ${a.ref} ${JSON.stringify(a.option)}`,
-    run: (a, ctx) => onPage(ctx, a.hatch, (page) => selectOption(page, a.ref, a.option)),
+    shape: { ref, target, option: z.string().describe('The option\'s label, or its value.'), hatch, intent },
+    summary: (a) => `select_option ${named(a)} ${JSON.stringify(a.option)}`,
+    run: (a, ctx) =>
+      onPage(ctx, a.hatch, async (page) => {
+        const found = await elementFor(page, a, 'dropdown', 'choose an option in');
+        return withPick(found, await selectOption(page, found.ref, a.option));
+      }),
   }),
   tool({
     name: 'press_key',
@@ -37,9 +53,13 @@ export const actTools = [
   tool({
     name: 'hover',
     description: 'Moves the pointer over an element, which opens hover menus and tooltips.',
-    shape: { ref, hatch, intent },
-    summary: (a) => `hover ${a.ref}`,
-    run: (a, ctx) => onPage(ctx, a.hatch, (page) => hover(page, a.ref)),
+    shape: { ref, target, hatch, intent },
+    summary: (a) => `hover ${named(a)}`,
+    run: (a, ctx) =>
+      onPage(ctx, a.hatch, async (page) => {
+        const found = await elementFor(page, a, 'any', 'hover over');
+        return withPick(found, await hover(page, found.ref));
+      }),
   }),
   tool({
     name: 'scroll',

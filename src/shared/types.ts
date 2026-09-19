@@ -50,6 +50,8 @@ export interface Settings {
   askBeforeViewSwitch: boolean;
   /** Agents may run their own script in pages. */
   allowEvaluate: boolean;
+  /** Agents may name an element in plain words, and Hatch sends the page's outline to TypeSafe to find it. */
+  describeElements: boolean;
   /** Comment pins show on every Hatch. */
   showComments: boolean;
   /** The user has finished or skipped the guide, so it stays away until Help opens it again. */
@@ -60,7 +62,7 @@ export interface Settings {
   commentsFolder: string;
 }
 
-export const DEFAULT_SETTINGS: Settings = { newHatchPage: '', askBeforeViewSwitch: true, allowEvaluate: false, showComments: true, guideSeen: false, linksFolder: '', commentsFolder: '' };
+export const DEFAULT_SETTINGS: Settings = { newHatchPage: '', askBeforeViewSwitch: true, allowEvaluate: false, describeElements: false, showComments: true, guideSeen: false, linksFolder: '', commentsFolder: '' };
 
 export interface ActivityEntry {
   id: string;

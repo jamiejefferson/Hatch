@@ -1,6 +1,7 @@
 /**
  * References such as e12 name elements in the agent view. One element keeps one reference for the life of its document,
- * so a second snapshot of the same page reads the same. A navigation clears the table.
+ * so a second snapshot of the same page reads the same. A navigation clears the table, and the numbering carries on,
+ * so a reference from an earlier page never names an element of the next one.
  */
 export class RefTable {
   private readonly byNode = new Map<number, string>();
@@ -25,7 +26,6 @@ export class RefTable {
   clear(): void {
     this.byNode.clear();
     this.byRef.clear();
-    this.next = 1;
     this.generation += 1;
   }
 }

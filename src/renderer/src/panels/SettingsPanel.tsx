@@ -82,6 +82,9 @@ export function SettingsPanel() {
       <p className="hint">Switched off, Hatch shows the agent's reason and then switches.</p>
       <Switch label="Let agents run script in pages" checked={settings.allowEvaluate} onChange={(v) => void actions.updateSettings({ allowEvaluate: v })} />
       <p className="hint">Agents read and operate pages without this. Switch it on for an agent you trust with the pages you open.</p>
+      <Switch label="Let Hatch find elements from a description" checked={settings.describeElements} onChange={(v) => void actions.updateSettings({ describeElements: v })} />
+      <p className="hint">An agent names an element in plain words and Hatch acts in one call, which saves the agent a step. Hatch sends the page's outline to TypeSafe, a service outside this Mac, each time. A page where Hatch filled a saved sign-in is never sent.</p>
+      {settings.describeElements && <JevKey />}
     </section>
     <section>
       <h2>Data</h2>
@@ -117,6 +120,48 @@ function FolderRow({ label, value, fallback, onChange, testid }: { label: string
         </button>
       </div>
     </div>
+  );
+}
+
+function JevKey() {
+  const [held, setHeld] = useState<boolean | null>(null);
+  const [text, setText] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => void window.hatch.hasJevKey().then(setHeld), []);
+
+  const save = async (value: string): Promise<void> => {
+    const result = await window.hatch.setJevKey(value);
+    setError(result.ok ? null : result.error);
+    if (!result.ok) return;
+    setHeld(result.value);
+    setText('');
+  };
+
+  return (
+    <form
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (text.trim()) void save(text);
+      }}
+    >
+      <div className={`field${error ? ' invalid' : ''}`}>
+        <input type="password" aria-label="TypeSafe key" placeholder={held ? 'Hatch holds a key. Paste a new one to replace it.' : 'Paste a TypeSafe key'} spellCheck={false} autoComplete="off" value={text} onChange={(e) => setText(e.target.value)} data-testid="jev-key" />
+        {held && (
+          <button type="button" className="field-action" aria-label="Remove the TypeSafe key" title="Remove the key" onClick={() => void save('')} data-testid="jev-key-remove">
+            <CloseIcon />
+          </button>
+        )}
+      </div>
+      {error && (
+        <p className="field-error" role="alert">
+          {error}
+        </p>
+      )}
+      <p className="hint" data-testid="jev-key-state">
+        {held === null ? 'Hatch is checking for a key.' : held ? 'Hatch holds a key, encrypted with the Mac’s Keychain. Press Return to save a new one.' : 'Hatch needs a key from typesafe.ai before this works. Press Return to save it.'}
+      </p>
+    </form>
   );
 }
 

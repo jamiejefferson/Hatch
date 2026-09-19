@@ -2,6 +2,7 @@
 import { hatchAddress } from '@shared/project-address';
 import { getProxyPort, projectsState } from '../servers/manager';
 import { HatchError, type PageSession } from './session';
+import { describeChanges } from './changes';
 import { buildOutline, findInOutline, renderOutline, type AxNode, type OutlineLine } from './snapshot';
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -135,12 +136,23 @@ async function settle(page: PageSession, work: Promise<unknown>): Promise<void> 
   off();
 }
 
-async function afterAction(page: PageSession, before: string): Promise<string> {
+/** The agent view as it stood before an action. A page that cannot be read yields nothing, and the reply then leaves the changes out. */
+const viewBefore = (page: PageSession, seen?: OutlineLine[]): Promise<OutlineLine[] | null> => (seen ? Promise.resolve(seen) : outlineOf(page).catch(() => null));
+
+/** A new page arrives with the top of its outline, which is what the agent asks for next. */
+const NEW_PAGE_CHARS = 4000;
+
+async function afterAction(page: PageSession, before: string, seen: OutlineLine[] | null): Promise<string> {
   await sleep(250);
   if (page.dialog) return ` The page opened a ${page.dialog.kind} dialog: ${JSON.stringify(page.dialog.message)}. Answer it with handle_dialog.`;
   if (page.loading) await waitForLoad(page, 10_000);
   const now = page.guest.getURL();
-  return now !== before ? ` The page is now ${await addressOf(page)} (${JSON.stringify(page.guest.getTitle())}). Earlier references no longer apply.` : '';
+  const after = await outlineOf(page).catch(() => null);
+  if (now !== before) {
+    const moved = ` The page is now ${await addressOf(page)} (${JSON.stringify(page.guest.getTitle())}). Earlier references no longer apply.`;
+    return after ? `${moved} Its agent view starts:\n${renderOutline(after, NEW_PAGE_CHARS)}`.trimEnd() : moved;
+  }
+  return seen && after ? ` ${describeChanges(seen, after)}` : '';
 }
 
 export function waitForLoad(page: PageSession, timeoutMs: number): Promise<boolean> {
@@ -156,8 +168,9 @@ export function waitForLoad(page: PageSession, timeoutMs: number): Promise<boole
   });
 }
 
-export async function click(page: PageSession, ref: string, options: { double?: boolean } = {}): Promise<string> {
+export async function click(page: PageSession, ref: string, options: { double?: boolean; seen?: OutlineLine[] } = {}): Promise<string> {
   ensureNoDialog(page);
+  const seen = await viewBefore(page, options.seen);
   const { x, y } = await locate(page, ref, 'click');
   const before = page.guest.getURL();
   const base = { x, y, button: 'left', clickCount: options.double ? 2 : 1 };
@@ -167,7 +180,7 @@ export async function click(page: PageSession, ref: string, options: { double?: 
     await page.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...base });
   })();
   await settle(page, work);
-  return `Clicked ${ref}.${await afterAction(page, before)}`;
+  return `Clicked ${ref}.${await afterAction(page, before, seen)}`;
 }
 
 export async function hover(page: PageSession, ref: string): Promise<string> {
@@ -297,12 +310,13 @@ async function key(page: PageSession, combo: string): Promise<void> {
   await page.evaluate('0', 400).catch(() => {});
 }
 
-export async function pressKey(page: PageSession, combo: string, ref?: string): Promise<string> {
+export async function pressKey(page: PageSession, combo: string, ref?: string, known?: OutlineLine[]): Promise<string> {
   ensureNoDialog(page);
+  const seen = await viewBefore(page, known);
   if (ref) await call(page, await objectFor(page, ref), 'function () { this.focus(); }');
   const before = page.guest.getURL();
   await settle(page, key(page, combo));
-  return `Pressed ${combo}.${await afterAction(page, before)}`;
+  return `Pressed ${combo}.${await afterAction(page, before, seen)}`;
 }
 
 export async function scroll(page: PageSession, options: { ref?: string; to?: 'top' | 'bottom'; dy?: number }): Promise<string> {

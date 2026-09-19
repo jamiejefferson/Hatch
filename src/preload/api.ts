@@ -56,6 +56,10 @@ export interface HatchApi {
   removeLink(id: string): Promise<SavedLink[]>;
   getSettings(): Promise<Settings>;
   setSettings(settings: Partial<Settings>): Promise<Settings>;
+  /** Whether Hatch holds a TypeSafe key. The key itself never comes back to the interface. */
+  hasJevKey(): Promise<boolean>;
+  /** Saves the key, or removes it when the text is empty. */
+  setJevKey(key: string): Promise<{ ok: true; value: boolean } | { ok: false; error: string }>;
   copyText(text: string): Promise<void>;
   /** Puts an element's markup on the clipboard in the form Paper pastes as editable layers. Resolves to the payload's length. */
   copyForPaper(html: string): Promise<number>;
