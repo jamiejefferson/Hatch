@@ -59,7 +59,13 @@ test('the user pins a comment to an element, and it lands in the project folder'
   const frame = (await win.locator('webview').boundingBox())!;
   const zoom = frame.width / 960;
   await win.getByTestId(`pick-${hatchId}`).click({ position: { x: 60 * zoom, y: 40 * zoom } });
-  await win.getByTestId('composer').fill('Make this heading say "Launch week".');
+  // The box grows when a long message wraps, and shrinks again for a short one.
+  const composer = win.getByTestId('composer');
+  const oneLine = (await composer.boundingBox())!.height;
+  await composer.fill('This heading reads well on a wide screen and wraps badly on a narrow one. '.repeat(3));
+  expect((await composer.boundingBox())!.height).toBeGreaterThan(oneLine * 2);
+  await composer.fill('Make this heading say "Launch week".');
+  expect((await composer.boundingBox())!.height).toBe(oneLine);
   await win.getByTestId('composer').press('Enter');
 
   const pin = win.getByTestId('pin-1');

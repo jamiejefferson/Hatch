@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { authorLabel, USER, type Anchor, type CommentThread } from '@shared/comments';
 import type { Rect } from '@shared/geometry';
 import type { Hatch } from '@shared/types';
@@ -257,9 +257,21 @@ function Thread({ hatchId, thread, style, orphan }: { hatchId: string; thread: C
   );
 }
 
+// Six lines of 18 px, the padding and the border.
+const COMPOSER_MAX = 6 * 18 + 12 + 2;
+
 function Composer({ placeholder, button, initial = '', autoFocus, onSend, onCancel }: { placeholder?: string; button: string; initial?: string; autoFocus?: boolean; onSend(text: string): Promise<boolean>; onCancel?(): void }) {
   const [text, setText] = useState(initial);
   const [sending, setSending] = useState(false);
+  const box = useRef<HTMLTextAreaElement>(null);
+  // The box grows with its text, wrapped lines included, up to six lines. Past that it scrolls.
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    const edges = el.offsetHeight - el.clientHeight;
+    el.style.height = `${Math.min(el.scrollHeight + edges, COMPOSER_MAX)}px`;
+  }, [text]);
   const send = async (): Promise<void> => {
     if (!text.trim() || sending) return;
     setSending(true);
@@ -276,10 +288,11 @@ function Composer({ placeholder, button, initial = '', autoFocus, onSend, onCanc
       }}
     >
       <textarea
+        ref={box}
         value={text}
         placeholder={placeholder}
         aria-label={placeholder ?? 'Message'}
-        rows={Math.min(6, Math.max(1, text.split('\n').length))}
+        rows={1}
         autoFocus={autoFocus}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
