@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { parseAddress } from '@shared/address';
-import { CloseIcon, ProjectsIcon } from '../icons';
+import { CheckIcon, CloseIcon, ProjectsIcon } from '../icons';
 import { ConnectSteps } from '../shell/Connect';
 import { actions, useStore } from '../state/store';
 
@@ -82,10 +82,8 @@ export function SettingsPanel() {
       <p className="hint">Switched off, Hatch shows the agent's reason and then switches.</p>
       <Switch label="Let agents run script in pages" checked={settings.allowEvaluate} onChange={(v) => void actions.updateSettings({ allowEvaluate: v })} />
       <p className="hint">Agents read and operate pages without this. Switch it on for an agent you trust with the pages you open.</p>
-      <Switch label="Let Hatch find elements from a description" checked={settings.describeElements} onChange={(v) => void actions.updateSettings({ describeElements: v })} />
-      <p className="hint">An agent names an element in plain words and Hatch acts in one call, which saves the agent a step. Hatch sends the page's outline to TypeSafe, a service outside this Mac, each time. A page where Hatch filled a saved sign-in is never sent.</p>
-      {settings.describeElements && <JevKey />}
     </section>
+    <JevSection />
     <section>
       <h2>Data</h2>
       <button className="text-button underline left" onClick={() => void window.hatch.openDataFolder()}>
@@ -123,45 +121,70 @@ function FolderRow({ label, value, fallback, onChange, testid }: { label: string
   );
 }
 
-function JevKey() {
+function JevSection() {
+  const on = useStore((s) => s.settings.describeElements);
   const [held, setHeld] = useState<boolean | null>(null);
   const [text, setText] = useState('');
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
   useEffect(() => void window.hatch.hasJevKey().then(setHeld), []);
+  const connected = held === true && on;
 
-  const save = async (value: string): Promise<void> => {
-    const result = await window.hatch.setJevKey(value);
-    setError(result.ok ? null : result.error);
-    if (!result.ok) return;
-    setHeld(result.value);
+  const connect = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    if (!text.trim() || saving) return;
+    setSaving(true);
+    setError(null);
+    const result = await window.hatch.setJevKey(text);
+    setSaving(false);
+    if (!result.ok) return setError(result.error);
+    await actions.updateSettings({ describeElements: true });
+    setHeld(true);
     setText('');
+    setJustSaved(true);
+  };
+
+  const disconnect = async (): Promise<void> => {
+    await window.hatch.setJevKey('');
+    await actions.updateSettings({ describeElements: false });
+    setHeld(false);
+    setJustSaved(false);
   };
 
   return (
-    <form
-      noValidate
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (text.trim()) void save(text);
-      }}
-    >
-      <div className={`field${error ? ' invalid' : ''}`}>
-        <input type="password" aria-label="TypeSafe key" placeholder={held ? 'Hatch holds a key. Paste a new one to replace it.' : 'Paste a TypeSafe key'} spellCheck={false} autoComplete="off" value={text} onChange={(e) => setText(e.target.value)} data-testid="jev-key" />
-        {held && (
-          <button type="button" className="field-action" aria-label="Remove the TypeSafe key" title="Remove the key" onClick={() => void save('')} data-testid="jev-key-remove">
-            <CloseIcon />
+    <section data-testid="jev">
+      <h2>Connect Jev</h2>
+      <p className="hint">Jev helps your agent browse faster. Your agent says what it wants, such as "the button that refuses cookies", and Jev finds it on the page, usually in under a second.</p>
+      {connected ? (
+        <>
+          <p className="said-ok" role="status" data-testid="jev-connected">
+            <CheckIcon size={14} />
+            {justSaved ? 'Your key is saved and Jev is connected.' : 'Jev is connected.'}
+          </p>
+          <p className="hint">Your agent uses Jev from its next action. Hatch keeps the key locked in this Mac's Keychain.</p>
+          <button type="button" className="button left" onClick={() => void disconnect()} data-testid="jev-disconnect">
+            Disconnect Jev
           </button>
-        )}
-      </div>
-      {error && (
-        <p className="field-error" role="alert">
-          {error}
-        </p>
+        </>
+      ) : (
+        <form onSubmit={(e) => void connect(e)} noValidate>
+          <div className={`field${error ? ' invalid' : ''}`}>
+            <input type="password" aria-label="Jev key" placeholder="Paste your Jev key" spellCheck={false} autoComplete="off" value={text} onChange={(e) => setText(e.target.value)} data-testid="jev-key" />
+          </div>
+          {error && (
+            <p className="field-error" role="alert" data-testid="jev-error">
+              {error}
+            </p>
+          )}
+          <button type="submit" className="button primary left" disabled={saving || !text.trim()} data-testid="jev-save">
+            {saving ? 'Checking the key…' : 'Save and connect'}
+          </button>
+          <p className="hint">Jev comes from TypeSafe. You get a key at typesafe.ai.</p>
+        </form>
       )}
-      <p className="hint" data-testid="jev-key-state">
-        {held === null ? 'Hatch is checking for a key.' : held ? 'Hatch holds a key, encrypted with the Mac’s Keychain. Press Return to save a new one.' : 'Hatch needs a key from typesafe.ai before this works. Press Return to save it.'}
-      </p>
-    </form>
+      <p className="hint">To find things, Hatch sends Jev a text outline of the page your agent is working on. A page where Hatch filled one of your saved sign-ins is never sent.</p>
+    </section>
   );
 }
 

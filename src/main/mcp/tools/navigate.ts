@@ -70,7 +70,7 @@ export const navigateTools = [
       text: z.string().optional().describe('Wait until the page shows this text.'),
       text_gone: z.string().optional().describe('Wait until the page no longer shows this text.'),
       url_contains: z.string().optional().describe('Wait until the address contains this string.'),
-      until: z.string().min(2).max(300).optional().describe('Wait until a statement about the page holds, in plain words, such as "the search results are showing". It needs the user\'s setting "Let Hatch find elements from a description". Pass it alone.'),
+      until: z.string().min(2).max(300).optional().describe('Wait until a statement about the page holds, in plain words, such as "the search results are showing". It works once the user has connected Jev in Settings. Pass it alone.'),
       timeout_s: timeoutS(30),
       hatch,
       intent,

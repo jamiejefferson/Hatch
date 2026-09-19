@@ -56,7 +56,7 @@ export interface HatchApi {
   removeLink(id: string): Promise<SavedLink[]>;
   getSettings(): Promise<Settings>;
   setSettings(settings: Partial<Settings>): Promise<Settings>;
-  /** Whether Hatch holds a TypeSafe key. The key itself never comes back to the interface. */
+  /** Whether Hatch holds a Jev key. The key itself never comes back to the interface. */
   hasJevKey(): Promise<boolean>;
   /** Saves the key, or removes it when the text is empty. */
   setJevKey(key: string): Promise<{ ok: true; value: boolean } | { ok: false; error: string }>;

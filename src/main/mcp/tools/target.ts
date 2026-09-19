@@ -8,7 +8,7 @@ import { candidatesIn, holds, holdsRequest, readAnswers, requestFor, SURE, tooMa
 import { settingsStore } from '../../store/stores';
 
 export const optionalRef = z.string().optional().describe('Element reference from the agent view, such as e12. Pass ref or target.');
-export const target = z.string().min(2).max(300).optional().describe('The element in plain words, such as "the button that refuses optional cookies". Hatch finds it and acts in one call, which saves a snapshot. It needs the user\'s setting "Let Hatch find elements from a description"; status says whether it is on. Pass ref or target.');
+export const target = z.string().min(2).max(300).optional().describe('The element in plain words, such as "the button that refuses optional cookies". Hatch finds it and acts in one call, which saves a snapshot. It works once the user has connected Jev in Settings; status says whether it is on. Pass ref or target.');
 
 export interface Found { ref: string; /** How Hatch names its pick in the reply, or nothing for a plain reference. */ said: string; seen?: OutlineLine[] }
 
@@ -16,7 +16,7 @@ const percent = (p: number): string => p.toFixed(2);
 
 /** Every question to Jev passes this gate: the user's setting, and no page that holds a filled sign-in. */
 async function ensureDescribing(page: PageSession): Promise<void> {
-  if (!(await settingsStore.read()).describeElements) throw new HatchError('Finding an element from a description is switched off. The user can switch it on in Hatch under Settings. Until then, call snapshot and pass ref.');
+  if (!(await settingsStore.read()).describeElements) throw new HatchError('Jev is not connected, so Hatch cannot find an element from a description. The user connects it in Hatch under Settings, in "Connect Jev". Until then, call snapshot and pass ref.');
   if (page.tainted) throw new HatchError('Hatch filled a saved sign-in on this page, so no part of the page leaves the Mac until it navigates. Call snapshot and pass ref.');
 }
 

@@ -18,17 +18,30 @@ export async function setKey(key: string): Promise<boolean> {
     return false;
   }
   if (!safeStorage.isEncryptionAvailable()) throw new HatchError('macOS refused Hatch access to the Keychain, so Hatch cannot store the key safely.');
+  await checkKey(value);
   await store.write({ key: safeStorage.encryptString(value).toString('base64') });
   return true;
 }
 
+/** One small question proves the key works, so the user hears about a mistyped key now and the agent never does. */
+async function checkKey(key: string): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(jevUrl(), { method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ state: 'Hello.', model: 'jev-latest', questions: { check: { type: 'noul', instructions: 'Is this a greeting?' } } }), signal: AbortSignal.timeout(8000) });
+  } catch {
+    throw new HatchError('Hatch could not reach Jev to check the key. Check the internet connection and try again.');
+  }
+  if (res.status === 401 || res.status === 403) throw new HatchError('Jev did not accept that key. Check it and paste it again.');
+  if (!res.ok) throw new HatchError(`Jev could not check the key just now (status ${res.status}). Try again in a moment.`);
+}
+
 async function keyValue(): Promise<string> {
   const cipher = (await store.read()).key;
-  if (!cipher) throw new HatchError('Hatch holds no TypeSafe key, so it cannot find an element from a description. The user adds one in Hatch under Settings. Until then, call snapshot and pass ref.');
+  if (!cipher) throw new HatchError('Jev is not connected, so Hatch cannot find an element from a description. The user connects it in Hatch under Settings, in "Connect Jev". Until then, call snapshot and pass ref.');
   try {
     return safeStorage.decryptString(Buffer.from(cipher, 'base64'));
   } catch {
-    throw new HatchError('Hatch could not unlock the TypeSafe key from the Keychain. The user saves it again in Hatch under Settings. Until then, call snapshot and pass ref.');
+    throw new HatchError('Hatch could not unlock the Jev key from the Keychain. The user connects Jev again in Hatch under Settings. Until then, call snapshot and pass ref.');
   }
 }
 
@@ -40,7 +53,7 @@ export async function askJev(request: JevRequest, timeoutMs = 8000): Promise<Rec
   } catch {
     throw new HatchError(`TypeSafe gave no answer within ${Math.round(timeoutMs / 1000)} seconds. Call snapshot and pass ref.`);
   }
-  if (res.status === 401 || res.status === 403) throw new HatchError('TypeSafe refused the key saved in Hatch. The user checks it in Hatch under Settings. Until then, call snapshot and pass ref.');
+  if (res.status === 401 || res.status === 403) throw new HatchError('Jev refused the key saved in Hatch. The user connects Jev again in Hatch under Settings. Until then, call snapshot and pass ref.');
   if (!res.ok) throw new HatchError(`TypeSafe answered with status ${res.status}. Call snapshot and pass ref.`);
   const body = (await res.json().catch(() => null)) as { answers?: Record<string, ChoiceAnswer> } | null;
   if (!body?.answers) throw new HatchError('TypeSafe sent an answer Hatch could not read. Call snapshot and pass ref.');

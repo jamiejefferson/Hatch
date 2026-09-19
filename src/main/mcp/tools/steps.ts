@@ -10,11 +10,11 @@ const step = z
   .object({
     do: z.enum(['click', 'fill', 'select_option', 'hover', 'press_key', 'wait']).describe('The action.'),
     ref: z.string().optional().describe('Element reference, for click, fill, select_option and hover. Pass ref or target.'),
-    target: z.string().min(2).max(300).optional().describe('The element in plain words, which needs the user\'s setting for finding elements from a description.'),
+    target: z.string().min(2).max(300).optional().describe('The element in plain words, which works once the user has connected Jev in Settings.'),
     text: z.string().optional().describe('fill: the text the field should hold. wait: text the page must show.'),
     option: z.string().optional().describe('select_option: the option\'s label or value.'),
     key: z.string().optional().describe('press_key: the key or chord, such as Enter.'),
-    until: z.string().min(2).max(300).optional().describe('wait: a statement about the page in plain words, such as "the search results are showing". It needs the same setting as target.'),
+    until: z.string().min(2).max(300).optional().describe('wait: a statement about the page in plain words, such as "the search results are showing". It needs Jev connected, as target does.'),
     url_contains: z.string().optional().describe('wait: a string the address must contain.'),
     timeout_s: z.number().min(1).max(60).optional().describe('wait: seconds to wait. Default 15.'),
   })

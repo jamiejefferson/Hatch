@@ -17,6 +17,7 @@ function standInJev(rules: { when: RegExp; choose: string; confidence: number }[
     let body = '';
     req.on('data', (c) => (body += c));
     req.on('end', () => {
+      if (req.headers.authorization === 'Bearer wrong-key') return void res.writeHead(401).end('{}');
       const request = JSON.parse(body) as { state: string; questions: Record<string, { instructions: string; criteria?: Record<string, string> }> };
       const answers: Record<string, unknown> = {};
       for (const [id, q] of Object.entries(request.questions)) {
@@ -60,17 +61,17 @@ test('click and fill take a description, act when sure, and hold back when unsur
     // Switched off, the tool explains itself and nothing leaves the Mac.
     const off = await call('click', { target: 'open the documentation' });
     expect(off.isError).toBe(true);
-    expect(off.text).toContain('switched off');
+    expect(off.text).toContain('Jev is not connected');
     expect(jev.seen).toHaveLength(0);
 
     await win.evaluate('window.hatch.setSettings({ describeElements: true })');
     const keyless = await call('click', { target: 'open the documentation' });
-    expect(keyless.text).toContain('holds no TypeSafe key');
+    expect(keyless.text).toContain('Jev is not connected');
 
     expect(await win.evaluate("window.hatch.setJevKey('key-for-the-test')")).toEqual({ ok: true, value: true });
     expect(existsSync(join(home, 'jev.json'))).toBe(true);
     expect(readFileSync(join(home, 'jev.json'), 'utf8')).not.toContain('key-for-the-test');
-    expect((await call('status')).text).toContain('Finding elements from a description is on');
+    expect((await call('status')).text).toContain('Jev is connected');
 
     // Below the gate Hatch does nothing and hands back the closest elements.
     const unsure = await call('click', { target: 'start the cheapest plan' });
@@ -170,6 +171,36 @@ test('run_steps fills a form and sends it in one call, and stops where Hatch is 
   } finally {
     await app.close();
     await site.close();
+    await jev.close();
+  }
+});
+
+test('the user connects Jev with a Save button, hears about a wrong key, and can disconnect', async () => {
+  const jev = await standInJev([]);
+  const home = freshHome();
+  const { app, win } = await launch(home, 0, { HATCH_JEV_URL: jev.url });
+  try {
+    await win.getByRole('tab', { name: 'Settings' }).click();
+    const section = win.getByTestId('jev');
+    await expect(section.getByRole('heading', { name: 'Connect Jev' })).toBeVisible();
+    await expect(win.getByTestId('jev-save')).toBeDisabled();
+
+    await win.getByTestId('jev-key').fill('wrong-key');
+    await win.getByTestId('jev-save').click();
+    await expect(win.getByTestId('jev-error')).toHaveText('Jev did not accept that key. Check it and paste it again.');
+    expect(existsSync(join(home, 'jev.json'))).toBe(false);
+
+    await win.getByTestId('jev-key').fill('key-for-the-test');
+    await win.getByTestId('jev-save').click();
+    await expect(win.getByTestId('jev-connected')).toHaveText('Your key is saved and Jev is connected.');
+    await expect.poll(() => JSON.parse(readFileSync(join(home, 'settings.json'), 'utf8')).describeElements).toBe(true);
+    expect(readFileSync(join(home, 'jev.json'), 'utf8')).not.toContain('key-for-the-test');
+
+    await win.getByTestId('jev-disconnect').click();
+    await expect(win.getByTestId('jev-key')).toBeVisible();
+    await expect.poll(() => JSON.parse(readFileSync(join(home, 'settings.json'), 'utf8')).describeElements).toBe(false);
+  } finally {
+    await app.close();
     await jev.close();
   }
 });
