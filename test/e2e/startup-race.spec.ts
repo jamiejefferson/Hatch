@@ -8,7 +8,7 @@ import { freshHome, serveSite } from './helpers';
 test('a call that lands while Hatch is still starting opens its page', async () => {
   const site = await serveSite();
   const home = freshHome();
-  const starting = electron.launch({ args: ['.'], env: { ...process.env, HATCH_HOME: home, HATCH_MCP_PORT: '0', HATCH_PROXY_PORT: '0', HATCH_HIDDEN: '1', HATCH_GUIDE: '0' } as Record<string, string> });
+  const starting = electron.launch({ args: ['.'], env: { ...process.env, HATCH_HOME: home, HATCH_MCP_PORT: '0', HATCH_PROXY_PORT: '0', HATCH_HIDDEN: '1', HATCH_GUIDE: '0', HATCH_WELCOME: '0' } as Record<string, string> });
   try {
     // No wait for the window: the call goes out as soon as the lockfile names a port.
     await expect.poll(() => existsSync(join(home, 'server.json')), { timeout: 20_000, intervals: [10] }).toBe(true);

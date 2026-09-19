@@ -41,7 +41,7 @@ test('a busy port moves Hatch to the next one and says so', async () => {
   const held = await new Promise<boolean>((ok) => blocker.once('error', () => ok(false)).listen(42824, '127.0.0.1', () => ok(true)));
   const home = freshHome();
   const { _electron: electron } = await import('@playwright/test');
-  const env = { ...process.env, HATCH_HOME: home, HATCH_PROXY_PORT: '0', HATCH_HIDDEN: '1', HATCH_GUIDE: '0' } as Record<string, string>;
+  const env = { ...process.env, HATCH_HOME: home, HATCH_PROXY_PORT: '0', HATCH_HIDDEN: '1', HATCH_GUIDE: '0', HATCH_WELCOME: '0' } as Record<string, string>;
   delete env.HATCH_MCP_PORT;
   const app = await electron.launch({ args: ['.'], env });
   try {

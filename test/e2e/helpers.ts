@@ -45,7 +45,7 @@ export function serveSite(): Promise<{ url: string; close(): Promise<void> }> {
 export const freshHome = (): string => mkdtempSync(join(tmpdir(), 'hatch-e2e-'));
 
 export async function launch(home: string, mcpPort = 0, extraEnv: Record<string, string> = {}): Promise<{ app: ElectronApplication; win: Page }> {
-  const app = await electron.launch({ args: ['.'], env: { ...process.env, HATCH_HOME: home, HATCH_MCP_PORT: String(mcpPort), HATCH_PROXY_PORT: '0', HATCH_HIDDEN: process.env.HATCH_SHOW ? '' : '1', HATCH_GUIDE: '0', ...extraEnv } });
+  const app = await electron.launch({ args: ['.'], env: { ...process.env, HATCH_HOME: home, HATCH_MCP_PORT: String(mcpPort), HATCH_PROXY_PORT: '0', HATCH_HIDDEN: process.env.HATCH_SHOW ? '' : '1', HATCH_GUIDE: '0', HATCH_WELCOME: '0', ...extraEnv } });
   const win = await app.firstWindow();
   await win.waitForSelector('[data-testid="canvas"]');
   return { app, win };

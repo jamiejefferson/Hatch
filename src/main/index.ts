@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { app, BrowserWindow } from 'electron';
 import { setUpPagesSession } from './hatches/registry';
 import { flushOutbox } from './feedback/send';
+import { seedFirstRun } from './first-run';
 import { registerIpc } from './ipc';
 import { noteMcpError, startMcp, stopMcp } from './mcp/http';
 import { buildMenu } from './menu';
@@ -56,6 +57,7 @@ if (!app.requestSingleInstanceLock()) {
   void app.whenReady().then(() => {
     if (app.isPackaged) app.setAsDefaultProtocolClient('hatch');
     setUpPagesSession();
+    seedFirstRun();
     registerIpc();
     registerRpcReplies();
     void startProxy()
