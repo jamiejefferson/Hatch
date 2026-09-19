@@ -6,6 +6,7 @@ import { callInterface } from '../../renderer-rpc';
 import { settingsStore } from '../../store/stores';
 import { openHatch } from './hatches';
 import { onPage } from './page';
+import { waitUntil } from './target';
 import { resolveTarget } from './resolve';
 import { hatch, intent, shortAddress, timeoutS, tool } from './types';
 
@@ -69,6 +70,7 @@ export const navigateTools = [
       text: z.string().optional().describe('Wait until the page shows this text.'),
       text_gone: z.string().optional().describe('Wait until the page no longer shows this text.'),
       url_contains: z.string().optional().describe('Wait until the address contains this string.'),
+      until: z.string().min(2).max(300).optional().describe('Wait until a statement about the page holds, in plain words, such as "the search results are showing". It needs the user\'s setting "Let Hatch find elements from a description". Pass it alone.'),
       timeout_s: timeoutS(30),
       hatch,
       intent,
@@ -77,6 +79,11 @@ export const navigateTools = [
     summary: (a) => `wait_for ${a.text ? JSON.stringify(a.text) : a.text_gone ? `gone ${JSON.stringify(a.text_gone)}` : (a.url_contains ?? 'load')}`,
     async run(a, ctx) {
       return onPage(ctx, a.hatch, async (page) => {
+        if (a.until) {
+          if (a.text || a.text_gone || a.url_contains) throw new HatchError('Pass until alone, or pass text, text_gone and url_contains.');
+          const described = await waitUntil(page, a.until, a.timeout_s * 1000);
+          return `${described.detail} The page is ${await addressOf(page)}.`;
+        }
         let lastTick = 0;
         const result = await waitFor(page, { text: a.text, text_gone: a.text_gone, url_contains: a.url_contains }, a.timeout_s * 1000, (elapsed) => {
           if (elapsed - lastTick < 5000) return;

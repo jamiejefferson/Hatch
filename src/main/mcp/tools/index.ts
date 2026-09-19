@@ -7,7 +7,8 @@ import { navigateTools } from './navigate';
 import { linkTools, projectTools } from './projects';
 import { readTools } from './read';
 import { sessionTools } from './session';
+import { stepTools } from './steps';
 import type { Tool } from './types';
 
 /** The tool list is static. A tool that a setting switches off stays listed and explains itself when called. */
-export const TOOLS: Tool[] = [...sessionTools, ...hatchTools, ...navigateTools, ...readTools, ...extractTools, ...actTools, ...projectTools, ...linkTools, ...commentTools, ...credentialTools];
+export const TOOLS: Tool[] = [...sessionTools, ...hatchTools, ...navigateTools, ...readTools, ...extractTools, ...actTools, ...stepTools, ...projectTools, ...linkTools, ...commentTools, ...credentialTools];

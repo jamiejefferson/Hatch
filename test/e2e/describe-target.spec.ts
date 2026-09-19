@@ -4,7 +4,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { expect, test } from '@playwright/test';
-import { freshHome, launch, serveSite } from './helpers';
+import { freshHome, inPages, launch, serveSite } from './helpers';
+
+const inPagesValue = async (app: Parameters<typeof inPages>[0], js: string): Promise<string> => (await inPages<string>(app, js))[0]!;
 
 interface Seen { auth: string; state: string; options: string[]; instructions: string }
 
@@ -15,9 +17,15 @@ function standInJev(rules: { when: RegExp; choose: string; confidence: number }[
     let body = '';
     req.on('data', (c) => (body += c));
     req.on('end', () => {
-      const request = JSON.parse(body) as { state: string; questions: Record<string, { instructions: string; criteria: Record<string, string> }> };
+      const request = JSON.parse(body) as { state: string; questions: Record<string, { instructions: string; criteria?: Record<string, string> }> };
       const answers: Record<string, unknown> = {};
       for (const [id, q] of Object.entries(request.questions)) {
+        if (!q.criteria) {
+          // A yes-or-no question holds once the page's outline carries the words in its rule.
+          const rule = rules.find((r) => r.when.test(q.instructions));
+          answers[id] = { type: 'noul', noul: rule && request.state.includes(rule.choose) ? rule.confidence : 0.03 };
+          continue;
+        }
         seen.push({ auth: String(req.headers.authorization), state: request.state, options: Object.values(q.criteria), instructions: q.instructions });
         const rule = rules.find((r) => r.when.test(q.instructions));
         const ref = rule && Object.entries(q.criteria).find(([, text]) => text.includes(rule.choose))?.[0];
@@ -111,5 +119,57 @@ test('a click by reference says what changed in the agent view', async () => {
   } finally {
     await app.close();
     await site.close();
+  }
+});
+
+test('run_steps fills a form and sends it in one call, and stops where Hatch is unsure', async () => {
+  const site = await serveSite();
+  const jev = await standInJev([
+    { when: /email address/, choose: 'textbox "Email"', confidence: 0.96 },
+    { when: /password field/, choose: 'textbox "Password"', confidence: 0.94 },
+    { when: /account page is showing/, choose: 'heading 1 "Your account"', confidence: 0.93 },
+    { when: /somewhere vague/, choose: 'button "Sign in"', confidence: 0.4 },
+  ]);
+  const home = freshHome();
+  const { app, win } = await launch(home, 0, { HATCH_JEV_URL: jev.url });
+  const { url } = JSON.parse(readFileSync(join(home, 'server.json'), 'utf8'));
+  const agent = new Client({ name: 'stepper', version: '1.0.0' });
+  await agent.connect(new StreamableHTTPClientTransport(new URL(`${url}?agent=stepper`)));
+  const call = async (name: string, args: Record<string, unknown> = {}): Promise<string> => ((await agent.callTool({ name, arguments: args })) as { content: { text: string }[] }).content[0]!.text;
+
+  try {
+    await win.evaluate('window.hatch.setSettings({ describeElements: true })');
+    await win.evaluate("window.hatch.setJevKey('key-for-the-test')");
+    await call('navigate', { to: `${site.url}/login.html` });
+
+    // An unsure step stops the run, and the steps before it stay done.
+    const halted = await call('run_steps', { steps: [{ do: 'fill', target: 'the email address field', text: 'sam@studio.example' }, { do: 'click', target: 'somewhere vague' }, { do: 'press_key', key: 'Enter' }] });
+    expect(halted).toMatch(/^Ran 1 of 3 steps\./);
+    expect(halted).toContain('Hatch stopped at step 2 of 3 (click)');
+    expect(halted).toContain('not sure');
+    expect((await inPagesValue(app, `document.querySelector('[name=email]').value`))).toBe('sam@studio.example');
+
+    const done = await call('run_steps', {
+      steps: [
+        { do: 'fill', target: 'the email address field', text: 'kim@studio.example' },
+        { do: 'fill', target: 'the password field', text: 'open-sesame' },
+        { do: 'press_key', key: 'Enter' },
+        { do: 'wait', until: 'the account page is showing' },
+      ],
+    });
+    expect(done).toMatch(/^Ran all 4 steps\./);
+    expect(done).toContain('1. Hatch chose textbox "Email"');
+    expect(done).toContain('"the account page is showing" holds');
+    expect(done).toContain('Its agent view starts:');
+    expect(done).toContain('heading 1 "Your account"');
+
+    // wait_for takes the same kind of statement on its own.
+    expect(await call('wait_for', { until: 'the account page is showing', timeout_s: 5 })).toContain('holds after');
+    // A step with a missing argument stops the run with a plain reason.
+    expect(await call('run_steps', { steps: [{ do: 'fill', ref: 'e1' }] })).toContain('A fill step needs text.');
+  } finally {
+    await app.close();
+    await site.close();
+    await jev.close();
   }
 });

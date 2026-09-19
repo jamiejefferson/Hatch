@@ -38,7 +38,7 @@ export const sessionTools = [
         lines.push(`- ${h.id}  ${JSON.stringify(h.title || '(no title yet)')}  ${h.url}  ${h.width} × ${h.height}${notes.length ? `  (${notes.join(', ')})` : ''}`);
       }
       if (ctx.agent.id.startsWith(UNNAMED)) lines.push('You connected with no name, so Hatch named you after your app. Two sessions of one app would then share this tab. Add ?agent=<your-name> to the address, or set HATCH_AGENT for the command.');
-      if ((await settingsStore.read()).describeElements && (await hasKey())) lines.push('Finding elements from a description is on: click, fill, select_option and hover take target in plain words in place of ref, which saves you a snapshot.');
+      if ((await settingsStore.read()).describeElements && (await hasKey())) lines.push('Finding elements from a description is on: click, fill, select_option, hover and the steps of run_steps take target in plain words in place of ref, which saves you a snapshot. wait_for takes until in plain words.');
       lines.push(`Activity log: ${logPath()}`);
       return lines.join('\n');
     },
