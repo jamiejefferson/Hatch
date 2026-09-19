@@ -13,10 +13,10 @@ test('a page and its pop-up see a plain Chrome user agent', async () => {
 
     // The pop-up opens for a Hatch in Fit to view.
     await win.getByRole('button', { name: 'Fit to view' }).first().click();
-    await expect.poll(() => inPages<boolean>(app, `!!window.open('/popup-provider.html', 'provider', 'width=480,height=600')`).then((r) => r[0])).toBe(true);
+    await expect.poll(() => inPages<boolean>(app, `!!window.open('/popup-provider.html?stay', 'provider', 'width=480,height=600')`).then((r) => r[0])).toBe(true);
     await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(2);
-    const popupUa = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((w) => w.webContents).find((wc) => wc.getURL().includes('popup-provider'))!.getUserAgent());
-    expect(popupUa).toBe(pageUa);
+    // The window exists before its address does, so the check waits for the pop-up's page. The pop-up stays open, because one that closes itself may be gone before the check reads it.
+    await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((w) => w.webContents).find((wc) => wc.getURL().includes('popup-provider'))?.getUserAgent() ?? '')).toBe(pageUa);
   } finally {
     await app.close();
     await site.close();

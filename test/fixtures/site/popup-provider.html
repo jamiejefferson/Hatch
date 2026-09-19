@@ -8,8 +8,9 @@
     <h1>Provider</h1>
     <script>
       // The provider answers the page that opened it, then closes, as an OAuth pop-up does.
+      // With ?stay it stays open, for a test that reads the pop-up itself.
       window.opener?.postMessage('sam@studio.example', '*');
-      window.close();
+      if (location.search !== '?stay') window.close();
     </script>
   </body>
 </html>
