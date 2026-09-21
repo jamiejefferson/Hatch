@@ -8,7 +8,7 @@ import { hatchAddress, projectOf, projectUrl, PROXY_PORT } from '@shared/project
 import type { Anchor, CommentStatus, PageComments } from '@shared/comments';
 import type { ConsentAnswer, ConsentRequest, SignIn } from '@shared/signins';
 import type { ConnectionInfo, Outcome } from '../../../preload/api';
-import type { ProjectsState, ActivityEntry, AgentWorkState, DialogState, Hatch, HatchView, InterfaceState, SavedLink, Settings, Tab, TemplateId, ViewRequest, Workspace } from '@shared/types';
+import type { ProjectsState, ActivityEntry, AgentAct, AgentWorkState, DialogState, Hatch, HatchView, InterfaceState, SavedLink, Settings, Tab, TemplateId, ViewRequest, Workspace } from '@shared/types';
 import { DEFAULT_SETTINGS } from '@shared/types';
 import { emptyTab, emptyWorkspace, newId } from '@shared/workspace';
 
@@ -33,6 +33,8 @@ export interface State {
   load: Record<string, LoadState>;
   activity: ActivityEntry[];
   work: AgentWorkState;
+  /** The element an agent last acted on in each Hatch, which the Hatch marks for a moment. */
+  acts: Record<string, AgentAct & { at: number }>;
   logPath: string;
   mcpPort: number | null;
   /** An agent's open request to switch a Hatch's view, by Hatch id. */
@@ -91,6 +93,7 @@ let state: State = {
   load: {},
   activity: [],
   work: { tabs: {}, hatches: {} },
+  acts: {},
   logPath: '',
   mcpPort: null,
   viewRequests: {},
@@ -168,6 +171,9 @@ export function flushSave(): void {
 
 let markBooted: () => void = () => {};
 /** Settles once the saved workspace has loaded. A call that arrived earlier would change a workspace that boot then replaces. */
+/** How long the mark on an element stays after an agent acts on it. */
+export const ACT_MS = 1800;
+
 const booted = new Promise<void>((resolve) => (markBooted = resolve));
 
 export async function boot(): Promise<void> {
@@ -190,6 +196,12 @@ export function listen(): () => void {
       }),
     ),
     window.hatch.on('agents:work', (work) => set({ work })),
+    window.hatch.on('agent:act', (act) => {
+      const at = Date.now();
+      set((s) => ({ acts: { ...s.acts, [act.hatchId]: { ...act, at } } }));
+      // The mark fades on its own, and a newer action keeps its own mark.
+      setTimeout(() => set((s) => (s.acts[act.hatchId]?.at === at ? { acts: Object.fromEntries(Object.entries(s.acts).filter(([id]) => id !== act.hatchId)) } : {})), ACT_MS);
+    }),
     window.hatch.on('page:escape', (hatchId) => actions.escape(hatchId)),
     window.hatch.on('popup:blocked', ({ hatchId, url }) => set((s) => ({ popups: { ...s.popups, [hatchId]: { url } } }))),
     window.hatch.on('page:changed', (hatchId) => set((s) => ({ pageVersion: { ...s.pageVersion, [hatchId]: (s.pageVersion[hatchId] ?? 0) + 1 } }))),

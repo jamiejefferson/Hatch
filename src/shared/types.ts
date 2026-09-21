@@ -91,7 +91,16 @@ export interface ActivityEntry {
 /** Which tabs and Hatches an agent is working in right now. */
 export interface AgentWorkState {
   tabs: Record<string, { agent: string; intent: string }>;
-  hatches: Record<string, true>;
+  /** Each Hatch an agent is using, with who uses it, the purpose the agent gave and the step a run has reached. */
+  hatches: Record<string, { agent: string; intent: string; doing: string }>;
+}
+
+/** One action an agent took on a page, which the interface marks on the Hatch for a moment. The box is in the page's own pixels. */
+export interface AgentAct {
+  hatchId: string;
+  kind: 'click' | 'fill' | 'hover';
+  ref: string;
+  box: { x: number; y: number; width: number; height: number };
 }
 
 /** What the main process reads from the interface before it routes an agent's call. */

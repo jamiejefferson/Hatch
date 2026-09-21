@@ -19,6 +19,8 @@ export interface Agent {
   running: number;
   finished: boolean;
   intent: string;
+  /** The step a long tool has reached, such as a jev_run step. It clears when the call ends. */
+  doing: string;
 }
 
 const agents = new Map<string, Agent>();
@@ -41,7 +43,7 @@ export function identify(request: Request | undefined): string {
 export function agentFor(id: string): Agent {
   let agent = agents.get(id);
   if (!agent) {
-    agent = { id, tabId: null, hatchId: null, lastCall: 0, running: 0, finished: false, intent: '' };
+    agent = { id, tabId: null, hatchId: null, lastCall: 0, running: 0, finished: false, intent: '', doing: '' };
     agents.set(id, agent);
   }
   return agent;
@@ -119,7 +121,7 @@ export function workState(): AgentWorkState {
     const working = !a.finished && (a.running > 0 || now - a.lastCall < WORKING_IDLE_MS);
     if (!working || !a.tabId) continue;
     state.tabs[a.tabId] = { agent: a.id, intent: a.intent };
-    if (a.hatchId) state.hatches[a.hatchId] = true;
+    if (a.hatchId) state.hatches[a.hatchId] = { agent: a.id, intent: a.intent, doing: a.doing };
   }
   return state;
 }
@@ -149,6 +151,13 @@ export function callStarted(agent: Agent, intent: string | undefined): void {
 export function callEnded(agent: Agent): void {
   agent.running = Math.max(0, agent.running - 1);
   agent.lastCall = Date.now();
+  if (agent.running === 0) agent.doing = '';
+  publishWork();
+}
+
+/** A long tool says which step it has reached, and the Hatch shows it while the call runs. */
+export function nowDoing(agent: Agent, doing: string): void {
+  agent.doing = doing.slice(0, 140);
   publishWork();
 }
 

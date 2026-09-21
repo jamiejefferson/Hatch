@@ -49,7 +49,9 @@ function noticeBox(screen: Rect, canvasWidth: number): { left: number; top: numb
 export function HatchOverlay({ tabId, hatch, size, screen, zoom, selected, docked }: Props) {
   const [hover, setHover] = useState(false);
   const load = useStore((s) => loadStateOf(s, hatch.id));
-  const working = useStore((s) => s.work.hatches[hatch.id] === true);
+  const work = useStore((s) => s.work.hatches[hatch.id]);
+  const working = work !== undefined;
+  const act = useStore((s) => s.acts[hatch.id]);
   const request = useStore((s) => s.viewRequests[hatch.id]);
   const dialog = useStore((s) => s.dialogs[hatch.id]);
   const consent = useStore((s) => s.consents[hatch.id]);
@@ -76,7 +78,7 @@ export function HatchOverlay({ tabId, hatch, size, screen, zoom, selected, docke
     });
   };
 
-  const act = (run: () => void) => (): void => {
+  const run = (run: () => void) => (): void => {
     actions.select(id);
     run();
   };
@@ -87,10 +89,10 @@ export function HatchOverlay({ tabId, hatch, size, screen, zoom, selected, docke
 
   const header = docked ? null : selected && (!compact || hover) ? (
     <div className="hatch-bar" style={barBox(screen)} onPointerDown={move} onPointerLeave={() => setHover(false)} onContextMenu={menu} data-testid={`header-${id}`}>
-      <button className="round small quiet" aria-label="Back" title="Back" disabled={!load.canGoBack} onClick={act(() => pages.back(id))}>
+      <button className="round small quiet" aria-label="Back" title="Back" disabled={!load.canGoBack} onClick={run(() => pages.back(id))}>
         <BackIcon size={14} />
       </button>
-      <button className="round small quiet" aria-label="Forward" title="Forward" disabled={!load.canGoForward} onClick={act(() => pages.forward(id))}>
+      <button className="round small quiet" aria-label="Forward" title="Forward" disabled={!load.canGoForward} onClick={run(() => pages.forward(id))}>
         <ForwardIcon size={14} />
       </button>
       {working && <span className="working-dot" role="status" aria-label="An agent is working in this Hatch" />}
@@ -98,7 +100,7 @@ export function HatchOverlay({ tabId, hatch, size, screen, zoom, selected, docke
       <span className="hatch-size mono">
         {size.width} × {size.height}
       </span>
-      <button className="round small quiet" aria-label="Fit to view" title="Fit to view" onClick={act(() => actions.toggleFit(id))}>
+      <button className="round small quiet" aria-label="Fit to view" title="Fit to view" onClick={run(() => actions.toggleFit(id))}>
         <FitIcon size={14} />
       </button>
       <button className="round small quiet" aria-label="Close this Hatch" title="Close this Hatch" onClick={() => actions.closeHatch(id)} data-testid={`bar-close-${id}`}>
@@ -117,7 +119,19 @@ export function HatchOverlay({ tabId, hatch, size, screen, zoom, selected, docke
   return (
     <>
       {header}
-      {!docked && <div className={`hatch-border${selected ? ' selected' : ''}`} style={box} />}
+      {(!docked || working) && <div className={`hatch-border${selected && !docked ? ' selected' : ''}${working ? ' working' : ''}`} style={box} data-testid={working ? `in-use-${id}` : undefined} />}
+      {act && hatch.view === 'page' && (
+        <div className="hatch-layer agent-act-layer" style={box}>
+          <div key={act.at} className={`agent-act ${act.kind}`} style={{ left: act.box.x * zoom - 4, top: act.box.y * zoom - 4, width: act.box.width * zoom + 8, height: act.box.height * zoom + 8 }} data-testid={`agent-act-${id}`} />
+        </div>
+      )}
+      {work && (
+        <div className="in-use" style={{ left: screen.x + 12, top: screen.y + screen.height - 44, maxWidth: Math.max(160, screen.width - 24) }} role="status" data-testid={`in-use-chip-${id}`}>
+          <span className="working-dot" aria-hidden="true" />
+          <strong>{work.agent} is using this Hatch</strong>
+          {(work.doing || work.intent) && <span className="in-use-doing">{work.doing || work.intent}</span>}
+        </div>
+      )}
       {hatch.view === 'agent' && (
         <div className="hatch-layer" style={box}>
           <AgentView hatchId={id} />
@@ -129,7 +143,7 @@ export function HatchOverlay({ tabId, hatch, size, screen, zoom, selected, docke
           <strong>This page did not load</strong>
           <span className="mono">{load.error.url}</span>
           <span>{load.error.description}</span>
-          <button className="button" onClick={act(() => pages.navigate(id, load.error!.url))}>
+          <button className="button" onClick={run(() => pages.navigate(id, load.error!.url))}>
             Try again
           </button>
         </div>

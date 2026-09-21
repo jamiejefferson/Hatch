@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { addressOf, click, CoveredError, fill, outlineOf, pressKey, scroll, selectOption, settledOutline, SUGGESTS, waitForLoad } from '../../cdp/actions';
 import { HatchError, type PageSession } from '../../cdp/session';
 import { renderOutline, type OutlineLine } from '../../cdp/snapshot';
+import { nowDoing } from '../../agents/agents';
 import { askJevWithUsage, canAsk } from '../../jev/client';
 import { record } from '../../jev/metrics';
 import type { ChoiceAnswer } from '../../jev/pick';
@@ -136,6 +137,8 @@ async function run(page: PageSession, o: Options, ctx: ToolContext) {
 
     const before = page.guest.getURL();
     const label = 'line' in p ? p.line : action.proposed_action;
+    // The Hatch shows the step while it runs, so the user follows a run without opening the Activity panel.
+    nowDoing(ctx.agent, `Jev, step ${step}: ${p.kind === 'type' ? `types ${JSON.stringify(p.text)} into ${label}` : p.kind === 'select' ? `chooses an option in ${label}` : p.kind === 'click' ? `clicks ${label}` : p.kind === 'press_enter' ? 'presses Enter' : p.kind === 'scroll_down' ? 'scrolls down' : 'scrolls up'}`);
     try {
       const done = await execute(page, p, ask, o.goal, history, lines);
       action.executed_action = done.executed;

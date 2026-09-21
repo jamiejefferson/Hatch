@@ -2,7 +2,7 @@ import type { Anchor, CommentStatus, PageComments } from '@shared/comments';
 import type { BrowserProfile, ImportOutcome } from '@shared/cookie-import';
 import type { FeedbackDetails, FeedbackInput } from '@shared/feedback';
 import type { ConsentAnswer, ConsentRequest, SignIn } from '@shared/signins';
-import type { ActivityEntry, AgentWorkState, DialogState, Project, ProjectsState, ProjectState, SavedLink, Settings, Workspace } from '@shared/types';
+import type { ActivityEntry, AgentAct, AgentWorkState, DialogState, Project, ProjectsState, ProjectState, SavedLink, Settings, Workspace } from '@shared/types';
 
 export type Outcome<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -15,6 +15,8 @@ export interface Pushes {
   command: MenuCommand;
   'activity:event': ActivityEntry;
   'agents:work': AgentWorkState;
+  /** An agent clicked, filled or hovered over an element, and the Hatch marks it for a moment. */
+  'agent:act': AgentAct;
   /** The id of a Hatch whose page navigated, loaded or changed. */
   'page:changed': string;
   /** The id of a Hatch whose page received the Esc key. */

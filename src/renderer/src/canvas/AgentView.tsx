@@ -8,6 +8,7 @@ import { useStore } from '../state/store';
 export function AgentView({ hatchId }: { hatchId: string }) {
   const version = useStore((s) => s.pageVersion[hatchId] ?? 0);
   const dialogOpen = useStore((s) => hatchId in s.dialogs);
+  const acted = useStore((s) => s.acts[hatchId]?.ref);
   const [text, setText] = useState<string | null>(null);
 
   useEffect(() => {
@@ -25,7 +26,15 @@ export function AgentView({ hatchId }: { hatchId: string }) {
         <span>This outline is exactly what the agent receives. The page stays live underneath.</span>
       </p>
       <pre className="mono" tabIndex={0} aria-label="Agent view outline">
-        {text ?? 'Reading the page…'}
+        {text === null
+          ? 'Reading the page…'
+          : // The line an agent just acted on carries a mark, so the user follows the work in the outline too.
+            text.split('\n').map((line, i) => (
+              <span key={i} className={acted && line.includes(`[${acted}]`) ? 'agent-line acted' : 'agent-line'}>
+                {line}
+                {'\n'}
+              </span>
+            ))}
       </pre>
     </div>
   );

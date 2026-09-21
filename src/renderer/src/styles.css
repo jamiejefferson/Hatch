@@ -158,6 +158,19 @@ svg { flex-shrink: 0; display: block; }
 .hatch-size { flex-shrink: 0; padding: 0 6px; font-size: 12px; color: var(--ink-3); }
 .hatch-border { position: absolute; pointer-events: none !important; outline: 1px solid var(--line-strong); }
 .hatch-border.selected { outline: 2px solid var(--ink); }
+/* A Hatch an agent is using wears the accent, and a chip at its foot says who uses it and what for. */
+.hatch-border.working { outline: 2px solid var(--accent); outline-offset: 1px; animation: in-use 1.6s ease-in-out infinite; }
+.hatch-border.selected.working { outline: 2px solid var(--ink); box-shadow: 0 0 0 4px var(--accent); }
+@keyframes in-use { 50% { outline-color: var(--accent-soft); } }
+.in-use { position: absolute; z-index: 4; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px 0 12px; border-radius: var(--pill); background: var(--ink); color: var(--surface); font-size: 12px; line-height: 16px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.18); pointer-events: none; }
+.in-use strong { font-weight: 600; white-space: nowrap; }
+.in-use-doing { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: rgb(255 255 255 / 0.72); }
+/* The element an agent acts on is outlined for a moment, so the user sees where the work happens. */
+.agent-act-layer { overflow: hidden; pointer-events: none !important; }
+.agent-act { position: absolute; border: 2px solid var(--accent); border-radius: 8px; background: rgb(233 197 52 / 0.18); animation: agent-act 1.8s ease-out forwards; }
+@keyframes agent-act { 0% { opacity: 0; transform: scale(1.12); } 12% { opacity: 1; transform: scale(1); } 70% { opacity: 1; } 100% { opacity: 0; } }
+.agent-line.acted { background: var(--accent-soft); }
+@media (prefers-reduced-motion: reduce) { .hatch-border.working, .agent-act { animation: none; } }
 .hatch-error {
   position: absolute; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 32px;
   background: var(--surface); overflow: hidden; line-height: 18px;

@@ -1,5 +1,7 @@
 // What an agent does to a page. Each action resolves a reference to a live element, works on it, and reports what happened.
 import { hatchAddress } from '@shared/project-address';
+import type { AgentAct } from '@shared/types';
+import { push } from '../renderer-rpc';
 import { getProxyPort, projectsState } from '../servers/manager';
 import { HatchError, type PageSession } from './session';
 import { describeChanges } from './changes';
@@ -101,7 +103,7 @@ async function call<T>(page: PageSession, objectId: string, fn: string, args: un
   return r.result.value;
 }
 
-interface Target { x: number; y: number; visible: boolean; covered: string | null }
+interface Target { x: number; y: number; visible: boolean; covered: string | null; box: { x: number; y: number; width: number; height: number } }
 
 /** Scrolls the element into view and reports its centre, and what covers it if anything does. */
 const LOCATE = `function () {
@@ -116,7 +118,7 @@ const LOCATE = `function () {
   const within = (outer, n) => { for (; n; n = n.parentNode || n.host) if (n === outer) return true; return false; };
   const mine = hit && (within(el, hit) || within(hit, el) || (hit.closest('label') && hit.closest('label').control === el) || (el.labels && [...el.labels].some((l) => l.contains(hit))));
   const describe = (n) => n ? '<' + n.tagName.toLowerCase() + (n.id ? '#' + n.id : '') + (typeof n.className === 'string' && n.className ? '.' + n.className.trim().split(/\\s+/).slice(0, 2).join('.') : '') + '>' : 'nothing';
-  return { x, y, visible: r.width > 0 && r.height > 0, covered: mine ? null : describe(hit) };
+  return { x, y, visible: r.width > 0 && r.height > 0, covered: mine ? null : describe(hit), box: { x: r.left, y: r.top, width: r.width, height: r.height } };
 }`;
 
 /** An element that sits under another one. "by" is the reference of what covers it, when the agent view lists that element. */
@@ -153,6 +155,9 @@ async function coveringRef(page: PageSession, ref: string): Promise<string | nul
   return null;
 }
 
+/** The user sees where an agent acts: the interface outlines the element on its Hatch for a moment. */
+const KINDS: Record<string, AgentAct['kind']> = { click: 'click', fill: 'fill', 'hover over': 'hover' };
+
 async function locate(page: PageSession, ref: string, action: string): Promise<Target> {
   const target = await call<Target>(page, await objectFor(page, ref), LOCATE);
   if (!target.visible) throw new HatchError(`The element ${ref} has no size on the page, so Hatch cannot ${action} it. It may be hidden.`);
@@ -160,6 +165,7 @@ async function locate(page: PageSession, ref: string, action: string): Promise<T
     const by = await coveringRef(page, ref);
     throw new CoveredError(by ? `Another element covers ${ref}: ${target.covered}, which the agent view lists under ${by}. A list or a dialog may have opened over it. Act on ${by} or on an element inside it, or close it, then try ${ref} again.` : `Another element covers ${ref}: ${target.covered}. Close or scroll past what covers it, then call snapshot again.`, by);
   }
+  push('agent:act', { hatchId: page.hatchId, kind: KINDS[action] ?? 'click', ref, box: target.box } satisfies AgentAct);
   return target;
 }
 
