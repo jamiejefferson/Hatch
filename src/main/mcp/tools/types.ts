@@ -1,7 +1,8 @@
 import { z } from 'zod';
+import type { ActivityDetail } from '@shared/types';
 import type { Agent } from '../../agents/agents';
 
-export type ToolResult = string | { text: string; image?: { base64: string; mimeType: string }; tabId?: string | null; hatchId?: string | null };
+export type ToolResult = string | { text: string; image?: { base64: string; mimeType: string }; tabId?: string | null; hatchId?: string | null; /** What the Activity panel shows under the call, beyond its first line. */ activity?: ActivityDetail };
 
 export interface ToolContext {
   agent: Agent;

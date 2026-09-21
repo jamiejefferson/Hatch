@@ -60,6 +60,10 @@ export interface HatchApi {
   hasJevKey(): Promise<boolean>;
   /** Saves the key, or removes it when the text is empty. */
   setJevKey(key: string): Promise<{ ok: true; value: boolean } | { ok: false; error: string }>;
+  /** The last four characters of the saved key. The rest of the key never comes back to the interface. */
+  jevKeyHint(): Promise<string>;
+  /** Asks Jev one small question with the saved key. */
+  testJev(): Promise<{ ok: true; value: true } | { ok: false; error: string }>;
   copyText(text: string): Promise<void>;
   /** Puts an element's markup on the clipboard in the form Paper pastes as editable layers. Resolves to the payload's length. */
   copyForPaper(html: string): Promise<number>;

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { activeTab, useStore } from '../state/store';
 
 const clock = (t: number): string => new Date(t).toTimeString().slice(0, 5);
+const money = (usd: number): string => `$${usd < 0.01 ? usd.toFixed(4) : usd.toFixed(3)}`;
 
 export function ActivityPanel() {
   const entries = useStore((s) => s.activity);
@@ -9,6 +10,8 @@ export function ActivityPanel() {
   const port = useStore((s) => s.mcpPort);
   const waiting = useStore((s) => activeTab(s).hatches.map((h) => s.consents[h.id]).find(Boolean));
   const end = useRef<HTMLDivElement>(null);
+  const runs = entries.filter((e) => e.detail?.costUsd !== undefined);
+  const spent = runs.reduce((sum, e) => sum + (e.detail?.costUsd ?? 0), 0);
 
   useEffect(() => {
     // scrollIntoView would also scroll every ancestor, so the panel scrolls its own container.
@@ -62,7 +65,27 @@ export function ActivityPanel() {
                   {e.status === 'running' && <span className="state"> · running</span>}
                   {e.status === 'failed' && <span className="state"> · failed</span>}
                 </p>
+                {e.detail && (
+                  <p className="mono result" data-testid="activity-result">
+                    → {e.detail.result}
+                  </p>
+                )}
                 {e.intent && <p className="intent">{e.intent}</p>}
+                {e.detail?.trace && e.detail.trace.length > 0 && (
+                  <details className="trace" data-testid="activity-trace">
+                    <summary>Show the {e.detail.trace.length === 1 ? 'one step' : `${e.detail.trace.length} steps`} Jev took</summary>
+                    <ol>
+                      {e.detail.trace.map((t) => (
+                        <li key={t.step}>
+                          <span className="mono">
+                            {t.step}. {t.action} · {t.confidence.toFixed(2)}
+                          </span>
+                          <span>{t.detail}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
+                )}
                 {e.error && <p className="error">{e.error}</p>}
               </div>
             </li>
@@ -70,6 +93,14 @@ export function ActivityPanel() {
         </ol>
         <div ref={end} />
       </section>
+      {runs.length > 0 && (
+        <section data-testid="jev-spend">
+          <h2>Jev this session</h2>
+          <p className="hint">
+            Jev ran {runs.length === 1 ? 'one goal' : `${runs.length} goals`}, which cost {money(spent)} in all.
+          </p>
+        </section>
+      )}
       <section className="panel-end">
         <button className="text-button left underline" onClick={() => void window.hatch.openLog()}>
           Show the session log file

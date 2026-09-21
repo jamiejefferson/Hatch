@@ -128,7 +128,10 @@ function JevSection() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [justSaved, setJustSaved] = useState(false);
+  const [hint, setHint] = useState('');
+  const [test, setTest] = useState<{ state: 'idle' | 'running' | 'ok' } | { state: 'failed'; error: string }>({ state: 'idle' });
   useEffect(() => void window.hatch.hasJevKey().then(setHeld), []);
+  useEffect(() => void (held && window.hatch.jevKeyHint().then(setHint)), [held]);
   const connected = held === true && on;
 
   const connect = async (e: React.FormEvent): Promise<void> => {
@@ -150,12 +153,19 @@ function JevSection() {
     await actions.updateSettings({ describeElements: false });
     setHeld(false);
     setJustSaved(false);
+    setTest({ state: 'idle' });
+  };
+
+  const runTest = async (): Promise<void> => {
+    setTest({ state: 'running' });
+    const result = await window.hatch.testJev();
+    setTest(result.ok ? { state: 'ok' } : { state: 'failed', error: result.error });
   };
 
   return (
     <section data-testid="jev">
       <h2>Connect Jev</h2>
-      <p className="hint">Jev helps your agent browse faster. Your agent says what it wants, such as "the button that refuses cookies", and Jev finds it on the page, usually in under a second.</p>
+      <p className="hint">Jev helps your agent browse faster. Your agent names an element in plain words, such as "the button that refuses cookies", and Jev finds it on the page. Your agent can also hand Jev a whole goal, such as a search, and Jev takes the steps. The Activity panel shows each run with its steps and its cost.</p>
       {connected ? (
         <>
           <p className="said-ok" role="status" data-testid="jev-connected">
@@ -163,6 +173,25 @@ function JevSection() {
             {justSaved ? 'Your key is saved and Jev is connected.' : 'Jev is connected.'}
           </p>
           <p className="hint">Your agent uses Jev from its next action. Hatch keeps the key locked in this Mac's Keychain.</p>
+          {hint && (
+            <p className="hint mono" data-testid="jev-hint">
+              The saved key ends in ••••{hint}
+            </p>
+          )}
+          {test.state === 'ok' && (
+            <p className="said-ok" role="status" data-testid="jev-test-ok">
+              <CheckIcon size={14} />
+              Jev answered, so the connection works.
+            </p>
+          )}
+          {test.state === 'failed' && (
+            <p className="field-error" role="alert" data-testid="jev-test-error">
+              {test.error}
+            </p>
+          )}
+          <button type="button" className="button left" disabled={test.state === 'running'} onClick={() => void runTest()} data-testid="jev-test">
+            {test.state === 'running' ? 'Asking Jev…' : 'Test the connection'}
+          </button>
           <button type="button" className="button left" onClick={() => void disconnect()} data-testid="jev-disconnect">
             Disconnect Jev
           </button>
@@ -180,10 +209,10 @@ function JevSection() {
           <button type="submit" className="button primary left" disabled={saving || !text.trim()} data-testid="jev-save">
             {saving ? 'Checking the key…' : 'Save and connect'}
           </button>
-          <p className="hint">Jev comes from TypeSafe. You get a key at typesafe.ai.</p>
+          <p className="hint">Jev comes from TypeSafe. You get a key at console.typesafe.ai/settings/keys, and one key covers finding elements and running goals.</p>
         </form>
       )}
-      <p className="hint">To find things, Hatch sends Jev a text outline of the page your agent is working on. A page where Hatch filled one of your saved sign-ins is never sent.</p>
+      <p className="hint">To do this, Hatch sends Jev a text outline of the page your agent is working on. A page where Hatch filled one of your saved sign-ins is never sent.</p>
     </section>
   );
 }

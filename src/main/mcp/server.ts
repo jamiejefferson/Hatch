@@ -21,7 +21,7 @@ async function runTool(tool: Tool, args: Record<string, unknown>, agent: Agent, 
   try {
     const result = await tool.run(args, ctx);
     const text = typeof result === 'string' ? result : result.text;
-    end(entry, { ...where, note: text.split('\n')[0]?.slice(0, 200) });
+    end(entry, { ...where, note: text.split('\n')[0]?.slice(0, 200), detail: typeof result === 'string' ? undefined : result.activity });
     const content: ({ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string })[] = [];
     // Some agent apps drop image content, so the text always carries the saved file's path as well.
     if (typeof result !== 'string' && result.image) content.push({ type: 'image', data: result.image.base64, mimeType: result.image.mimeType });

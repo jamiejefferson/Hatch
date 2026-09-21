@@ -56,13 +56,20 @@ export interface Settings {
   showComments: boolean;
   /** The user has finished or skipped the guide, so it stays away until Help opens it again. */
   guideSeen: boolean;
+  /** The user has seen the note that says agents can hand a goal to Jev. */
+  jevRunSeen: boolean;
   /** The folder that holds links.json. Empty means Hatch's own data folder. */
   linksFolder: string;
   /** The folder that holds one folder of comment files per site. Empty means Hatch's own data folder. Project comments stay inside their project. */
   commentsFolder: string;
 }
 
-export const DEFAULT_SETTINGS: Settings = { newHatchPage: '', askBeforeViewSwitch: true, allowEvaluate: false, describeElements: false, showComments: true, guideSeen: false, linksFolder: '', commentsFolder: '' };
+export const DEFAULT_SETTINGS: Settings = { newHatchPage: '', askBeforeViewSwitch: true, allowEvaluate: false, describeElements: false, showComments: true, guideSeen: false, jevRunSeen: false, linksFolder: '', commentsFolder: '' };
+
+/** One step of a jev_run, as the Activity panel lists it. */
+export interface TraceLine { step: number; action: string; detail: string; confidence: number }
+/** What a tool adds to its Activity entry: a result line, a trace the user can open, and what the call cost. */
+export interface ActivityDetail { result: string; trace?: TraceLine[]; costUsd?: number }
 
 export interface ActivityEntry {
   id: string;
@@ -76,6 +83,7 @@ export interface ActivityEntry {
   ms?: number;
   error?: string;
   note?: string;
+  detail?: ActivityDetail;
   tabId?: string | null;
   hatchId?: string | null;
 }

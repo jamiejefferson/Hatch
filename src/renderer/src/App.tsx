@@ -10,6 +10,7 @@ import { ContextMenu, Toast } from './shell/ContextMenu';
 import { Guide } from './shell/Guide';
 import { Intro } from './shell/Intro';
 import { TopStrip } from './shell/TopStrip';
+import { WhatsNew } from './shell/WhatsNew';
 import { actions, activeTab, boot, flushSave, getState, listen, useStore } from './state/store';
 
 function run(command: MenuCommand): void {
@@ -89,6 +90,7 @@ function Shell({ tabs, activeTabId, sidebarOpen }: { tabs: Tab[]; activeTabId: s
       <ContextMenu />
       <Toast />
       <Guide />
+      <WhatsNew />
     </div>
   );
 }

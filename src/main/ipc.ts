@@ -22,7 +22,7 @@ import { push } from './renderer-rpc';
 import { logOf, projectsState, publish, register, remove, start, stop, update } from './servers/manager';
 import { syncWatchers } from './servers/watch';
 import { cleanFolder, linksFile, setFolders } from './store/folders';
-import { hasKey, setKey } from './jev/client';
+import { hasKey, keyHint, setKey, testKey } from './jev/client';
 import { linksStore, settingsStore, workspaceStore } from './store/stores';
 
 export function registerIpc(): void {
@@ -54,6 +54,7 @@ export function registerIpc(): void {
       describeElements: typeof settings.describeElements === 'boolean' ? settings.describeElements : current.describeElements,
       showComments: typeof settings.showComments === 'boolean' ? settings.showComments : current.showComments,
       guideSeen: current.guideSeen || settings.guideSeen === true,
+      jevRunSeen: current.jevRunSeen || settings.jevRunSeen === true,
       linksFolder: typeof settings.linksFolder === 'string' ? cleanFolder(settings.linksFolder) : current.linksFolder,
       commentsFolder: typeof settings.commentsFolder === 'string' ? cleanFolder(settings.commentsFolder) : current.commentsFolder,
     })).then(async (saved) => {
@@ -130,6 +131,8 @@ export function registerIpc(): void {
   // The key goes in and never comes back out. The interface learns only whether Hatch holds one.
   ipcMain.handle('jev:has-key', () => hasKey());
   ipcMain.handle('jev:set-key', safely((key: string) => setKey(String(key))));
+  ipcMain.handle('jev:key-hint', () => keyHint());
+  ipcMain.handle('jev:test', safely(() => testKey()));
   ipcMain.handle('consent:answer', (_e, hatchId: string, answer: 'once' | 'always' | 'refuse') => answerConsent(String(hatchId), answer === 'once' || answer === 'always' ? answer : 'refuse'));
 
   ipcMain.handle('connection:info', () => connectionInfo());

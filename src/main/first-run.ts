@@ -18,7 +18,7 @@ export function seedFirstRun(): void {
     mkdirSync(hatchHome(), { recursive: true });
     write('links.json', welcomeLinks(url));
     // The guide page stands in for the coach marks on a first open. Help > Show the Guide still runs them.
-    write('settings.json', { ...DEFAULT_SETTINGS, newHatchPage: url, guideSeen: true });
+    write('settings.json', { ...DEFAULT_SETTINGS, newHatchPage: url, guideSeen: true, jevRunSeen: true });
     write('workspace.json', welcomeWorkspace(url));
   } catch (error) {
     console.error('[first-run] Hatch could not write its starting files:', error);

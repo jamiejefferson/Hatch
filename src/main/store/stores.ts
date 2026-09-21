@@ -18,6 +18,7 @@ function repairSettings(raw: unknown): Settings {
     describeElements: typeof source.describeElements === 'boolean' ? source.describeElements : DEFAULT_SETTINGS.describeElements,
     showComments: typeof source.showComments === 'boolean' ? source.showComments : DEFAULT_SETTINGS.showComments,
     guideSeen: source.guideSeen === true,
+    jevRunSeen: source.jevRunSeen === true,
     linksFolder: cleanFolder(source.linksFolder),
     commentsFolder: cleanFolder(source.commentsFolder),
   };
