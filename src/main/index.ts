@@ -57,7 +57,7 @@ if (!app.requestSingleInstanceLock()) {
   void app.whenReady().then(() => {
     if (app.isPackaged) app.setAsDefaultProtocolClient('hatch');
     setUpPagesSession();
-    seedFirstRun();
+    seedFirstRun(app.getVersion());
     registerIpc();
     registerRpcReplies();
     void startProxy()

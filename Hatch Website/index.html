@@ -46,6 +46,26 @@
   </header>
 
   <main id="guide">
+    <!-- What changed. Hatch opens the guide at #new after an update, and the panel stays hidden for every other visit. -->
+    <section class="panel charcoal whats-new" id="new" aria-labelledby="h-new">
+      <div class="panel-side">
+        <div class="numeral" aria-hidden="true">New</div>
+      </div>
+      <div class="panel-main">
+        <h2 class="headline large" id="h-new">Jev now clicks for your agent.</h2>
+        <p class="subhead">You updated Hatch, and this is what changed.</p>
+        <p class="lede">Your agent plans every click, which costs time and tokens. Now it gives Jev a goal, such as a search, and Jev does the clicking and typing. On GOV.UK a five-step search took 3.0 seconds and cost $0.0012.</p>
+        <div class="four">
+          <div><h3>Your agent hands Jev a goal</h3><p>Jev clicks, types, chooses from dropdowns, presses Enter and scrolls until the goal is reached. Your agent reads every step back and decides what happens next.</p></div>
+          <div><h3>An OpenRouter key connects Jev</h3><p>Open Settings and paste a key from OpenRouter or from TypeSafe under “Connect Jev”. Hatch works out which one it is.</p></div>
+          <div><h3>You see what each run cost</h3><p>The Activity panel shows a run as one line, such as “done (5 steps, $0.0012, 3.0s)”, and opens to show every step.</p></div>
+          <div><h3>Your agent learns it from its own page</h3><p>Point your agent at the Agent page once. It says when a goal suits Jev and when your agent should reason for itself.</p></div>
+        </div>
+        <a class="pill big" href="#jev">See how Jev works <span aria-hidden="true">→</span></a>
+        <p class="aside">The whole guide follows below, so scroll on if you want the tour again.</p>
+      </div>
+    </section>
+
     <!-- 1 -->
     <section class="panel" data-stage="1" aria-labelledby="h1">
       <div class="panel-side">
@@ -55,7 +75,7 @@
         <h1 class="headline large" id="h1">Thanks for trying out Hatch.</h1>
         <p class="subhead">A browser for people who build with agents.</p>
         <p class="lede">Your agent writes the code and you judge the result. Both of you need the live site in front of you. Hatch puts it there, between the Paper or Figma file and the finished build.</p>
-        <p class="aside">This page runs to ten stages, and each one gives you a thing to try.</p>
+        <p class="aside">This page runs to eleven stages, and most of them give you a thing to try.</p>
         <div class="rows" role="img" aria-label="Design tools draw the site, Hatch holds your prototypes, and code and deploy finish it.">
           <div class="row"><span class="label">Design</span><span class="row-text">Paper and Figma draw the site.</span><span class="row-bar"><i style="left:0;width:30%"></i></span></div>
           <div class="row"><span class="label accent">Hatch</span><span class="row-text strong">Hatch holds your prototypes.</span><span class="row-bar"><i class="accent" style="left:30%;width:40%"></i></span></div>
@@ -283,7 +303,7 @@
             <div><span class="label">By hand</span><p class="calls"><code>snapshot</code><code>click</code><code>snapshot</code><code>fill</code><code>snapshot</code><code>press_key</code><code>snapshot</code><code>click</code><em>one turn of your agent for every call</em></p></div>
             <div><span class="label accent">With Jev</span><p class="calls"><code class="on">jev_run {goal}</code><em>one turn of your agent for the whole run</em></p></div>
           </div>
-          <p>Connect it in Settings with your own key from console.typesafe.ai/settings/keys.</p>
+          <p>Connect it in Settings with your own key, from console.typesafe.ai/settings/keys or from openrouter.ai/keys.</p>
           <ol class="controls">
             <li class="control"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-settings"/></svg></span><b>Settings</b><span>“Connect Jev” sits near the foot.</span></li>
             <li class="then" aria-hidden="true">→</li>
@@ -291,7 +311,7 @@
           </ol>
           <ul>
             <li>Jev stays off until you connect it, and “Disconnect Jev” switches it off again.</li>
-            <li>Each use sends the page’s outline to TypeSafe. A page where Hatch filled a sign-in is never sent.</li>
+            <li>Each use sends the page’s outline to TypeSafe, through OpenRouter when the key is an OpenRouter key. A page where Hatch filled a sign-in is never sent.</li>
             <li>The Activity panel lists each run with its steps, Jev’s confidence in each one and what the run cost.</li>
             <li>Below 80% certainty Hatch does nothing and lists the closest elements.</li>
             <li>To try it, connect Jev, then ask your agent to press “the sample button in stage 4”.</li>
@@ -408,7 +428,7 @@
           <div><h3>You see what it cost</h3><p>The Activity panel shows each run as one line, such as “done (8 steps, $0.0031, 4.2s)”, and opens to show every step.</p></div>
         </div>
         <p class="aside">Jev suits mechanical goals. Your agent still does the reasoning: which product to pick, whether a result is right, what to try when a page surprises it.</p>
-        <p class="aside">To switch it on, open Settings, paste your TypeSafe key under “Connect Jev” and press “Save and connect”. Then point your agent at the Agent page, which tells it when a goal suits Jev.</p>
+        <p class="aside">To switch it on, open Settings, paste your TypeSafe or OpenRouter key under “Connect Jev” and press “Save and connect”. Then point your agent at the Agent page, which tells it when a goal suits Jev.</p>
       </div>
     </section>
 

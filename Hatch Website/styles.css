@@ -163,6 +163,29 @@ button {
   padding-top: 120px;
 }
 
+/* The "what changed" panel shows for a visit that arrives at #new, which is how Hatch opens the guide after an update. */
+.panel.whats-new {
+  display: none;
+}
+
+.show-new .panel.whats-new {
+  display: flex;
+}
+
+.whats-new .numeral {
+  font-size: clamp(40px, 5vw, 72px);
+}
+
+.whats-new .pill.big {
+  align-self: flex-start;
+}
+
+/* While that panel is hidden, stage 1 is the top of the page. */
+html:not(.show-new) .panel.whats-new + .panel {
+  border-radius: 0;
+  padding-top: 120px;
+}
+
 .panel.charcoal {
   background: var(--charcoal);
 }

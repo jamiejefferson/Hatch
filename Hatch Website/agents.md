@@ -179,7 +179,7 @@ Anchor: #settings
 
 Two settings start switched off, and a saved sign-in needs the user’s consent. You cannot change any of them. When a tool answers that one is off, tell the user its name and carry on with the fallback.
 
-- “Connect Jev”: The user pastes a TypeSafe key and presses “Save and connect”. It opens `jev_run`, `target` on `click`, `fill`, `select_option` and `hover`, and `until` on `wait_for`. For a `target` Hatch acts at 0.8 confidence or above and otherwise lists the closest elements. `status` says when it is on. Fallback: `snapshot`, then `ref`.
+- “Connect Jev”: The user pastes a TypeSafe key or an OpenRouter key and presses “Save and connect”. It opens `jev_run`, `target` on `click`, `fill`, `select_option` and `hover`, and `until` on `wait_for`. For a `target` Hatch acts at 0.8 confidence or above and otherwise lists the closest elements. `status` says when it is on. Fallback: `snapshot`, then `ref`.
 - “Let agents run script in pages”: Opens `evaluate`, `grab_element`, `get_css` and `save_image`. Fallback: `snapshot`, `get_element` and `screenshot`.
 - A saved sign-in, with the user’s consent: `fill_credentials` waits for the user’s answer. You never receive the password. After a fill the agent view hides every field value, `evaluate` stays blocked and no part of the page goes to TypeSafe, until the page navigates.
 
@@ -190,7 +190,7 @@ Anchor: #when-a-call-fails
 - A reference is unknown or comes from an earlier page: Call `snapshot` again. Reference numbers never restart, so an old one never names a new element.
 - Another element covers the one you clicked: Close the overlay first. Hatch names the element on top.
 - Hatch is not sure which element your words name: Hatch did nothing. Pass one of the listed references as `ref`.
-- `jev_run` answers that Jev is not connected: Tell the user to add a TypeSafe key in Settings, under “Connect Jev”. A key comes from console.typesafe.ai/settings/keys. Carry on with `snapshot`, `click` and `fill`.
+- `jev_run` answers that Jev is not connected: Tell the user to add a TypeSafe key or an OpenRouter key in Settings, under “Connect Jev”. A key comes from console.typesafe.ai/settings/keys or openrouter.ai/keys. Carry on with `snapshot`, `click` and `fill`.
 - A dialog is open on the page: Call `handle_dialog`. Every other page tool waits until you do.
 - The page is still loading when the timeout ends: Call `wait_for`. A dev server’s first compile often runs past ten seconds.
 - The page opened a pop-up, such as a Google sign-in: You cannot read a pop-up window. Ask the user to complete it.

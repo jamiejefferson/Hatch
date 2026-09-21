@@ -1,5 +1,7 @@
 // The Hatch guide. Plain script, no build step.
 (() => {
+  // Hatch opens the guide at #new after an update. The panel stays for the whole visit, whichever link the reader follows next.
+  if (location.hash === '#new') document.documentElement.classList.add('show-new');
   // The feedback service is the one the Hatch app writes to. This key inserts and reads nothing.
   const FEEDBACK_URL = 'https://zxyexylnnnojprmmdhzz.supabase.co';
   const FEEDBACK_KEY = 'sb_publishable_ft-eUqQ10ir2Dx8ycl0j2Q_xhbPfjIy';
