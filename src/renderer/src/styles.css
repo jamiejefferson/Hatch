@@ -397,7 +397,8 @@ h2 .count { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0
 .menu-scrim { position: fixed; inset: 0; z-index: 900; }
 .menu { position: fixed; display: flex; flex-direction: column; min-width: 220px; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 12px 32px rgb(0 0 0 / 0.16); }
 .menu button { display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 8px; text-align: left; }
-.menu button:hover, .menu button:focus-visible { background: var(--fill); outline: none; }
+.menu button:hover:not(:disabled), .menu button:focus-visible { background: var(--fill); outline: none; }
+.menu button:disabled { cursor: default; }
 .menu hr { width: 100%; margin: 4px 0; border: 0; border-top: 1px solid var(--line); }
 .toast-anchor { position: fixed; left: 0; right: 0; bottom: 24px; z-index: 950; display: flex; justify-content: center; pointer-events: none; }
 .toast { margin: 0; padding: 10px 18px; background: var(--ink); color: var(--surface); border-radius: var(--pill); box-shadow: 0 8px 24px rgb(0 0 0 / 0.2); }

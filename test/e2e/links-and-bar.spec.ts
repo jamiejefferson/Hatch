@@ -20,6 +20,16 @@ test('a copied Hatch link takes an agent to that exact Hatch, in a tab it did no
     const link = await clipboard();
     expect(link).toMatch(/^hatch:@hatch_\w+$/);
 
+    // The same menu saves the page to Links, once.
+    await bar.click({ button: 'right' });
+    await win.getByTestId('menu-save-link').click();
+    await expect(win.getByText('Hatch saved this link in Links.')).toBeVisible();
+    expect(JSON.parse(readFileSync(join(home, 'links.json'), 'utf8')).map((l: { url: string }) => l.url)).toContain(`${site.url}/index.html`);
+    await bar.click({ button: 'right' });
+    await expect(win.getByTestId('menu-save-link')).toBeDisabled();
+    await expect(win.getByTestId('menu-save-link')).toHaveText('This link is saved in Links');
+    await win.keyboard.press('Escape');
+
     await win.getByTestId('canvas').first().click({ button: 'right', position: { x: 20, y: 500 } });
     await win.getByTestId('copy-canvas-link').click();
     expect(await clipboard()).toMatch(/^hatch:@tab_\w+$/);

@@ -1,11 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { CloseIcon, CopyIcon, FitIcon, ReleaseIcon } from '../icons';
-import { actions, useStore } from '../state/store';
+import { CloseIcon, CopyIcon, FitIcon, ReleaseIcon, SaveLinkIcon } from '../icons';
+import { actions, hatchLabel, useStore } from '../state/store';
 
 /** The right-click menu for a Hatch, a canvas or a tab. Its first job is the link a user pastes to an agent. */
 export function ContextMenu() {
   const menu = useStore((s) => s.contextMenu);
   const hatch = useStore((s) => (menu?.hatchId ? (s.workspace.tabs.flatMap((t) => t.hatches).find((h) => h.id === menu.hatchId) ?? null) : null));
+  const saved = useStore((s) => (hatch ? s.links.some((l) => l.url === hatch.url) : false));
   const ref = useRef<HTMLDivElement>(null);
   const [spot, setSpot] = useState({ left: 0, top: 0 });
 
@@ -52,6 +53,11 @@ export function ContextMenu() {
         <button role="menuitem" onClick={run(() => void actions.copyLink(menu.tabId, 'canvas'))} data-testid="copy-canvas-link">
           <CopyIcon /> Copy link to this canvas
         </button>
+        {hatch && (
+          <button role="menuitem" disabled={saved} onClick={run(() => void actions.saveLink(hatchLabel(hatch), hatch.url).then(() => actions.toast('Hatch saved this link in Links.')))} data-testid="menu-save-link">
+            <SaveLinkIcon /> {saved ? 'This link is saved in Links' : 'Save this link'}
+          </button>
+        )}
         {hatch && (
           <>
             <hr />
