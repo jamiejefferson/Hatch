@@ -32,6 +32,8 @@ export interface Pushes {
   'signins:state': SignIn[];
   'connection:state': ConnectionInfo;
   'consent:state': { hatchId: string; request: ConsentRequest | null };
+  /** One line for the foot of the window, such as a download that has landed. */
+  toast: string;
 }
 
 export interface ConnectionInfo {

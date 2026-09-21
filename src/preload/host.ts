@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { HatchApi, Pushes } from './api';
 
-const PUSHES: (keyof Pushes)[] = ['command', 'activity:event', 'agents:work', 'agent:act', 'page:changed', 'page:escape', 'popup:blocked', 'dialog:state', 'projects:state', 'projects:log', 'links:state', 'comments:changed', 'signins:state', 'consent:state', 'connection:state'];
+const PUSHES: (keyof Pushes)[] = ['command', 'activity:event', 'agents:work', 'agent:act', 'page:changed', 'page:escape', 'popup:blocked', 'dialog:state', 'projects:state', 'projects:log', 'links:state', 'comments:changed', 'signins:state', 'consent:state', 'connection:state', 'toast'];
 
 const api: HatchApi = {
   intro: process.env.HATCH_INTRO === '1' || !process.env.HATCH_HIDDEN,

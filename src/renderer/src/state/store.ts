@@ -203,6 +203,7 @@ export function listen(): () => void {
       setTimeout(() => set((s) => (s.acts[act.hatchId]?.at === at ? { acts: Object.fromEntries(Object.entries(s.acts).filter(([id]) => id !== act.hatchId)) } : {})), ACT_MS);
     }),
     window.hatch.on('page:escape', (hatchId) => actions.escape(hatchId)),
+    window.hatch.on('toast', (text) => actions.toast(text)),
     window.hatch.on('popup:blocked', ({ hatchId, url }) => set((s) => ({ popups: { ...s.popups, [hatchId]: { url } } }))),
     window.hatch.on('page:changed', (hatchId) => set((s) => ({ pageVersion: { ...s.pageVersion, [hatchId]: (s.pageVersion[hatchId] ?? 0) + 1 } }))),
     window.hatch.on('dialog:state', ({ hatchId, dialog }) =>

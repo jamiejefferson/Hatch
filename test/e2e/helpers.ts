@@ -5,7 +5,7 @@ import { dirname, extname, join, resolve } from 'node:path';
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
 
 const SITE = resolve('test/fixtures/site');
-const TYPES: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript' };
+const TYPES: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml' };
 
 export function serveSite(): Promise<{ url: string; close(): Promise<void> }> {
   const server: Server = createServer((req, res) => {

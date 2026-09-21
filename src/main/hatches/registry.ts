@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { BrowserWindow, ipcMain, session, type WebContents } from 'electron';
 import { PageSession } from '../cdp/session';
 import { PAGES_PARTITION } from '../paths';
+import { addPageMenu, watchDownloads } from './page-menu';
 
 const ALLOWED_SCHEMES = ['http:', 'https:', 'file:', 'about:'];
 const GRANTED_PERMISSIONS = new Set(['clipboard-sanitized-write']);
@@ -101,6 +102,7 @@ async function adoptOldCookies(): Promise<void> {
 export function setUpPagesSession(): void {
   const partition = session.fromPartition(PAGES_PARTITION);
   void adoptOldCookies();
+  watchDownloads();
   partition.setPermissionRequestHandler((_wc, permission, grant) => grant(GRANTED_PERMISSIONS.has(permission)));
   partition.setPermissionCheckHandler((_wc, permission) => GRANTED_PERMISSIONS.has(permission));
 
@@ -151,6 +153,7 @@ export function watchHost(host: WebContents): void {
   host.on('did-attach-webview', (_event, guest) => {
     // A pinch belongs to the canvas, so the page itself never zooms.
     void guest.setVisualZoomLevelLimits(1, 1);
+    addPageMenu(host, guest);
     // A link that asks for a new window opens in the same Hatch.
     // A pop-up is a window the page opens with a size, which is how "Sign in with Google" works: the page and the pop-up talk to each other,
     // so loading it in the same Hatch breaks the sign-in. In Fit to view Hatch opens a real pop-up. On the canvas it refuses and tells the user.
