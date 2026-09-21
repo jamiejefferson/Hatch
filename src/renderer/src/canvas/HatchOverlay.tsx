@@ -119,7 +119,17 @@ export function HatchOverlay({ tabId, hatch, size, screen, zoom, selected, docke
   return (
     <>
       {header}
-      {(!docked || working) && <div className={`hatch-border${selected && !docked ? ' selected' : ''}${working ? ' working' : ''}`} style={box} data-testid={working ? `in-use-${id}` : undefined} />}
+      {(!docked || working) && (
+        <div className={`hatch-border${selected && !docked ? ' selected' : ''}${working ? ' working' : ''}`} style={box} data-testid={working ? `in-use-${id}` : undefined}>
+          {working && (
+            <span className="sparkle" aria-hidden="true" data-testid={`sparkle-${id}`}>
+              <svg viewBox="0 0 16 16" width="16" height="16">
+                <path d="M8 0 Q8.9 7.1 16 8 Q8.9 8.9 8 16 Q7.1 8.9 0 8 Q7.1 7.1 8 0Z" fill="currentColor" />
+              </svg>
+            </span>
+          )}
+        </div>
+      )}
       {act && hatch.view === 'page' && (
         <div className="hatch-layer agent-act-layer" style={box}>
           <div key={act.at} className={`agent-act ${act.kind}`} style={{ left: act.box.x * zoom - 4, top: act.box.y * zoom - 4, width: act.box.width * zoom + 8, height: act.box.height * zoom + 8 }} data-testid={`agent-act-${id}`} />

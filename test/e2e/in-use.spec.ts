@@ -20,6 +20,18 @@ test('a Hatch an agent uses wears an outline and a chip, and each action marks i
     await expect(chip).toContainText('fox is using this Hatch');
     await expect(chip).toContainText('I am signing in to check the account page.');
     await expect(win.locator('.hatch-border.working')).toHaveCount(1);
+    // The sparkle sits on the border of the Hatch in use and moves along it.
+    const sparkle = win.locator('[data-testid^="sparkle-"]');
+    await expect(sparkle).toHaveCount(1);
+    const edge = (await win.locator('.hatch-border.working').boundingBox())!;
+    const at = (await sparkle.boundingBox())!;
+    const cx = at.x + at.width / 2;
+    const cy = at.y + at.height / 2;
+    const onEdge = [cx - edge.x, edge.x + edge.width - cx, cy - edge.y, edge.y + edge.height - cy].some((d) => Math.abs(d) < 4);
+    expect(onEdge).toBe(true);
+    await win.waitForTimeout(400);
+    const later = (await sparkle.boundingBox())!;
+    expect(Math.abs(later.x - at.x) + Math.abs(later.y - at.y)).toBeGreaterThan(2);
 
     const view = await call('snapshot');
     const email = view.match(/textbox "Email".*\[(e\d+)\]/)![1]!;
@@ -43,6 +55,7 @@ test('a Hatch an agent uses wears an outline and a chip, and each action marks i
     await call('finish_working');
     await expect(chip).toHaveCount(0);
     await expect(win.locator('.hatch-border.working')).toHaveCount(0);
+    await expect(sparkle).toHaveCount(0);
   } finally {
     await agent.close().catch(() => undefined);
     await app.close();

@@ -7,6 +7,7 @@ import { request } from 'node:http';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
+import { briefing } from '../main/mcp/guide/brief';
 
 interface Message { jsonrpc: '2.0'; id?: number | string | null; method?: string; params?: Record<string, unknown>; result?: unknown; error?: unknown }
 
@@ -88,7 +89,7 @@ function answerAlone(message: Message): void {
     case 'initialize': {
       const wanted = String(message.params?.protocolVersion ?? LEGACY);
       protocol = wanted;
-      return reply({ protocolVersion: wanted, capabilities: { tools: { listChanged: true } }, serverInfo: { name: 'hatch', version: readJson<{ version: string }>('tools.json')?.version ?? '0.0.0' }, instructions: 'Hatch is closed at the moment. Ask the user to open the Hatch app. Every tool works once it runs.' });
+      return reply({ protocolVersion: wanted, capabilities: { tools: { listChanged: true } }, serverInfo: { name: 'hatch', version: readJson<{ version: string }>('tools.json')?.version ?? '0.0.0' }, instructions: `Hatch is closed at the moment. Ask the user to open the Hatch app. Every tool works once it runs.\n\n${briefing('unknown')}` });
     }
     case 'ping':
       return reply({});

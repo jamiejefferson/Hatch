@@ -20,6 +20,12 @@ test('a copied Hatch link takes an agent to that exact Hatch, in a tab it did no
     const link = await clipboard();
     expect(link).toMatch(/^hatch:@hatch_\w+$/);
 
+    // The same menu copies the page's own URL, for pasting anywhere.
+    await bar.click({ button: 'right' });
+    await win.getByTestId('menu-copy-url').click();
+    await expect(win.getByText("Hatch copied this page's URL.")).toBeVisible();
+    expect(await clipboard()).toBe(`${site.url}/index.html`);
+
     // The same menu saves the page to Links, once.
     await bar.click({ button: 'right' });
     await win.getByTestId('menu-save-link').click();

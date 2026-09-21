@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { OutlineLine } from '../../src/main/cdp/snapshot';
-import { candidatesFor, changeNote, nameOf, optionsUnder, readOption, readStep, repeats, resultLine, stepRequest, textsIn, twinOf, type JevAction } from '../../src/main/jev/run';
+import { candidatesFor, changeNote, closestIn, nameOf, optionsUnder, readOption, readStep, repeats, resultLine, stepRequest, textsIn, twinOf, type JevAction } from '../../src/main/jev/run';
 
 const line = (depth: number, text: string): OutlineLine => ({ depth, text, ref: text.match(/\[(e\d+)\]/)?.[1] });
 const PAGE: OutlineLine[] = [
@@ -119,5 +119,16 @@ describe('twinOf', () => {
     expect(twinOf(page.slice(0, 3), 'e24', 'textbox "Return"')).toBeNull();
     expect(twinOf([...page, line(1, 'textbox "Return" [e301]')], 'e24', 'textbox "Return"')).toBeNull();
     expect(twinOf(page, 'e300', 'button "Return"')).toBeNull();
+  });
+});
+
+describe('closestIn', () => {
+  it('lists the actions Jev weighed most, best first, and leaves out page text and stray keys', () => {
+    const answers = { act0: { choice: 'e2', confidence: 0.41, probabilities: { e2: 0.41, e4: 0.3, none: 0.2, scroll_down: 0.05, e5: 0.03, e99: 0.01 } }, goal: { noul: 0.1 } };
+    expect(closestIn(answers, candidatesFor(PAGE))).toEqual([
+      { action: 'button "Search" [e2]', probability: 0.41 },
+      { action: 'link "Espresso machine, £240" [e4]', probability: 0.3 },
+      { action: 'no action on this page', probability: 0.2 },
+    ]);
   });
 });

@@ -40,6 +40,7 @@ export const sessionTools = [
       if (ctx.agent.id.startsWith(UNNAMED)) lines.push('You connected with no name, so Hatch named you after your app. Two sessions of one app would then share this tab. Add ?agent=<your-name> to the address, or set HATCH_AGENT for the command.');
       if ((await settingsStore.read()).describeElements && (await hasKey())) lines.push('Jev is connected, so finding elements from a description is on: click, fill, select_option, hover and the steps of run_steps take target in plain words in place of ref, which saves you a snapshot. wait_for takes until in plain words.');
       if (await canAsk()) lines.push('jev_run is on: hand it a mechanical goal, such as a search or a known flow, and Jev takes the steps and returns a trace. get_guide with topic "jev" says when to use it.');
+      if (await canAsk()) lines.push('jev_decide is on: it answers one closed question about items you choose, with a probability for every answer. Use it when a task needs judgement over a list, and keep the loop yourself.');
       lines.push(`Activity log: ${logPath()}`);
       return lines.join('\n');
     },

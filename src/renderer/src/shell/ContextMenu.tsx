@@ -54,6 +54,11 @@ export function ContextMenu() {
           <CopyIcon /> Copy link to this canvas
         </button>
         {hatch && (
+          <button role="menuitem" onClick={run(() => void window.hatch.copyText(hatch.url).then(() => actions.toast("Hatch copied this page's URL.")))} data-testid="menu-copy-url">
+            <CopyIcon /> Copy this page's URL
+          </button>
+        )}
+        {hatch && (
           <button role="menuitem" disabled={saved} onClick={run(() => void actions.saveLink(hatchLabel(hatch), hatch.url).then(() => actions.toast('Hatch saved this link in Links.')))} data-testid="menu-save-link">
             <SaveLinkIcon /> {saved ? 'This link is saved in Links' : 'Save this link'}
           </button>

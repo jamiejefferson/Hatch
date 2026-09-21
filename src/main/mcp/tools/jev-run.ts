@@ -8,7 +8,7 @@ import { nowDoing } from '../../agents/agents';
 import { askJevWithUsage, canAsk } from '../../jev/client';
 import { record } from '../../jev/metrics';
 import type { ChoiceAnswer } from '../../jev/pick';
-import { candidatesFor, changeNote, GATE, nameOf, optionRequest, optionsUnder, readOption, readStep, repeats, resultLine, stepRequest, tooManyFor, twinOf, USD_PER_INPUT_TOKEN, type JevAction, type Proposal, type Status } from '../../jev/run';
+import { candidatesFor, changeNote, closestIn, GATE, nameOf, optionRequest, optionsUnder, readOption, readStep, repeats, resultLine, stepRequest, tooManyFor, twinOf, USD_PER_INPUT_TOKEN, type JevAction, type Proposal, type Status } from '../../jev/run';
 import { onPage } from './page';
 import { hatch, intent, tool, type ToolContext } from './types';
 
@@ -18,7 +18,7 @@ const FAILS_IN_A_ROW = 3;
 const DONE_NEEDS = 0.5;
 
 const GUIDANCE: Record<Exclude<Status, 'done'>, string> = {
-  stuck: 'Read the trace to see where the run stopped. Carry on from final_snapshot with click and fill, or call jev_run again with a plainer goal.',
+  stuck: 'Read the trace to see where the run stopped. Carry on from final_snapshot with click and fill, or call jev_run again with a plainer goal. When the goal needs judgement over a list, such as which messages are junk, read the list yourself and put it to jev_decide.',
   max_steps: 'The run used every step without reaching the goal. Split the goal into smaller ones, or carry on from final_snapshot with click and fill.',
   timeout: 'The time ran out. Raise max_seconds or shorten the goal, and call get_console when the page looks broken.',
   error: 'Jev could not be asked. Read error, try once more, then carry on with snapshot, click and fill.',
@@ -96,8 +96,11 @@ async function run(page: PageSession, o: Options, ctx: ToolContext) {
     ctx.progress(`Step ${step} of at most ${o.max_steps}.`);
     const candidates = candidatesFor(lines);
     let reading: ReturnType<typeof readStep>;
+    let closest: ReturnType<typeof closestIn> = [];
     try {
-      reading = readStep(await ask(stepRequest(o.goal, history, lines, tooManyFor(candidates) ? candidates.slice(0, MAX_CONTROLS) : candidates)), o.goal, lines, candidates);
+      const answers = await ask(stepRequest(o.goal, history, lines, tooManyFor(candidates) ? candidates.slice(0, MAX_CONTROLS) : candidates));
+      closest = closestIn(answers, candidates);
+      reading = readStep(answers, o.goal, lines, candidates);
     } catch (e) {
       if (!(e instanceof HatchError)) throw e;
       status = 'error';
@@ -131,7 +134,7 @@ async function run(page: PageSession, o: Options, ctx: ToolContext) {
     }
     if (p.confidence < o.min_confidence) {
       status = 'stuck';
-      action.detail = `Jev's confidence of ${p.confidence.toFixed(2)} sits under min_confidence ${o.min_confidence}, so Hatch did not act.`;
+      action.detail = `Jev's confidence of ${p.confidence.toFixed(2)} sits under min_confidence ${o.min_confidence}, so Hatch did not act.${closest.length ? ` Jev weighed these most: ${closest.map((c) => `${c.action} (${c.probability.toFixed(2)})`).join('; ')}.` : ''} A spread this even often means the goal asks for judgement. Ask jev_decide a closed question, or act by reference.`;
       break;
     }
 
@@ -233,7 +236,7 @@ export const jevRunTools = [
   tool({
     name: 'jev_run',
     description:
-      'Hands a goal to Jev, a fast decision model, which takes the steps on your current page: click, type, choose an option, press Enter and scroll. Use it for a mechanical goal such as searching a site, paging through results or clicking through a known flow. Jev chooses among options and writes nothing, so put every text it must type inside quotes in the goal, such as: search for "espresso machine" and open the first result. The reply holds a status (done, stuck, max_steps, timeout or error), a trace of every step with Jev\'s confidence, what the run cost, and final_snapshot, the agent view with references ready to use. Verify the result before you rely on it. It works once the user has connected Jev in Settings; status says whether it is on. It takes no target and no ref.',
+      'Hands a goal to Jev, a fast decision model, which takes the steps on your current page: click, type, choose an option, press Enter and scroll. Use it for a mechanical goal such as searching a site, paging through results or clicking through a known flow. A goal that needs judgement, such as reviewing a list and acting on some of it, stops at the first step: keep that loop yourself and ask jev_decide. Jev chooses among options and writes nothing, so put every text it must type inside quotes in the goal, such as: search for "espresso machine" and open the first result. The reply holds a status (done, stuck, max_steps, timeout or error), a trace of every step with Jev\'s confidence, what the run cost, and final_snapshot, the agent view with references ready to use. Verify the result before you rely on it. It works once the user has connected Jev in Settings; status says whether it is on. It takes no target and no ref.',
     shape: {
       goal: z.string().min(4).max(600).describe('What the page should reach, in plain words, with every text to type inside quotes.'),
       max_steps: z.number().int().min(1).max(60).default(20).describe('The most steps Jev may take. Default 20.'),

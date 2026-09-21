@@ -7,21 +7,28 @@ import { z } from 'zod';
 import { begin, end } from '../agents/activity';
 import { agentFor, callEnded, callStarted, identify, type Agent } from '../agents/agents';
 import { HatchError } from '../cdp/session';
+import { canAsk } from '../jev/client';
+import { BRIEFING_HEAD, briefing } from './guide/brief';
 import { TOOLS } from './tools';
 import type { Tool, ToolContext } from './tools/types';
 
-const INSTRUCTIONS = 'Hatch is a browser you drive. Call status first, then get_guide with topic "start". Read pages with snapshot and act by element reference. Use screenshot only to judge how a design looks.';
+const INSTRUCTIONS = briefing('unknown');
+/** An agent silent for this long has most likely started a new conversation, which has never seen the briefing. */
+const BRIEF_AGAIN_MS = 5 * 60_000;
 
 async function runTool(tool: Tool, args: Record<string, unknown>, agent: Agent, progress: (message: string) => void) {
   const intent = typeof args.intent === 'string' ? args.intent : '';
   const entry = begin({ agent: agent.id, tool: tool.name, summary: tool.summary ? tool.summary(args) : tool.name, intent, tabId: agent.tabId, hatchId: agent.hatchId });
   const where: { tabId: string | null; hatchId: string | null } = { tabId: agent.tabId, hatchId: agent.hatchId };
   const ctx: ToolContext = { agent, progress, at: (tabId, hatchId) => Object.assign(where, { tabId, hatchId }) };
+  // The first call of a piece of work carries the briefing, whichever tool it is, so an agent app that hides the server's instructions still briefs its model.
+  const brief = agent.finished || Date.now() - agent.lastCall > BRIEF_AGAIN_MS;
   callStarted(agent, intent);
   try {
     const result = await tool.run(args, ctx);
-    const text = typeof result === 'string' ? result : result.text;
-    end(entry, { ...where, note: text.split('\n')[0]?.slice(0, 200), detail: typeof result === 'string' ? undefined : result.activity });
+    const said = typeof result === 'string' ? result : result.text;
+    const text = brief && tool.name !== 'finish_working' ? `${said}\n\n${BRIEFING_HEAD}\n${briefing((await canAsk()) ? 'on' : 'off')}` : said;
+    end(entry, { ...where, note: said.split('\n')[0]?.slice(0, 200), detail: typeof result === 'string' ? undefined : result.activity });
     const content: ({ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string })[] = [];
     // Some agent apps drop image content, so the text always carries the saved file's path as well.
     if (typeof result !== 'string' && result.image) content.push({ type: 'image', data: result.image.base64, mimeType: result.image.mimeType });

@@ -126,6 +126,21 @@ export function readStep(answers: Record<string, ChoiceAnswer>, goalText: string
   return { proposal: { kind: 'click', ...base }, goal, stuck };
 }
 
+/** The actions Jev weighed most, best first, so an agent that takes over from a halted run sees the choice Jev faced. */
+export function closestIn(answers: Record<string, ChoiceAnswer>, candidates: Candidate[], most = 3): { action: string; probability: number }[] {
+  const byRef = new Map(candidates.map((c) => [c.ref, c]));
+  const all: { action: string; probability: number }[] = [];
+  for (const [id, answer] of Object.entries(answers)) {
+    if (!id.startsWith('act')) continue;
+    for (const [choice, p] of Object.entries(answer.probabilities ?? {})) {
+      if (choice === NONE) all.push({ action: 'no action on this page', probability: p });
+      else if (choice in SPECIAL) all.push({ action: choice, probability: p });
+      else if (byRef.has(choice)) all.push({ action: `${byRef.get(choice)!.text} [${choice}]`, probability: p });
+    }
+  }
+  return all.filter((a) => a.probability >= 0.02).sort((a, b) => b.probability - a.probability).slice(0, most).map((a) => ({ ...a, probability: Math.round(a.probability * 100) / 100 }));
+}
+
 /** A native dropdown takes a second question: which of its options serves the goal. */
 export function optionRequest(goal: string, history: string[], lines: OutlineLine[], dropdown: string, options: string[]): JevRequest<ChoiceQuestion> {
   const criteria: Record<string, string> = { [NONE]: 'No option in this list serves the goal.' };
