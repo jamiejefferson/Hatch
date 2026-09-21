@@ -65,7 +65,8 @@ async function run(page: PageSession, o: Options, ctx: ToolContext) {
     return answers;
   };
   const read = async (): Promise<OutlineLine[] | null> => {
-    if (page.loading) await waitForLoad(page, Math.max(500, Math.min(10_000, remaining())));
+    // The outline reads on a page that is still fetching images, so a slow site holds a step for three seconds at most.
+    if (page.loading) await waitForLoad(page, Math.max(500, Math.min(3000, remaining())));
     return outlineOf(page).catch(() => null);
   };
 
