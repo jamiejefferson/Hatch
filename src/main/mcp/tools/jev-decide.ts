@@ -57,7 +57,8 @@ export const jevDecideTools = [
       // OpenRouter states what each call cost. TypeSafe sends tokens alone, which Hatch prices at TypeSafe's listed rate.
       const cost = Number(replies.reduce((n, r) => n + (r.usage.cost ?? r.usage.input_tokens * USD_PER_INPUT_TOKEN), 0).toFixed(6));
       const outcome = readDecision(decision, answers);
-      const line = `${outcomeLine(outcome)} ($${cost.toFixed(4)}, ${((Date.now() - started) / 1000).toFixed(1)}s)`;
+      // One call often costs under a hundredth of a cent, which four decimals would print as nothing.
+      const line = `${outcomeLine(outcome)} (${cost > 0 && cost < 0.0001 ? 'under $0.0001' : `$${cost.toFixed(4)}`}, ${((Date.now() - started) / 1000).toFixed(1)}s)`;
       const result = { ...outcome, cost_usd: cost, elapsed_ms: Date.now() - started, jev_calls: replies.length, tokens_used: tokens };
       return {
         text: [`jev_decide: ${line}.`, JSON.stringify(result, null, 1), 'Each probability is Jev\'s own and nothing has changed on the page. Apply your threshold, act by reference, then check the page.'].join('\n'),

@@ -58,7 +58,7 @@ test('jev_decide answers a closed question with a probability for every answer, 
     // A list is labelled in one call, with no page open, in the agent's own order.
     const labelled = await call('jev_decide', { kind: 'label_each', question: 'Is this message unsolicited marketing?', options: ['junk', 'keep'], rubric: 'a receipt is keep', items: ['Acme Deals | Summer sale, 50% off', 'Sam Reid | Re: budget review', 'Shoe Barn | Flash SALE ends tonight'] });
     expect(labelled.isError).toBe(false);
-    expect(labelled.text).toMatch(/^jev_decide: Jev labelled 3 items: 2 "junk", 1 "keep" \(\$0\.0000, /);
+    expect(labelled.text).toMatch(/^jev_decide: Jev labelled 3 items: 2 "junk", 1 "keep" \(under \$0\.0001, /);
     const items = resultOf(labelled.text).items as { number: number; label: string; probability: number; probabilities: Record<string, number> }[];
     expect(items.map((i) => [i.number, i.label, i.probability])).toEqual([[1, 'junk', 0.9], [2, 'keep', 0.9], [3, 'junk', 0.9]]);
     expect(items[0]!.probabilities).toEqual({ junk: 0.9, keep: 0.1 });
