@@ -2,7 +2,7 @@
 import { z } from 'zod';
 import { outlineOf } from '../../cdp/actions';
 import { HatchError, type PageSession } from '../../cdp/session';
-import type { OutlineLine } from '../../cdp/snapshot';
+import { renderOutline, type OutlineLine } from '../../cdp/snapshot';
 import { askJev } from '../../jev/client';
 import { candidatesIn, holds, holdsRequest, readAnswers, requestFor, SURE, tooMany, type Want } from '../../jev/pick';
 import { settingsStore } from '../../store/stores';
@@ -21,17 +21,31 @@ async function ensureDescribing(page: PageSession): Promise<void> {
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+/** A page that finished loading and then shows nothing new for this long will not come to meet the statement on its own. */
+const IDLE_MS = 6000;
 
 /** Waits until a statement about the page holds, such as "the search results are showing". Jev reads the outline about once a second. */
 export async function waitUntil(page: PageSession, statement: string, timeoutMs: number): Promise<{ met: boolean; detail: string }> {
   const started = Date.now();
   let last = 0;
+  let asked = '';
+  let changedAt = started;
   for (;;) {
     await ensureDescribing(page);
     if (page.dialog) return { met: false, detail: `The page opened a ${page.dialog.kind} dialog: ${JSON.stringify(page.dialog.message)}. Answer it with handle_dialog.` };
-    if (!page.loading) {
-      last = holds(await askJev(holdsRequest(await outlineOf(page), statement)));
-      if (last >= SURE) return { met: true, detail: `${JSON.stringify(statement)} holds after ${((Date.now() - started) / 1000).toFixed(1)} seconds (confidence ${percent(last)}).` };
+    if (page.loading) changedAt = Date.now();
+    else {
+      const lines = await outlineOf(page);
+      const now = renderOutline(lines);
+      // Jev gives the same answer for the same page, so Hatch asks again only once the page has changed.
+      if (now !== asked) {
+        asked = now;
+        changedAt = Date.now();
+        last = holds(await askJev(holdsRequest(lines, statement)));
+        if (last >= SURE) return { met: true, detail: `${JSON.stringify(statement)} holds after ${((Date.now() - started) / 1000).toFixed(1)} seconds (confidence ${percent(last)}).` };
+      } else if (Date.now() - changedAt >= IDLE_MS) {
+        return { met: false, detail: `${JSON.stringify(statement)} does not hold (confidence ${percent(last)}), and the page has stood still for ${Math.round(IDLE_MS / 1000)} seconds, so a longer wait is unlikely to help. Check that your last action worked, then act again.` };
+      }
     }
     if (Date.now() - started >= timeoutMs) return { met: false, detail: `${JSON.stringify(statement)} does not hold yet after ${Math.round((Date.now() - started) / 1000)} seconds (confidence ${percent(last)}).` };
     await sleep(900);

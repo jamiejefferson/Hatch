@@ -120,6 +120,8 @@ const timing = `# Timing
 Hatch sets no global time limit. Your own agent app does: it abandons a tool call after its own limit, and the shortest limit found in research was 60 seconds.
 
 - navigate, reload, go_back, open_hatch and wait_for take timeout_s. The default is 30 seconds.
+- wait_for with until ends early when the page has stood still for 6 seconds and the statement does not hold. That usually means your last action did nothing, so read its reply before you wait.
+- When another element covers the one you named, the error gives the reference of what covers it. An open list of suggestions or a dialog is the usual cause: act on that reference, then carry on.
 - When timeout_s runs out the tool returns the current state as a normal result, such as "still loading". Hatch carries on with the work. Call wait_for to pick it up.
 - Raise timeout_s only when you know your app allows longer calls.
 - Hatch sends progress notifications during long waits.`;

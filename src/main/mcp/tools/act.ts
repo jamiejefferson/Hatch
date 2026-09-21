@@ -23,7 +23,7 @@ export const actTools = [
   }),
   tool({
     name: 'fill',
-    description: 'Replaces the text in a field. Works with fields that a framework controls. An empty string clears the field.',
+    description: 'Replaces the text in a field. Works with fields that a framework controls. An empty string clears the field. The reply lists what the typing brought up, such as a list of suggestions with their references, so click the suggestion you want straight from the reply. A field that suggests rarely accepts the typed text alone.',
     shape: { ref, target, text: z.string().describe('The text the field should hold.'), hatch, intent },
     summary: (a) => `fill ${named(a)}`,
     run: (a, ctx) =>

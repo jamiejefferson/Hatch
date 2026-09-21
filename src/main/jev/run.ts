@@ -140,6 +140,18 @@ export function readOption(answers: Record<string, ChoiceAnswer>, options: strin
   return option === undefined ? null : { option, confidence: a.confidence ?? 0 };
 }
 
+/**
+ * A travel site shows a plain field on the page and the real one inside the dialog that opens over it, under the same label.
+ * When a field is covered, its twin is the one other line with the same role and name. Two or more twins leave the choice to Jev.
+ */
+export function twinOf(lines: OutlineLine[], ref: string, line: string): { ref: string; line: string } | null {
+  const label = line.match(/^\w[\w-]* ("(?:[^"\\]|\\.)*")/)?.[0];
+  if (!label) return null;
+  const twins = lines.filter((l) => l.ref && l.ref !== ref && l.text.startsWith(label) && FIELD_OR_COMBO.test(l.text));
+  return twins.length === 1 ? { ref: twins[0]!.ref!, line: twins[0]!.text.replace(/ \[e\d+\]/, '') } : null;
+}
+const FIELD_OR_COMBO = /^(textbox|searchbox|combobox|spinbutton|date|date-time|time)\b/;
+
 /** The name an action carries in the trace, such as click_e12. */
 export function nameOf(p: Proposal): string {
   if (p.kind === 'click' || p.kind === 'type' || p.kind === 'select') return `${p.kind}_${p.ref}`;

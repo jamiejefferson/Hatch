@@ -1,18 +1,20 @@
 // jev_run hands Jev a goal and lets it take the steps. Jev holds no goal between calls, so Hatch runs the loop:
 // each step asks Jev for the next action and for its goal and stuck signals, acts, and records what the page did.
 import { z } from 'zod';
-import { addressOf, click, fill, outlineOf, pressKey, scroll, selectOption, waitForLoad } from '../../cdp/actions';
+import { addressOf, click, CoveredError, fill, outlineOf, pressKey, scroll, selectOption, settledOutline, SUGGESTS, waitForLoad } from '../../cdp/actions';
 import { HatchError, type PageSession } from '../../cdp/session';
 import { renderOutline, type OutlineLine } from '../../cdp/snapshot';
 import { askJevWithUsage, canAsk } from '../../jev/client';
 import { record } from '../../jev/metrics';
 import type { ChoiceAnswer } from '../../jev/pick';
-import { candidatesFor, changeNote, GATE, nameOf, optionRequest, optionsUnder, readOption, readStep, repeats, resultLine, stepRequest, tooManyFor, USD_PER_INPUT_TOKEN, type JevAction, type Proposal, type Status } from '../../jev/run';
+import { candidatesFor, changeNote, GATE, nameOf, optionRequest, optionsUnder, readOption, readStep, repeats, resultLine, stepRequest, tooManyFor, twinOf, USD_PER_INPUT_TOKEN, type JevAction, type Proposal, type Status } from '../../jev/run';
 import { onPage } from './page';
 import { hatch, intent, tool, type ToolContext } from './types';
 
 const MAX_CONTROLS = 1000;
 const FAILS_IN_A_ROW = 3;
+/** A choice to stop counts as done only when Jev also puts the goal at even odds or better. */
+const DONE_NEEDS = 0.5;
 
 const GUIDANCE: Record<Exclude<Status, 'done'>, string> = {
   stuck: 'Read the trace to see where the run stopped. Carry on from final_snapshot with click and fill, or call jev_run again with a plainer goal.',
@@ -28,7 +30,7 @@ async function execute(page: PageSession, p: Proposal, ask: (request: ReturnType
     case 'click':
       return { executed: nameOf(p), said: await click(page, p.ref, { brief: true }) };
     case 'type':
-      return { executed: nameOf(p), said: `${await fill(page, p.ref, p.text!)} It now holds ${JSON.stringify(p.text)}.` };
+      return { executed: nameOf(p), said: `${await fill(page, p.ref, p.text!, { brief: true })} It now holds ${JSON.stringify(p.text)}.` };
     case 'select': {
       const options = optionsUnder(lines, p.ref);
       const picked = readOption(await ask(optionRequest(goal, history, lines, p.line, options)), options);
@@ -57,6 +59,7 @@ async function run(page: PageSession, o: Options, ctx: ToolContext) {
   let status: Status = 'max_steps';
   let error = '';
   let fails = 0;
+  let coveredLast = '';
 
   const ask = async (request: Parameters<typeof askJevWithUsage>[0]) => {
     const { answers, usage } = await askJevWithUsage(request, Math.max(2000, Math.min(15_000, remaining())));
@@ -109,6 +112,12 @@ async function run(page: PageSession, o: Options, ctx: ToolContext) {
     const action: JevAction = { step, proposed_action: nameOf(p), executed_action: null, detail: '', confidence: round(p.confidence), goal_probability: round(reading.goal), stuck_probability: round(reading.stuck) };
     actions.push(action);
 
+    // Jev answers each question alone, so it can choose to stop while it puts the goal well short. Hatch reports that as stuck, because a run that says done is one the agent trusts.
+    if (p.kind === 'done' && reading.goal < DONE_NEEDS) {
+      status = 'stuck';
+      action.detail = `Jev chose to stop, yet it puts the goal at ${reading.goal.toFixed(2)}, so the goal is likely unfinished.`;
+      break;
+    }
     if (reading.goal > GATE || p.kind === 'done') {
       status = 'done';
       action.detail = reading.goal > GATE ? 'Jev judged the goal reached, so no further action ran.' : 'Jev chose to stop, because it judged the goal reached.';
@@ -130,20 +139,53 @@ async function run(page: PageSession, o: Options, ctx: ToolContext) {
     try {
       const done = await execute(page, p, ask, o.goal, history, lines);
       action.executed_action = done.executed;
-      const after = await read();
       const moved = page.guest.getURL() !== before;
+      // Typing calls up suggestions and a click opens a menu, and both arrive a moment later. Jev chooses next from the page once it has stopped changing.
+      const after = !moved && !page.loading && (p.kind === 'type' || p.kind === 'click') ? await settledOutline(page, { maxMs: Math.max(200, Math.min(1200, remaining())), awaitChange: p.kind === 'type' && SUGGESTS.test(p.line) }) : await read();
       const note = moved ? `navigated to ${await addressOf(page)}` : after ? changeNote(lines, after) : 'the page gave no answer';
       action.detail = `${done.said.split(' The page is now ')[0]} The page: ${note}.`;
       const did = p.kind === 'type' ? `typed ${JSON.stringify(p.text)} into ${label}` : p.kind === 'select' ? `chose an option in ${label}` : p.kind === 'click' ? `clicked ${label}` : label;
       history.push(`${step}. ${did} -> ${note}`);
       fails = 0;
+      coveredLast = '';
       lines = after;
     } catch (e) {
       if (!(e instanceof HatchError)) throw e;
+      lines = await read();
+      // A covered field whose one twin sits in what opened takes the text there, which is where a person would type it.
+      const typed = p.kind === 'type' ? p : null;
+      const fresh = lines;
+      const twin = e instanceof CoveredError && typed && fresh ? twinOf(fresh, typed.ref, typed.line) : null;
+      if (twin && typed && fresh) {
+        try {
+          const said = await fill(page, twin.ref, typed.text!, { brief: true });
+          const after = await settledOutline(page, { maxMs: Math.max(200, Math.min(1200, remaining())), awaitChange: SUGGESTS.test(twin.line) });
+          action.executed_action = `type_${twin.ref}`;
+          const note = after ? changeNote(fresh, after) : 'the page gave no answer';
+          action.detail = `${label} sits under what opened, so Hatch typed into the field with the same name inside it. ${said} It now holds ${JSON.stringify(typed.text)}. The page: ${note}.`;
+          history.push(`${step}. typed ${JSON.stringify(typed.text)} into ${twin.line} -> ${note}`);
+          fails = 0;
+          coveredLast = '';
+          lines = after;
+          continue;
+        } catch (again) {
+          if (!(again instanceof HatchError)) throw again;
+        }
+      }
+      if (e instanceof CoveredError) {
+        // A list or a dialog over the target is ordinary page behaviour. Jev chooses again from the fresh page, and the failure counts only when the same element stays covered.
+        const over = e.by ? lines?.find((l) => l.ref === e.by)?.text.replace(/ \[e\d+\]/, '') : undefined;
+        const covered = 'ref' in p ? p.ref : label;
+        if (coveredLast === covered) fails += 1;
+        coveredLast = covered;
+        action.detail = `${label} sits under ${over ?? 'another element'}, so Hatch did not act and Jev chooses again.`;
+        history.push(`${step}. tried ${label} -> it sits under ${over ?? 'another element'}, which opened over it. The next action belongs inside what opened, or closes it.`);
+        continue;
+      }
       fails += 1;
+      coveredLast = '';
       action.detail = `The action failed: ${e.message}`;
       history.push(`${step}. tried ${label} -> failed: ${e.message.slice(0, 160)}`);
-      lines = await read();
     }
   }
   if (status === 'timeout' && actions.every((a) => a.executed_action === null)) error = 'The time ran out before any action finished. Raise max_seconds or make the goal simpler.';

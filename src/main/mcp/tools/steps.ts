@@ -35,7 +35,7 @@ async function runStep(page: PageSession, s: Step): Promise<string> {
     case 'fill': {
       const text = need(s.text, 'A fill step needs text.');
       const found = await elementFor(page, s, 'field', 'type into');
-      return withPick(found, await fill(page, found.ref, text));
+      return withPick(found, await fill(page, found.ref, text, { brief: true }));
     }
     case 'select_option': {
       const option = need(s.option, 'A select_option step needs option.');

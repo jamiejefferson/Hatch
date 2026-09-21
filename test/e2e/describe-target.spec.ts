@@ -166,6 +166,12 @@ test('run_steps fills a form and sends it in one call, and stops where Hatch is 
 
     // wait_for takes the same kind of statement on its own.
     expect(await call('wait_for', { until: 'the account page is showing', timeout_s: 5 })).toContain('holds after');
+    // A page that stands still will not come to meet the statement, so the wait ends early.
+    const began = Date.now();
+    const idle = await call('wait_for', { until: 'the password field is showing', timeout_s: 30 });
+    expect(idle).toContain('the page has stood still for 6 seconds');
+    expect(Date.now() - began).toBeLessThan(12_000);
+
     // A step with a missing argument stops the run with a plain reason.
     expect(await call('run_steps', { steps: [{ do: 'fill', ref: 'e1' }] })).toContain('A fill step needs text.');
   } finally {

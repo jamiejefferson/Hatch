@@ -125,8 +125,8 @@ test('jev_run takes a goal through a sign-in form, returns a trace and fresh ref
 
 test('jev_run stops when Jev is stuck, unsure, out of steps or rate limited, and says what to do next', async () => {
   const site = await serveSite();
-  let mode: 'stuck' | 'unsure' | 'loop' | 'muddle' = 'stuck';
-  const jev = await standInJev(() => (mode === 'stuck' ? { act: 'none', stuck: 0.94 } : mode === 'unsure' ? { act: 'link "Docs"', confidence: 0.41 } : mode === 'muddle' ? { act: 'link "Docs"', goal: 0.95, stuck: 0.95 } : { act: 'scroll_down' }));
+  let mode: 'stuck' | 'unsure' | 'loop' | 'muddle' | 'early' = 'stuck';
+  const jev = await standInJev(() => (mode === 'stuck' ? { act: 'none', stuck: 0.94 } : mode === 'unsure' ? { act: 'link "Docs"', confidence: 0.41 } : mode === 'muddle' ? { act: 'link "Docs"', goal: 0.95, stuck: 0.95 } : mode === 'early' ? { act: 'done', goal: 0.2 } : { act: 'scroll_down' }));
   const home = freshHome();
   const { app, win } = await launch(home, 0, { HATCH_JEV_URL: jev.url });
   const { url } = JSON.parse(readFileSync(join(home, 'server.json'), 'utf8'));
@@ -158,6 +158,12 @@ test('jev_run stops when Jev is stuck, unsure, out of steps or rate limited, and
 
     mode = 'muddle';
     expect(await call({ goal: 'open the documentation' })).toContain('does not hold together');
+
+    // A choice to stop while Jev puts the goal well short reads as stuck, so the agent never trusts an unfinished run.
+    mode = 'early';
+    const early = await call({ goal: 'open the documentation' });
+    expect(early).toMatch(/^jev_run: stuck \(0 steps/);
+    expect(early).toContain('yet it puts the goal at 0.20, so the goal is likely unfinished');
 
     jev.status.code = 429;
     const limited = await call({ goal: 'open the documentation' });
@@ -226,6 +232,93 @@ test('an OpenRouter key sends the same questions under OpenRouter\'s model name,
     expect(new Set(jev.models)).toEqual(new Set(['~typesafe/jev-latest']));
     const result = JSON.parse(reply.slice(reply.indexOf('{'), reply.indexOf('\nfinal_snapshot'))) as { jev_calls: number; cost_usd: number };
     expect(result.cost_usd).toBeCloseTo(result.jev_calls * 0.0005, 6);
+  } finally {
+    await agent.close().catch(() => undefined);
+    await app.close();
+    await jev.close();
+    await site.close();
+  }
+});
+
+test('a list of suggestions over the next field makes Jev choose again, and the run carries on to the end', async () => {
+  const site = await serveSite();
+  // This Jev reaches for the destination field while the origin's suggestions still cover it, as the real one did on Google Flights.
+  const plan: Plan = (state) => {
+    if (state.includes('Showing flights from Edinburgh, United Kingdom to Milan, Italy.')) return { act: 'done', goal: 0.97 };
+    if (!state.includes('typed "Edinburgh"')) return { act: 'combobox "Where from?"', text: 'Edinburgh' };
+    if (!state.includes('clicked option "Edinburgh, United Kingdom"')) return state.includes('sits under') ? { act: 'option "Edinburgh, United Kingdom"' } : { act: 'combobox "Where to?"', text: 'Milan' };
+    if (!state.includes('typed "Milan"')) return { act: 'combobox "Where to?"', text: 'Milan' };
+    if (!state.includes('clicked option "Milan, Italy"')) return { act: 'option "Milan, Italy"' };
+    return { act: 'button "Search"' };
+  };
+  const jev = await standInJev(plan);
+  const home = freshHome();
+  const { app, win } = await launch(home, 0, { HATCH_JEV_URL: jev.url });
+  const { url } = JSON.parse(readFileSync(join(home, 'server.json'), 'utf8'));
+  const agent = new Client({ name: 'runner', version: '1.0.0' });
+  await agent.connect(new StreamableHTTPClientTransport(new URL(`${url}?agent=runner`)));
+  const call = async (name: string, args: Record<string, unknown> = {}): Promise<{ text: string; isError: boolean }> => {
+    const r = (await agent.callTool({ name, arguments: args })) as { content: { text: string }[]; isError?: boolean };
+    return { text: r.content[0]!.text, isError: r.isError === true };
+  };
+
+  try {
+    await win.evaluate('window.hatch.setSettings({ describeElements: true })');
+    await win.evaluate("window.hatch.setJevKey('key-for-the-test')");
+    await call('navigate', { to: `${site.url}/flights.html` });
+
+    const ran = await call('jev_run', { goal: 'find flights from "Edinburgh" to "Milan"', min_confidence: 0.7 });
+    expect(ran.text).toMatch(/^jev_run: done \(5 steps,/);
+    const result = JSON.parse(ran.text.slice(ran.text.indexOf('{'), ran.text.indexOf('\nfinal_snapshot'))) as { actions: { executed_action: string | null; detail: string }[] };
+    // The suggestions had arrived by the time Jev chose again, and the covered field cost one step and no failure.
+    const covered = result.actions.find((a) => a.executed_action === null && a.detail.includes('sits under'));
+    expect(covered?.detail).toContain('sits under option "Edinburgh');
+    expect(await inPages<string>(app, "document.getElementById('result').textContent")).toEqual(['Showing flights from Edinburgh, United Kingdom to Milan, Italy.']);
+
+    // By hand, fill says what the typing brought up, and a covered field names the list that covers it.
+    await call('navigate', { to: `${site.url}/flights.html` });
+    const view = (await call('snapshot')).text;
+    const from = view.match(/combobox "Where from\?".*\[(e\d+)\]/)![1]!;
+    const to = view.match(/combobox "Where to\?".*\[(e\d+)\]/)![1]!;
+    const filled = (await call('fill', { ref: from, text: 'Edin' })).text;
+    expect(filled).toMatch(/option "Edinburgh, United Kingdom" \[e\d+\]/);
+    const options = [...filled.matchAll(/option "Edinburgh[^"]*" \[(e\d+)\]/g)].map((m) => m[1]);
+    const refused = await call('click', { ref: to });
+    expect(refused.isError).toBe(true);
+    // The error names the option that lies over the field, so the agent acts on it with no snapshot.
+    expect(options).toContain(refused.text.match(/lists under (e\d+)/)?.[1]);
+  } finally {
+    await agent.close().catch(() => undefined);
+    await app.close();
+    await jev.close();
+    await site.close();
+  }
+});
+
+test('a field covered by a dialog that holds a field of the same name takes its text inside the dialog', async () => {
+  const site = await serveSite();
+  const plan: Plan = (state) => {
+    if (state.includes('typed "20 October 2026"')) return { act: 'done', goal: 0.97 };
+    if (!state.includes('dialog "Choose dates"')) return { act: 'button "Dates"' };
+    // Jev names the page's own field, which the dialog now covers.
+    return { act: 'textbox "Return"', text: '20 October 2026' };
+  };
+  const jev = await standInJev(plan);
+  const home = freshHome();
+  const { app, win } = await launch(home, 0, { HATCH_JEV_URL: jev.url });
+  const { url } = JSON.parse(readFileSync(join(home, 'server.json'), 'utf8'));
+  const agent = new Client({ name: 'runner', version: '1.0.0' });
+  await agent.connect(new StreamableHTTPClientTransport(new URL(`${url}?agent=runner`)));
+  const call = async (name: string, args: Record<string, unknown> = {}): Promise<string> => ((await agent.callTool({ name, arguments: args })) as { content: { text: string }[] }).content[0]!.text;
+
+  try {
+    await win.evaluate('window.hatch.setSettings({ describeElements: true })');
+    await win.evaluate("window.hatch.setJevKey('key-for-the-test')");
+    await call('navigate', { to: `${site.url}/flights.html` });
+    const ran = await call('jev_run', { goal: 'set the return date to "20 October 2026"' });
+    expect(ran).toMatch(/^jev_run: done \(2 steps,/);
+    expect(ran).toContain('so Hatch typed into the field with the same name inside it');
+    expect(await inPages<string[]>(app, "[document.getElementById('return').value, document.getElementById('return-real').value]")).toEqual([['', '20 October 2026']]);
   } finally {
     await agent.close().catch(() => undefined);
     await app.close();

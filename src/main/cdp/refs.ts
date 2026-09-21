@@ -19,6 +19,11 @@ export class RefTable {
     return ref;
   }
 
+  /** The reference a node already carries, or nothing. Asking never makes a new one. */
+  refOf(backendNodeId: number): string | undefined {
+    return this.byNode.get(backendNodeId);
+  }
+
   nodeFor(ref: string): number | undefined {
     return this.byRef.get(ref.trim().replace(/^\[|\]$/g, ''));
   }

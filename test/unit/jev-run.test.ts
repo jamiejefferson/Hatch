@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { OutlineLine } from '../../src/main/cdp/snapshot';
-import { candidatesFor, changeNote, nameOf, optionsUnder, readOption, readStep, repeats, resultLine, stepRequest, textsIn, type JevAction } from '../../src/main/jev/run';
+import { candidatesFor, changeNote, nameOf, optionsUnder, readOption, readStep, repeats, resultLine, stepRequest, textsIn, twinOf, type JevAction } from '../../src/main/jev/run';
 
 const line = (depth: number, text: string): OutlineLine => ({ depth, text, ref: text.match(/\[(e\d+)\]/)?.[1] });
 const PAGE: OutlineLine[] = [
@@ -104,5 +104,20 @@ describe('the trace', () => {
   it('writes the line the Activity panel shows', () => {
     expect(resultLine('done', 8, 0.0031, 4210)).toBe('done (8 steps, $0.0031, 4.2s)');
     expect(resultLine('stuck', 1, 0.0123, 18000)).toBe('stuck (1 step, $0.012, 18.0s)');
+  });
+});
+
+describe('twinOf', () => {
+  const page = [line(0, 'search "Flight" [e15]'), line(1, 'textbox "Departure" [e23]'), line(1, 'textbox "Return" [e24]'), line(0, 'dialog [e287]'), line(1, 'textbox "Departure"  value "16 October 2026" [e288]'), line(1, 'textbox "Return" [e289]'), line(1, 'button "Return" [e300]')];
+
+  it('finds the one other field with the same role and name, which is the real field inside the dialog', () => {
+    expect(twinOf(page, 'e24', 'textbox "Return"')).toEqual({ ref: 'e289', line: 'textbox "Return"' });
+    expect(twinOf(page, 'e23', 'textbox "Departure"')?.ref).toBe('e288');
+  });
+
+  it('leaves the choice to Jev when no twin exists or several do', () => {
+    expect(twinOf(page.slice(0, 3), 'e24', 'textbox "Return"')).toBeNull();
+    expect(twinOf([...page, line(1, 'textbox "Return" [e301]')], 'e24', 'textbox "Return"')).toBeNull();
+    expect(twinOf(page, 'e300', 'button "Return"')).toBeNull();
   });
 });

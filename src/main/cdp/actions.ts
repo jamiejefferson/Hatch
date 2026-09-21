@@ -119,10 +119,47 @@ const LOCATE = `function () {
   return { x, y, visible: r.width > 0 && r.height > 0, covered: mine ? null : describe(hit) };
 }`;
 
+/** An element that sits under another one. "by" is the reference of what covers it, when the agent view lists that element. */
+export class CoveredError extends HatchError {
+  constructor(message: string, readonly by: string | null) {
+    super(message);
+  }
+}
+
+// The same lookup as LOCATE, returning the covering element itself so Hatch can name its reference.
+const COVERING = `function () {
+  const el = this.nodeType === 1 ? this : this.parentElement;
+  const r = el.getBoundingClientRect();
+  const x = Math.min(Math.max(r.left + r.width / 2, 0), innerWidth - 1);
+  const y = Math.min(Math.max(r.top + r.height / 2, 0), innerHeight - 1);
+  let hit = document.elementFromPoint(x, y);
+  for (let inner; hit && hit.shadowRoot && (inner = hit.shadowRoot.elementFromPoint(x, y)) && inner !== hit; ) hit = inner;
+  return hit;
+}`;
+
+/** Climbs from the covering element to the nearest one the agent view has given a reference, which is usually the open list or dialog. */
+async function coveringRef(page: PageSession, ref: string): Promise<string | null> {
+  try {
+    let { result } = await page.send<{ result: { objectId?: string } }>('Runtime.callFunctionOn', { objectId: await objectFor(page, ref), functionDeclaration: COVERING, returnByValue: false });
+    for (let depth = 0; result.objectId && depth < 12; depth += 1) {
+      const { node } = await page.send<{ node: { backendNodeId: number } }>('DOM.describeNode', { objectId: result.objectId });
+      const known = page.refs.refOf(node.backendNodeId);
+      if (known) return known;
+      ({ result } = await page.send<{ result: { objectId?: string } }>('Runtime.callFunctionOn', { objectId: result.objectId, functionDeclaration: 'function () { return this.parentNode || this.host || null; }', returnByValue: false }));
+    }
+  } catch {
+    // The message still names the covering element by its tag.
+  }
+  return null;
+}
+
 async function locate(page: PageSession, ref: string, action: string): Promise<Target> {
   const target = await call<Target>(page, await objectFor(page, ref), LOCATE);
   if (!target.visible) throw new HatchError(`The element ${ref} has no size on the page, so Hatch cannot ${action} it. It may be hidden.`);
-  if (target.covered) throw new HatchError(`Another element covers ${ref}: ${target.covered}. Close or scroll past what covers it, then call snapshot again.`);
+  if (target.covered) {
+    const by = await coveringRef(page, ref);
+    throw new CoveredError(by ? `Another element covers ${ref}: ${target.covered}, which the agent view lists under ${by}. A list or a dialog may have opened over it. Act on ${by} or on an element inside it, or close it, then try ${ref} again.` : `Another element covers ${ref}: ${target.covered}. Close or scroll past what covers it, then call snapshot again.`, by);
+  }
   return target;
 }
 
@@ -138,6 +175,30 @@ async function settle(page: PageSession, work: Promise<unknown>): Promise<void> 
 
 /** The agent view as it stood before an action. A page that cannot be read yields nothing, and the reply then leaves the changes out. */
 const viewBefore = (page: PageSession, seen?: OutlineLine[]): Promise<OutlineLine[] | null> => (seen ? Promise.resolve(seen) : outlineOf(page).catch(() => null));
+
+/** A field that calls up suggestions as the user types. */
+export const SUGGESTS = /^(combobox|searchbox)\b/;
+
+/**
+ * Suggestions and menus arrive a moment after the action that calls them. The outline is read until two readings match, for 1.2 seconds at most.
+ * After typing into a field that suggests, the first change counts as the start, because a server sends the list and the page stands still until it lands.
+ */
+export async function settledOutline(page: PageSession, options: { maxMs?: number; awaitChange?: boolean } = {}): Promise<OutlineLine[] | null> {
+  const started = Date.now();
+  const maxMs = options.maxMs ?? 1200;
+  let waiting = options.awaitChange === true;
+  let last = await outlineOf(page).catch(() => null);
+  while (last && Date.now() - started < maxMs) {
+    await sleep(200);
+    const next = await outlineOf(page).catch(() => null);
+    if (!next) return last;
+    const same = renderOutline(next) === renderOutline(last);
+    if (same && !waiting) return next;
+    if (!same) waiting = false;
+    last = next;
+  }
+  return last;
+}
 
 /** A new page arrives with the top of its outline, which is what the agent asks for next. */
 const NEW_PAGE_CHARS = 4000;
@@ -225,8 +286,10 @@ const SET_VALUE = `function (text) {
   return this.value === text;
 }`;
 
-export async function fill(page: PageSession, ref: string, text: string): Promise<string> {
+/** The reply says what the typing brought up, such as a list of suggestions, so the agent needs no snapshot to see it. */
+export async function fill(page: PageSession, ref: string, text: string, options: { brief?: boolean } = {}): Promise<string> {
   ensureNoDialog(page);
+  const seen = options.brief ? null : await outlineOf(page).catch(() => null);
   const { x, y } = await locate(page, ref, 'fill');
   // The click puts the caret in the field the way a person does, which also fires the focus handlers some forms rely on.
   const base = { x, y, button: 'left', clickCount: 1 };
@@ -244,7 +307,10 @@ export async function fill(page: PageSession, ref: string, text: string): Promis
   if (!(await call<boolean>(page, object, HOLDS, [text])) && !(await call<boolean>(page, object, SET_VALUE, [text]))) {
     throw new HatchError(`The field ${ref} did not take the text. It may format or reject what it receives. Call snapshot to see what it holds.`);
   }
-  return `Filled ${ref}.`;
+  if (!seen) return `Filled ${ref}.`;
+  await sleep(250);
+  const after = await settledOutline(page, { awaitChange: SUGGESTS.test(seen.find((l) => l.ref === ref)?.text ?? '') });
+  return after ? `Filled ${ref}. ${describeChanges(seen, after)}` : `Filled ${ref}.`;
 }
 
 const SELECT = `function (wanted) {
