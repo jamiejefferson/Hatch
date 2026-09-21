@@ -22,7 +22,7 @@ import { push } from './renderer-rpc';
 import { logOf, projectsState, publish, register, remove, start, stop, update } from './servers/manager';
 import { syncWatchers } from './servers/watch';
 import { cleanFolder, linksFile, setFolders } from './store/folders';
-import { hasKey, keyHint, setKey, testKey } from './jev/client';
+import { hasKey, keyHint, keyProvider, setKey, testKey } from './jev/client';
 import { linksStore, settingsStore, workspaceStore } from './store/stores';
 
 export function registerIpc(): void {
@@ -132,6 +132,7 @@ export function registerIpc(): void {
   ipcMain.handle('jev:has-key', () => hasKey());
   ipcMain.handle('jev:set-key', safely((key: string) => setKey(String(key))));
   ipcMain.handle('jev:key-hint', () => keyHint());
+  ipcMain.handle('jev:provider', () => keyProvider());
   ipcMain.handle('jev:test', safely(() => testKey()));
   ipcMain.handle('consent:answer', (_e, hatchId: string, answer: 'once' | 'always' | 'refuse') => answerConsent(String(hatchId), answer === 'once' || answer === 'always' ? answer : 'refuse'));
 

@@ -4,20 +4,22 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { expect, test } from '@playwright/test';
-import { freshHome, inPages, launch, serveSite } from './helpers';
+import { capture, freshHome, inPages, launch, serveSite } from './helpers';
 
 interface Question { type: string; instructions: string; criteria?: Record<string, string> }
 type Plan = (state: string) => { act: string; text?: string; confidence?: number; goal?: number; stuck?: number };
 
 /** Answers each step from a plan that reads the state, the way Jev reads the goal, the steps taken and the outline. */
-function standInJev(plan: Plan): Promise<{ url: string; states: string[]; status: { code: number }; close(): Promise<void> }> {
+function standInJev(plan: Plan, costPerCall?: number): Promise<{ url: string; states: string[]; models: string[]; status: { code: number }; close(): Promise<void> }> {
   const states: string[] = [];
+  const models: string[] = [];
   const status = { code: 200 };
   const server = createServer((req, res) => {
     let body = '';
     req.on('data', (c) => (body += c));
     req.on('end', () => {
-      const request = JSON.parse(body) as { state: string; questions: Record<string, Question> };
+      const request = JSON.parse(body) as { state: string; model: string; questions: Record<string, Question> };
+      models.push(request.model);
       if (request.questions.check) return void res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ answers: { check: { type: 'noul', noul: 0.99 } }, usage: { input_tokens: 10, output_tokens: 0 } }));
       if (status.code !== 200) return void res.writeHead(status.code).end('{}');
       states.push(request.state);
@@ -33,10 +35,10 @@ function standInJev(plan: Plan): Promise<{ url: string; states: string[]; status
           answers[id] = { type: 'choice', choice: key, confidence, probabilities: { [key]: confidence } };
         }
       }
-      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ model: 'stand-in', answers, usage: { input_tokens: 5000, output_tokens: 0 } }));
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ model: 'stand-in', answers, usage: { input_tokens: 5000, output_tokens: 0, ...(costPerCall === undefined ? {} : { cost: costPerCall }) } }));
     });
   });
-  return new Promise((ok) => server.listen(0, '127.0.0.1', () => ok({ url: `http://127.0.0.1:${(server.address() as { port: number }).port}/v1/systemone`, states, status, close: () => new Promise((done) => server.close(() => done())) })));
+  return new Promise((ok) => server.listen(0, '127.0.0.1', () => ok({ url: `http://127.0.0.1:${(server.address() as { port: number }).port}/v1/systemone`, states, models, status, close: () => new Promise((done) => server.close(() => done())) })));
 }
 
 const signIn: Plan = (state) => {
@@ -67,7 +69,7 @@ test('jev_run takes a goal through a sign-in form, returns a trace and fresh ref
     // With no key the tool says who must act, and nothing leaves the Mac.
     const keyless = await call('jev_run', { goal });
     expect(keyless.isError).toBe(true);
-    expect(keyless.text).toContain('Ask the user to add their TypeSafe key');
+    expect(keyless.text).toContain('Ask the user to add a TypeSafe key or an OpenRouter key');
     expect(jev.states).toHaveLength(0);
     // It takes a goal alone.
     expect((await call('jev_run', { goal, target: 'the email field' })).isError).toBe(true);
@@ -176,7 +178,7 @@ test('Settings shows the end of the saved key and tests the connection', async (
     await win.getByRole('tab', { name: 'Settings' }).click();
     await win.getByTestId('jev-key').fill('key-for-the-test-9f3a');
     await win.getByTestId('jev-save').click();
-    await expect(win.getByTestId('jev-hint')).toHaveText('The saved key ends in ••••9f3a');
+    await expect(win.getByTestId('jev-hint')).toHaveText('The saved TypeSafe key ends in ••••9f3a');
     await win.getByTestId('jev-test').click();
     await expect(win.getByTestId('jev-test-ok')).toHaveText('Jev answered, so the connection works.');
     await jev.close();
@@ -192,11 +194,42 @@ test('a user who updates sees one note about Jev, and closing it keeps it away',
   writeFileSync(join(home, 'settings.json'), JSON.stringify({ guideSeen: true }));
   const { app, win } = await launch(home, 0, { HATCH_GUIDE: '1' });
   try {
-    await expect(win.getByTestId('whats-new')).toContainText('Your agent can now hand a goal to Jev');
+    await expect(win.getByTestId('whats-new')).toContainText('Jev clicks for your agent');
+    await capture(app, 'test-results/screens/21-whats-new.png');
     await win.getByTestId('whats-new-close').click();
     await expect(win.getByTestId('whats-new')).toHaveCount(0);
     await expect.poll(() => JSON.parse(readFileSync(join(home, 'settings.json'), 'utf8')).jevRunSeen).toBe(true);
   } finally {
     await app.close();
+  }
+});
+
+test('an OpenRouter key sends the same questions under OpenRouter\'s model name, and the run adds up the cost OpenRouter states', async () => {
+  const site = await serveSite();
+  const jev = await standInJev(signIn, 0.0005);
+  const home = freshHome();
+  const { app, win } = await launch(home, 0, { HATCH_JEV_URL: jev.url, TYPESAFE_API_KEY: '', OPENROUTER_API_KEY: '' });
+  const { url } = JSON.parse(readFileSync(join(home, 'server.json'), 'utf8'));
+  const agent = new Client({ name: 'runner', version: '1.0.0' });
+  await agent.connect(new StreamableHTTPClientTransport(new URL(`${url}?agent=runner`)));
+  const call = async (name: string, args: Record<string, unknown> = {}): Promise<string> => ((await agent.callTool({ name, arguments: args })) as { content: { text: string }[] }).content[0]!.text;
+
+  try {
+    await win.getByRole('tab', { name: 'Settings' }).click();
+    await win.getByTestId('jev-key').fill('sk-or-v1-key-for-the-test-7c2e');
+    await win.getByTestId('jev-save').click();
+    await expect(win.getByTestId('jev-hint')).toHaveText('The saved OpenRouter key ends in ••••7c2e');
+
+    await call('navigate', { to: `${site.url}/login.html` });
+    const reply = await call('jev_run', { goal: 'sign in with the email "kim@studio.example" and the password "open-sesame"' });
+    expect(reply).toMatch(/^jev_run: done \(3 steps, \$0\.0020,/);
+    expect(new Set(jev.models)).toEqual(new Set(['~typesafe/jev-latest']));
+    const result = JSON.parse(reply.slice(reply.indexOf('{'), reply.indexOf('\nfinal_snapshot'))) as { jev_calls: number; cost_usd: number };
+    expect(result.cost_usd).toBeCloseTo(result.jev_calls * 0.0005, 6);
+  } finally {
+    await agent.close().catch(() => undefined);
+    await app.close();
+    await jev.close();
+    await site.close();
   }
 });

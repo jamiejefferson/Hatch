@@ -53,6 +53,7 @@ async function run(page: PageSession, o: Options, ctx: ToolContext) {
   const history: string[] = [];
   const tokens = { input: 0, output: 0 };
   let calls = 0;
+  let spent = 0;
   let status: Status = 'max_steps';
   let error = '';
   let fails = 0;
@@ -62,6 +63,8 @@ async function run(page: PageSession, o: Options, ctx: ToolContext) {
     calls += 1;
     tokens.input += usage.input_tokens;
     tokens.output += usage.output_tokens;
+    // OpenRouter states what each call cost. TypeSafe sends tokens alone, which Hatch prices at TypeSafe's listed rate.
+    spent += usage.cost ?? usage.input_tokens * USD_PER_INPUT_TOKEN;
     return answers;
   };
   const read = async (): Promise<OutlineLine[] | null> => {
@@ -146,7 +149,7 @@ async function run(page: PageSession, o: Options, ctx: ToolContext) {
   if (status === 'timeout' && actions.every((a) => a.executed_action === null)) error = 'The time ran out before any action finished. Raise max_seconds or make the goal simpler.';
 
   const elapsed = Date.now() - started;
-  const cost = tokens.input * USD_PER_INPUT_TOKEN;
+  const cost = spent;
   const final = lines ?? (await outlineOf(page).catch(() => null));
   const snapshot = o.format === 'text' ? await page.evaluate<string>("document.body ? document.body.innerText.slice(0, 24000) : ''", 4000).catch(() => '') : final ? renderOutline(final) : '';
   const since = (list: { time: number }[]): boolean => list.length > 0 && list.some((e) => e.time >= started);
@@ -198,7 +201,7 @@ export const jevRunTools = [
     summary: (a) => `jev_run(goal: ${JSON.stringify(a.goal.length > 70 ? `${a.goal.slice(0, 69)}…` : a.goal)}, max_steps: ${a.max_steps ?? 20})`,
     run: (a, ctx) =>
       onPage(ctx, a.hatch, async (page) => {
-        if (!(await canAsk())) throw new HatchError('Jev is not connected, so jev_run cannot start. Ask the user to add their TypeSafe key in Hatch under Settings, in "Connect Jev". A key comes from console.typesafe.ai/settings/keys. Until then, use snapshot, click and fill.');
+        if (!(await canAsk())) throw new HatchError('Jev is not connected, so jev_run cannot start. Ask the user to add a TypeSafe key or an OpenRouter key in Hatch under Settings, in "Connect Jev". A key comes from console.typesafe.ai/settings/keys or openrouter.ai/keys. Until then, use snapshot, click and fill.');
         if (page.tainted) throw new HatchError('Hatch filled a saved sign-in on this page, so no part of the page leaves the Mac until it navigates. Use snapshot, click and fill here.');
         if (page.dialog) throw new HatchError(`The page is showing a ${page.dialog.kind} dialog: ${JSON.stringify(page.dialog.message)}. Answer it with handle_dialog before jev_run.`);
         const { text, activity } = await run(page, { goal: a.goal, max_steps: a.max_steps ?? 20, max_seconds: a.max_seconds ?? 180, min_confidence: a.min_confidence ?? 0, format: a.format ?? 'agent' }, ctx);

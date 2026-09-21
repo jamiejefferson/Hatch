@@ -129,9 +129,11 @@ function JevSection() {
   const [error, setError] = useState<string | null>(null);
   const [justSaved, setJustSaved] = useState(false);
   const [hint, setHint] = useState('');
+  const [provider, setProvider] = useState<'typesafe' | 'openrouter' | ''>('');
   const [test, setTest] = useState<{ state: 'idle' | 'running' | 'ok' } | { state: 'failed'; error: string }>({ state: 'idle' });
   useEffect(() => void window.hatch.hasJevKey().then(setHeld), []);
   useEffect(() => void (held && window.hatch.jevKeyHint().then(setHint)), [held]);
+  useEffect(() => void (held && window.hatch.jevProvider().then(setProvider)), [held]);
   const connected = held === true && on;
 
   const connect = async (e: React.FormEvent): Promise<void> => {
@@ -175,7 +177,7 @@ function JevSection() {
           <p className="hint">Your agent uses Jev from its next action. Hatch keeps the key locked in this Mac's Keychain.</p>
           {hint && (
             <p className="hint mono" data-testid="jev-hint">
-              The saved key ends in ••••{hint}
+              The saved {provider === 'openrouter' ? 'OpenRouter' : 'TypeSafe'} key ends in ••••{hint}
             </p>
           )}
           {test.state === 'ok' && (
@@ -209,10 +211,10 @@ function JevSection() {
           <button type="submit" className="button primary left" disabled={saving || !text.trim()} data-testid="jev-save">
             {saving ? 'Checking the key…' : 'Save and connect'}
           </button>
-          <p className="hint">Jev comes from TypeSafe. You get a key at console.typesafe.ai/settings/keys, and one key covers finding elements and running goals.</p>
+          <p className="hint">Jev comes from TypeSafe, and OpenRouter offers it too. Paste a key from console.typesafe.ai/settings/keys or from openrouter.ai/keys, and Hatch works out which one it is. One key covers finding elements and running goals.</p>
         </form>
       )}
-      <p className="hint">To do this, Hatch sends Jev a text outline of the page your agent is working on. A page where Hatch filled one of your saved sign-ins is never sent.</p>
+      <p className="hint">To do this, Hatch sends Jev a text outline of the page your agent is working on. With an OpenRouter key, the outline passes through OpenRouter on its way to TypeSafe. A page where Hatch filled one of your saved sign-ins is never sent.</p>
     </section>
   );
 }

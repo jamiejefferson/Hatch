@@ -16,6 +16,7 @@ const api: HatchApi = {
   hasJevKey: () => ipcRenderer.invoke('jev:has-key'),
   setJevKey: (key) => ipcRenderer.invoke('jev:set-key', key),
   jevKeyHint: () => ipcRenderer.invoke('jev:key-hint'),
+  jevProvider: () => ipcRenderer.invoke('jev:provider'),
   testJev: () => ipcRenderer.invoke('jev:test'),
   copyText: (text) => ipcRenderer.invoke('clipboard:copy', text),
   copyForPaper: (html) => ipcRenderer.invoke('clipboard:paper', html),

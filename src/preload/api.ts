@@ -62,6 +62,8 @@ export interface HatchApi {
   setJevKey(key: string): Promise<{ ok: true; value: boolean } | { ok: false; error: string }>;
   /** The last four characters of the saved key. The rest of the key never comes back to the interface. */
   jevKeyHint(): Promise<string>;
+  /** Which service the saved key belongs to. Empty when Hatch holds no key. */
+  jevProvider(): Promise<'typesafe' | 'openrouter' | ''>;
   /** Asks Jev one small question with the saved key. */
   testJev(): Promise<{ ok: true; value: true } | { ok: false; error: string }>;
   copyText(text: string): Promise<void>;

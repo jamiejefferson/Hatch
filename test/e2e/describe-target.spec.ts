@@ -187,7 +187,7 @@ test('the user connects Jev with a Save button, hears about a wrong key, and can
 
     await win.getByTestId('jev-key').fill('wrong-key');
     await win.getByTestId('jev-save').click();
-    await expect(win.getByTestId('jev-error')).toHaveText('Jev did not accept that key. Check it and paste it again.');
+    await expect(win.getByTestId('jev-error')).toHaveText('TypeSafe did not accept that key. Check it and paste it again.');
     expect(existsSync(join(home, 'jev.json'))).toBe(false);
 
     await win.getByTestId('jev-key').fill('key-for-the-test');
