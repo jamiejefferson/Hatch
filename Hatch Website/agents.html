@@ -94,6 +94,7 @@ first     status, then get_guide</pre>
         <ul class="list">
           <li><span class="key">Complete a flow on a site</span><span class="value"><code>navigate → jev_run {goal: "…", max_steps: 30}</code> for a flow you know, or <code>navigate → snapshot → click / fill → wait_for</code> when each step needs thought</span></li>
           <li><span class="key">Search a site and open an item</span><span class="value"><code>navigate → jev_run {goal: "search for \"X\" and open the result that matches"}</code></span></li>
+          <li><span class="key">Sort a list by judgement, such as which messages are junk</span><span class="value"><code>snapshot → jev_decide {kind: "label_each", question: "…", options: ["junk", "keep"], items: […]} → click</code> on the items that clear your threshold. You keep the loop, and <code>jev_run</code> stops at step one on a goal like this.</span></li>
           <li><span class="key">Fill a form with many fields</span><span class="value"><code>jev_run {goal: "type \"Sam\" as the first name, …, then send the form"}</code> when the labels are clear, or <code>run_steps</code> with one <code>fill</code> per field</span></li>
           <li><span class="key">Make the next few moves in one call</span><span class="value"><code>run_steps {steps: [{do: "fill", …}, {do: "press_key", key: "Enter"}, {do: "wait", until: "…"}]}</code></span></li>
           <li><span class="key">Press a control you can describe</span><span class="value"><code>click {target: "the button that refuses cookies"}</code></span></li>
@@ -144,7 +145,7 @@ first     status, then get_guide</pre>
     <section id="tools">
       <div class="doc-head">
         <a class="anchor" href="#tools">#tools</a>
-        <h2>Hatch has 46 tools in ten groups.</h2>
+        <h2>Hatch has 47 tools in ten groups.</h2>
         <p>A question mark marks an optional argument. Every page tool also takes <code>hatch</code>, which names a Hatch other than your current one, and <code>intent</code>, which the user reads in the Activity panel. Hatch refuses by name any argument a tool does not take.</p>
       </div>
       <div class="doc-body">
@@ -205,6 +206,7 @@ first     status, then get_guide</pre>
           <h3>Autonomous runs</h3>
           <ul class="list">
             <li><span class="key"><code>jev_run</code></span><span class="value"><code>goal, max_steps?, max_seconds?, min_confidence?, format?</code> Runs Jev on your current page until the goal is reached or Jev is stuck, and returns the trace. See <a href="#jev">#jev</a>.</span></li>
+            <li><span class="key"><code>jev_decide</code></span><span class="value"><code>question, kind, options?, items?, evidence?, rubric?, use_page?</code> Puts one closed question to Jev and returns a probability for every answer: <code>boolean</code>, <code>choose_one</code>, or <code>label_each</code> for up to 60 items. It changes nothing on the page. See <a href="#jev">#jev</a>.</span></li>
           </ul>
         </div>
         <div class="group">

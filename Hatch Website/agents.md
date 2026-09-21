@@ -49,6 +49,7 @@ Each row names a job in the user’s words and the shortest run of calls that do
 
 - Complete a flow on a site: `navigate → jev_run {goal: "…", max_steps: 30}` for a flow you know, or `navigate → snapshot → click / fill → wait_for` when each step needs thought
 - Search a site and open an item: `navigate → jev_run {goal: "search for \"X\" and open the result that matches"}`
+- Sort a list by judgement, such as which messages are junk: `snapshot → jev_decide {kind: "label_each", question: "…", options: ["junk", "keep"], items: […]} → click` on the items that clear your threshold. You keep the loop, and `jev_run` stops at step one on a goal like this.
 - Fill a form with many fields: `jev_run {goal: "type \"Sam\" as the first name, …, then send the form"}` when the labels are clear, or `run_steps` with one `fill` per field
 - Make the next few moves in one call: `run_steps {steps: [{do: "fill", …}, {do: "press_key", key: "Enter"}, {do: "wait", until: "…"}]}`
 - Press a control you can describe: `click {target: "the button that refuses cookies"}`
@@ -91,7 +92,7 @@ jev_run {
 - `min_confidence`: The default is 0, which sets no threshold. Pass 0.8 on a page you do not trust: Hatch then stops before any action Jev is less sure of. Text on a page can steer Jev.
 - `intent`: Pass it, as on every call. The user reads it beside the run in the Activity panel.
 
-## Hatch has 46 tools in ten groups.
+## Hatch has 47 tools in ten groups.
 
 Anchor: #tools
 
@@ -143,6 +144,7 @@ A question mark marks an optional argument. Every page tool also takes `hatch`, 
 ### Autonomous runs
 
 - `jev_run`: `goal, max_steps?, max_seconds?, min_confidence?, format?` Runs Jev on your current page until the goal is reached or Jev is stuck, and returns the trace. See #jev.
+- `jev_decide`: `question, kind, options?, items?, evidence?, rubric?, use_page?` Puts one closed question to Jev and returns a probability for every answer: `boolean`, `choose_one`, or `label_each` for up to 60 items. It changes nothing on the page. See #jev.
 
 ### Comments
 
