@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hatch — a guide you try as you read</title>
+  <meta name="description" content="Hatch is a browser for people who build with agents. This guide walks through ten stages, and each one gives you a thing to try.">
+  <meta property="og:title" content="Hatch — a browser for people who build with agents">
+  <meta property="og:description" content="This guide walks through ten stages, and each one gives you a thing to try.">
+  <meta property="og:image" content="https://hatch-guide.vercel.app/assets/social.png">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=Libre+Franklin:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-sidebar" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.5h11v9h-11zM10 3.5v9"/></symbol>
+    <symbol id="i-hatch" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.5h11v9h-11zM2.5 6h11"/></symbol>
+    <symbol id="i-projects" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5V12.5h12V5.5H8L6.5 3.5H2z"/></symbol>
+    <symbol id="i-links" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2.5h8v11l-4-3-4 3z"/></symbol>
+    <symbol id="i-activity" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 8.5h3l2-5 3 9 2-4h3"/></symbol>
+    <symbol id="i-signins" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 6.8L14 2M11.5 4.5l1.5 1.5M12.8 3.2l1.5 1.5"/><circle cx="6" cy="10" r="3.2"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5h6M11.5 4.5H14M2 11.5h2.5M8 11.5h6"/><circle cx="9.75" cy="4.5" r="1.75"/><circle cx="6.25" cy="11.5" r="1.75"/></symbol>
+    <symbol id="i-feedback" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3h11v8h-5.5l-3 2.5V11h-2.5zM5.5 6h5M5.5 8.5h3"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v10M3 8h10"/></symbol>
+    <symbol id="i-open" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5H3.5v9h9V10M9 3.5h3.5V7M12.5 3.5L7.5 8.5"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 5.5h8v8h-8zM10.5 5.5v-3h-8v8h3"/></symbol>
+    <symbol id="i-comment" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.5h11v7.5h-6l-3 2.5v-2.5h-2z"/></symbol>
+    <symbol id="i-grab" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 5.5v-3h3M10.5 2.5h3v3M13.5 10.5v3h-3M5.5 13.5h-3v-3M6 6h4v4H6z"/></symbol>
+    <symbol id="i-outline" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.5h5M6 8h7.5M6 12.5h7.5M3.5 3.5v9H6M3.5 8H6"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8s-2.4 4.5-6.5 4.5S1.5 8 1.5 8z"/><circle cx="8" cy="8" r="1.8" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2.5h4v4M13.5 2.5L9 7M6.5 13.5h-4v-4M2.5 13.5L7 9"/></symbol>
+    <symbol id="i-desktop" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h12v8H2zM6 14h4M8 11v3"/></symbol>
+    <symbol id="i-laptop" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 4h9v6.5h-9zM1.5 12.5h13"/></symbol>
+    <symbol id="i-tablet" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h8v12H4zM7.2 12h1.6"/></symbol>
+    <symbol id="i-tablet-landscape" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12v8H2zM12 7.2v1.6"/></symbol>
+    <symbol id="i-mobile" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2h6v12H5zM7.2 12h1.6"/></symbol>
+  </svg>
+
+  <header class="progress" aria-label="Your place in the guide">
+    <img src="/assets/hatch-on-dark.svg" width="82" height="28" alt="Hatch">
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="progress-count" id="progress-count">01 / 11</div>
+  </header>
+
+  <main id="guide">
+    <!-- 1 -->
+    <section class="panel" data-stage="1" aria-labelledby="h1">
+      <div class="panel-side">
+        <div class="numeral" aria-hidden="true">01</div>
+      </div>
+      <div class="panel-main">
+        <h1 class="headline large" id="h1">Thanks for trying out Hatch.</h1>
+        <p class="subhead">A browser for people who build with agents.</p>
+        <p class="lede">Your agent writes the code and you judge the result. Both of you need the live site in front of you. Hatch puts it there, between the Paper or Figma file and the finished build.</p>
+        <p class="aside">This page runs to ten stages, and each one gives you a thing to try.</p>
+        <div class="rows" role="img" aria-label="Design tools draw the site, Hatch holds your prototypes, and code and deploy finish it.">
+          <div class="row"><span class="label">Design</span><span class="row-text">Paper and Figma draw the site.</span><span class="row-bar"><i style="left:0;width:30%"></i></span></div>
+          <div class="row"><span class="label accent">Hatch</span><span class="row-text strong">Hatch holds your prototypes.</span><span class="row-bar"><i class="accent" style="left:30%;width:40%"></i></span></div>
+          <div class="row"><span class="label">Build</span><span class="row-text">Code and deploy finish it.</span><span class="row-bar"><i style="left:70%;width:30%"></i></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 -->
+    <section class="panel charcoal" data-stage="2" aria-labelledby="h2">
+      <div class="panel-side">
+        <div class="numeral" aria-hidden="true">02</div>
+      </div>
+      <div class="panel-main">
+        <h2 class="headline" id="h2">We left out everything you never use.</h2>
+        <p class="lede">Hatch runs on the engine inside Chrome, so every site works. It has no address bar and no extensions. We added one thing. The agent view turns a page into a short outline with a reference on every line, and your agent acts on a line by its reference.</p>
+        <div class="compare">
+          <div>
+            <span class="label">Regular view</span>
+            <div class="mock" aria-hidden="true"><i class="tall"></i><i></i><i style="width:85%"></i><i class="pill"></i></div>
+          </div>
+          <div>
+            <span class="label accent">Agent view</span>
+<pre class="outline"><b>[e12]</b> region "2 · The browser"
+<b>[e13]</b> heading "We left out everything you never use."
+<b>[e14]</b> text "Hatch runs on the engine inside Chrome…"
+<b>[e15]</b> button "Done it!"</pre>
+          </div>
+        </div>
+        <div class="controls-block">
+          <span class="label">Press these in Hatch</span>
+          <ol class="controls">
+            <li class="control"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-sidebar"/></svg></span><b>The sidebar switch</b><span>It sits at the top right of the window.</span></li>
+            <li class="then" aria-hidden="true">→</li>
+            <li class="control"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-hatch"/></svg></span><b>Hatch</b><span>The first panel icon opens the Hatch panel.</span></li>
+            <li class="then" aria-hidden="true">→</li>
+            <li class="control"><span class="disc pair"><svg width="26" height="26" aria-hidden="true"><use href="#i-eye"/></svg><em></em><svg width="26" height="26" aria-hidden="true"><use href="#i-outline"/></svg></span><b>The view switch</b><span>The eye shows the page and the outline shows the agent view.</span></li>
+          </ol>
+        </div>
+        <div class="try" data-try="2">
+          <div class="try-text">
+            <span class="label accent">Try it</span>
+            <p>Open the sidebar, top right. Switch this page to the agent view, find this sentence, then switch back.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section class="panel on-yellow" data-stage="3" id="stage-3" aria-labelledby="h3">
+      <div class="panel-side">
+        <div class="numeral" aria-hidden="true">03</div>
+      </div>
+      <div class="panel-main">
+        <h2 class="headline poster" id="h3">Now imagine your pages side by side.</h2>
+        <div class="esc">
+          <div class="keycap" aria-hidden="true">esc</div>
+          <p>Hatch has kept something from you.<br>Press Esc and see.</p>
+        </div>
+        <div class="after" id="after-reveal" aria-live="polite">
+          <h3>This is the canvas. Every page on it is a Hatch.</h3>
+          <p>Pan with two fingers and pinch to zoom. Select a Hatch to scroll its page. Now double tap the empty canvas and open a second Hatch beside this one.</p>
+          <div class="canvas-diagram" role="img" aria-label="Before, one page filled the window. Now the page sits on a canvas beside other pages.">
+            <div><div class="frame full"></div><span>Fit to view fills the window with one page.</span></div>
+            <div class="arrow" aria-hidden="true">→</div>
+            <div><div class="frame canvas"><i></i><i></i></div><span>The canvas holds as many pages as you open.</span></div>
+          </div>
+          <div class="controls-block">
+            <span class="label">Press these in Hatch</span>
+            <ol class="controls">
+              <li class="control"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-fit"/></svg></span><b>Fit to view</b><span>The bar above a selected Hatch holds it. Esc leaves it.</span></li>
+              <li class="control primary"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-plus"/></svg></span><b>New Hatch</b><span>The Hatch panel holds it, and a double tap on empty canvas does the same.</span></li>
+            </ol>
+          </div>
+          <div class="try" data-try="3">
+            <div class="try-text">
+              <span class="label">Go back any time</span>
+              <p>The Fit to view button above this page fills the window again, and Esc brings the canvas back.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section class="panel" data-stage="4" aria-labelledby="h4">
+      <div class="panel-side">
+        <div class="numeral" aria-hidden="true">04</div>
+      </div>
+      <div class="panel-main">
+        <h2 class="headline" id="h4">Put your comment on the thing you want changed.</h2>
+        <p class="lede">A comment in Hatch pins to an element on the live page and stays there. Come back next week and you will find it where you left it. Your agent reads it, makes the change and tells you what it did.</p>
+        <p class="aside">You can resolve a thread or edit your words. Every comment is also a plain text file.</p>
+        <div class="sample-card" id="sample-card">
+          <h3>A heading that runs a little longer than it should</h3>
+          <p>A line of supporting copy sits under the heading.</p>
+          <button type="button" class="pill" id="sample-button">Sample button</button>
+          <span class="pin" aria-hidden="true">1</span>
+        </div>
+        <div class="controls-block">
+          <span class="label">Press these in Hatch</span>
+          <ol class="controls">
+            <li class="control"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-hatch"/></svg></span><b>Hatch</b><span>Select this Hatch, then open the Hatch panel.</span></li>
+            <li class="then" aria-hidden="true">→</li>
+            <li class="control wide"><span class="replica"><svg width="26" height="26" aria-hidden="true"><use href="#i-comment"/></svg>Add a comment</span><span>The button sits under Comments in the Hatch panel. Press it, then press the card.</span></li>
+          </ol>
+        </div>
+        <div class="try" data-try="4">
+          <div class="try-text">
+            <span class="label accent">Try it</span>
+            <p>Select this Hatch. Press the comment tool in the Hatch panel and pin “Make this heading shorter” to the card.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section class="panel charcoal" data-stage="5" aria-labelledby="h5">
+      <div class="panel-side">
+        <div class="numeral" aria-hidden="true">05</div>
+      </div>
+      <div class="panel-main">
+        <h2 class="headline" id="h5">See your page on a phone and a desktop at the same moment.</h2>
+        <p class="lede">Five buttons set a Hatch to desktop, laptop, tablet upright, tablet on its side or mobile. Open one page in two Hatches and you catch the broken layout before your client does.</p>
+        <div class="readout" aria-live="polite">
+          <div class="readout-size" id="readout-size">1440 × 900</div>
+          <p id="readout-name">This Hatch is at the Laptop size.</p>
+        </div>
+        <div class="controls-block">
+          <span class="label">The five size buttons sit under Size in the Hatch panel</span>
+          <ol class="controls">
+            <li class="control" data-size="960x752"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-desktop"/></svg></span><b>Desktop</b><span>960 × 752</span></li>
+            <li class="control" data-size="1440x900"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-laptop"/></svg></span><b>Laptop</b><span>1440 × 900</span></li>
+            <li class="control" data-size="768x1024"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-tablet"/></svg></span><b>Tablet portrait</b><span>768 × 1024</span></li>
+            <li class="control" data-size="1024x768"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-tablet-landscape"/></svg></span><b>Tablet landscape</b><span>1024 × 768</span></li>
+            <li class="control" data-size="390x844"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-mobile"/></svg></span><b>Mobile</b><span>390 × 844</span></li>
+          </ol>
+        </div>
+        <div class="try" data-try="5">
+          <div class="try-text">
+            <span class="label accent">Try it</span>
+            <p>Choose Mobile in the Hatch panel and watch this page reflow. Then open it again at Desktop, side by side.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section class="panel" data-stage="6" aria-labelledby="h6">
+      <div class="panel-side">
+        <div class="numeral" aria-hidden="true">06</div>
+      </div>
+      <div class="panel-main">
+        <h2 class="headline" id="h6">Every project gets its own address, and keeps it.</h2>
+        <p class="lede">Give Hatch a folder and it starts the dev server for you. The project answers at a short name such as hatch:my-site, on a port that never changes. You will not open localhost:3000 and find the wrong site again. Hatch also lists the servers you started elsewhere.</p>
+        <p class="aside">Start or stop each server from one panel, and read its logs there.</p>
+        <div class="table" role="img" aria-label="Three example projects, each with a folder, a short address, a port and a state.">
+          <div><span>~/Sites/my-site</span><span>hatch:my-site</span><span>4300</span><span class="running">Running</span></div>
+          <div><span>~/Sites/shop</span><span>hatch:shop</span><span>4301</span><span>Stopped</span></div>
+          <div><span>~/Sites/blog</span><span>hatch:blog</span><span>3000</span><span>Found</span></div>
+        </div>
+        <div class="controls-block">
+          <span class="label">Press these in Hatch</span>
+          <ol class="controls">
+            <li class="control"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-projects"/></svg></span><b>Projects</b><span>The folder icon in the top strip opens the panel.</span></li>
+            <li class="then" aria-hidden="true">→</li>
+            <li class="control primary"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-plus"/></svg></span><b>Add a project</b><span>Hatch asks you for a folder.</span></li>
+            <li class="then" aria-hidden="true">→</li>
+            <li class="control primary"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-open"/></svg></span><b>Open</b><span>Hatch opens the project in a new Hatch.</span></li>
+          </ol>
+        </div>
+        <div class="try" data-try="6">
+          <div class="try-text">
+            <span class="label accent">Try it</span>
+            <p>Open Projects and add a folder. Then open it in a Hatch beside this one.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section class="panel charcoal" data-stage="7" aria-labelledby="h7">
+      <div class="panel-side">
+        <div class="numeral" aria-hidden="true">07</div>
+      </div>
+      <div class="panel-main">
+        <h2 class="headline large" id="h7">Hand Hatch to your agent.</h2>
+        <p class="lede">One button in Settings copies the details. Paste them to your agent and it sets itself up. It works in its own tab, so your view stays as you left it. The Activity panel records every call it makes.</p>
+        <p class="aside">Hatch works with any agent that speaks MCP, and we test it with Claude Code.</p>
+        <div class="controls-block">
+          <span class="label">Press these in Hatch</span>
+          <ol class="controls">
+            <li class="control"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-settings"/></svg></span><b>Settings</b><span>The sliders icon in the top strip opens the panel.</span></li>
+            <li class="then" aria-hidden="true">→</li>
+            <li class="control wide"><span class="replica"><svg width="26" height="26" aria-hidden="true"><use href="#i-copy"/></svg>Copy the details for your agent</span><span>Paste what it copies to your agent.</span></li>
+            <li class="control"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-activity"/></svg></span><b>Activity</b><span>This panel lists every call your agent makes.</span></li>
+          </ol>
+        </div>
+        <div class="prompt-block">
+          <p class="label accent">Try it. Send your agent this.</p>
+          <p>Your agent needs the details from Settings first.</p>
+          <div class="prompt">
+            <p id="agent-prompt">Open the Hatch guide, press the button in stage 7, then read my comment in stage 4 and reply to it.</p>
+            <button type="button" class="pill" id="copy-prompt">Copy</button>
+          </div>
+        </div>
+        <div class="press">
+          <button type="button" class="big-button" id="agent-button">Your agent presses this</button>
+          <p class="answer" id="agent-answer" aria-live="polite">The page answers when it feels the press.</p>
+        </div>
+        <div class="try" data-try="7">
+          <div class="try-text">
+            <span class="label">After the press</span>
+            <p>Open the comment you pinned in stage 4 and read your agent’s reply.</p>
+          </div>
+        </div>
+        <aside class="jev" aria-labelledby="jev-h">
+          <p class="jev-tag"><span>Optional</span>Works with Jev</p>
+          <h3 id="jev-h">Hatch works with Jev from TypeSafe.ai.</h3>
+          <div class="stat">36/36</div>
+          <p>Jev picked the right element every time in our test, in a median of 0.8 seconds.</p>
+          <p>Jev is a small model built to make fast, inexpensive, structured decisions that software can use directly. Hatch asks it which element your agent means, so your agent says “the button that refuses cookies” and Hatch presses it.</p>
+          <p>Your agent can also hand Jev a whole goal, such as “search for "blue badge" and open the first result”. Jev chooses each click and keystroke, Hatch carries it out, and your agent reads a record of every step before it carries on. Your agent keeps the decisions and Jev takes the repetition. <a href="#jev">Stage 11 shows how a run works.</a></p>
+          <div class="jev-runs" role="img" aria-label="By hand, your agent reads the page and chooses an action once for every step. With Jev, your agent makes one call and reads one result.">
+            <div><span class="label">By hand</span><p class="calls"><code>snapshot</code><code>click</code><code>snapshot</code><code>fill</code><code>snapshot</code><code>press_key</code><code>snapshot</code><code>click</code><em>one turn of your agent for every call</em></p></div>
+            <div><span class="label accent">With Jev</span><p class="calls"><code class="on">jev_run {goal}</code><em>one turn of your agent for the whole run</em></p></div>
+          </div>
+          <p>Connect it in Settings with your own key from console.typesafe.ai/settings/keys.</p>
+          <ol class="controls">
+            <li class="control"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-settings"/></svg></span><b>Settings</b><span>“Connect Jev” sits near the foot.</span></li>
+            <li class="then" aria-hidden="true">→</li>
+            <li class="control wide"><span class="replica">Save and connect</span><span>Paste your key, then press this.</span></li>
+          </ol>
+          <ul>
+            <li>Jev stays off until you connect it, and “Disconnect Jev” switches it off again.</li>
+            <li>Each use sends the page’s outline to TypeSafe. A page where Hatch filled a sign-in is never sent.</li>
+            <li>The Activity panel lists each run with its steps, Jev’s confidence in each one and what the run cost.</li>
+            <li>Below 80% certainty Hatch does nothing and lists the closest elements.</li>
+            <li>To try it, connect Jev, then ask your agent to press “the sample button in stage 4”.</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section class="panel" data-stage="8" aria-labelledby="h8">
+      <div class="panel-side">
+        <div class="numeral" aria-hidden="true">08</div>
+      </div>
+      <div class="panel-main">
+        <h2 class="headline" id="h8">Take any element on the web into Paper.</h2>
+        <p class="lede">“Grab an element” copies any element from any page. Paste it into Paper and it arrives as editable layers. Your agent can measure an element and read its styles. It can save the images too.</p>
+        <div class="layers" role="img" aria-label="An element on a page becomes four editable layers in Paper.">
+          <div class="mock"><i class="tall"></i><i></i><i class="pill"></i></div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <ul>
+            <li><em>Frame</em>Sample card</li>
+            <li><em>Text</em>Heading</li>
+            <li><em>Text</em>Supporting copy</li>
+            <li><em>Frame</em>Sample button</li>
+          </ul>
+        </div>
+        <div class="controls-block">
+          <span class="label">Press these in Hatch</span>
+          <ol class="controls">
+            <li class="control"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-hatch"/></svg></span><b>Hatch</b><span>Select a Hatch, then open the Hatch panel.</span></li>
+            <li class="then" aria-hidden="true">→</li>
+            <li class="control wide"><span class="replica"><svg width="26" height="26" aria-hidden="true"><use href="#i-grab"/></svg>Grab an element</span><span>The button sits at the foot of the Hatch panel. Press it, then press the element.</span></li>
+            <li class="control wide"><span class="replica switch-replica">Let agents run script in pages<i></i></span><span>Your agent needs this switch in Settings before it grabs anything.</span></li>
+          </ol>
+        </div>
+        <div class="try" data-try="8">
+          <div class="try-text">
+            <span class="label accent">Try it</span>
+            <p>Press “Grab an element”, pick the card in stage 4 and paste it into Paper. If you have no Paper, ask your agent for the card’s size and colours.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 -->
+    <section class="panel charcoal" data-stage="9" aria-labelledby="h9">
+      <div class="panel-side">
+        <div class="numeral" aria-hidden="true">09</div>
+      </div>
+      <div class="panel-main">
+        <h2 class="headline" id="h9">Your agent never sees your password.</h2>
+        <p class="lede">Hatch saves a sign-in and asks you before it fills one for an agent. The password goes into the form and nowhere else. Google refuses sign-ins inside apps like Hatch, so Hatch brings yours across from Chrome, Arc, Brave or Edge.</p>
+        <p class="aside">macOS asks for your password when Hatch brings a sign-in across, because the other browser keeps its key in the Keychain.</p>
+        <form class="practice" id="practice-form" autocomplete="on">
+          <span class="label">This practice form accepts made-up details</span>
+          <label>Email<input class="field" type="email" name="email" autocomplete="username" placeholder="you@example.com" required></label>
+          <label>Password<input class="field" type="password" name="password" autocomplete="current-password" placeholder="A made-up password" required></label>
+          <button type="submit" class="pill">Sign in</button>
+          <p class="answer" id="practice-answer" aria-live="polite">The form keeps everything on this page and sends nothing.</p>
+        </form>
+        <div class="controls-block">
+          <span class="label">Press these in Hatch</span>
+          <ol class="controls">
+            <li class="control"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-signins"/></svg></span><b>Sign-ins</b><span>The key icon in the top strip opens the panel.</span></li>
+            <li class="then" aria-hidden="true">→</li>
+            <li class="control wide"><span class="replica"><svg width="26" height="26" aria-hidden="true"><use href="#i-plus"/></svg>Save this sign-in</span><span>Fill in the site, the username and the password first.</span></li>
+          </ol>
+        </div>
+        <div class="try" data-try="9">
+          <div class="try-text">
+            <span class="label accent">Try it</span>
+            <p>Save a made-up sign-in for this page in the Sign-ins panel. Ask your agent to sign in here, and answer the question Hatch asks you.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="panel" data-stage="10" aria-labelledby="h10">
+      <div class="panel-side">
+        <div class="numeral" aria-hidden="true">10</div>
+      </div>
+      <div class="panel-main">
+        <h2 class="headline" id="h10">Four small things worth setting up once.</h2>
+        <div class="four">
+          <div><span class="disc small"><svg width="24" height="24" aria-hidden="true"><use href="#i-links"/></svg></span><h3>Links</h3><p>Save the pages you open most. This guide is already there.</p></div>
+          <div><span class="tab-replica">Tab 1<em>+</em></span><h3>Tabs</h3><p>A tab holds one canvas. Double-click to name it. Each agent gets its own.</p></div>
+          <div><span class="disc small"><svg width="24" height="24" aria-hidden="true"><use href="#i-settings"/></svg></span><h3>Hatch Home</h3><p>Choose the page every new Hatch opens. Today it is this guide.</p></div>
+          <div><span class="disc small"><svg width="24" height="24" aria-hidden="true"><use href="#i-settings"/></svg></span><h3>Default browser</h3><p>One button makes Hatch your Mac’s browser. Links from other apps open in a new Hatch.</p></div>
+        </div>
+        <div class="try" data-try="10">
+          <div class="try-text">
+            <span class="label accent">Try it</span>
+            <p>Save a page you open every day in Links. Then right-click this Hatch and copy its link for your agent.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="panel charcoal" data-stage="11" id="jev" aria-labelledby="h11">
+      <div class="panel-side">
+        <div class="numeral" aria-hidden="true">11</div>
+      </div>
+      <div class="panel-main">
+        <h2 class="headline" id="h11">Let Jev take the repetitive steps.</h2>
+        <p class="lede">A search, a long list or a checkout asks your agent for the same small decision again and again: read the page, choose the next click, wait, read the page again. Each of those is a full turn of a large model. With Jev connected, your agent states the goal once and Jev chooses each step.</p>
+        <p class="lede">Hatch asks Jev three things at every step: which action comes next, whether the goal is reached, and whether the run is stuck. Jev answers all three in one reply and writes no text, which keeps each step short. TypeSafe charges $0.042 for a million tokens read, and every run reports what it cost.</p>
+        <div class="jev-figures"><div class="stat">4/4</div><p>We gave Jev four goals on four public sites and it finished all four. On GOV.UK it refused the cookies, searched for “blue badge” and opened the right result: five steps in 3.0 seconds, for $0.0012.</p></div>
+        <div class="four">
+          <div><h3>Your agent sets the goal</h3><p>“Search for "espresso machine" and open the first result under £300.” Any text Jev must type sits inside quotes, because Jev chooses and never writes.</p></div>
+          <div><h3>Jev takes the steps</h3><p>It clicks, types, chooses from dropdowns, presses Enter and scrolls. It stops when the goal is reached, when it is stuck, or when it runs out of steps or time.</p></div>
+          <div><h3>Your agent reads the record</h3><p>Every step comes back with Jev’s confidence and what the page did, beside the final page as an outline. Your agent checks the result and decides what happens next.</p></div>
+          <div><h3>You see what it cost</h3><p>The Activity panel shows each run as one line, such as “done (8 steps, $0.0031, 4.2s)”, and opens to show every step.</p></div>
+        </div>
+        <p class="aside">Jev suits mechanical goals. Your agent still does the reasoning: which product to pick, whether a result is right, what to try when a page surprises it.</p>
+        <p class="aside">To switch it on, open Settings, paste your TypeSafe key under “Connect Jev” and press “Save and connect”. Then point your agent at the Agent page, which tells it when a goal suits Jev.</p>
+      </div>
+    </section>
+
+    <!-- Agent page link -->
+    <section class="panel link-panel" aria-labelledby="h-agent">
+      <div class="panel-side">
+        <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true"><circle cx="26" cy="36" r="24" fill="none" stroke="#E9C534" stroke-width="2.5"/><circle cx="46" cy="36" r="24" fill="none" stroke="#E9C534" stroke-width="2.5"/></svg>
+      </div>
+      <div class="panel-main">
+        <div class="copy">
+          <h2 id="h-agent">Help your agent get the most from Hatch.</h2>
+          <p>We wrote a page for your agent to read. Point your agent at it once, and it learns how Hatch works before it starts.</p>
+        </div>
+        <a class="pill big" href="/agents">Open the Agent page <span aria-hidden="true">→</span></a>
+      </div>
+    </section>
+
+    <!-- Close -->
+    <section class="panel on-paper close" id="close" aria-labelledby="h-close">
+      <div class="close-top">
+        <h2 class="headline" id="h-close">Help us make Hatch better.</h2>
+        <div class="close-side">
+          <p>You are one of the first people to use Hatch, and we would like to hear what you think. We read every note.</p>
+          <ol class="controls">
+            <li class="control"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-feedback"/></svg></span><b>Send feedback</b><span>The last icon in the top strip sends a note with a picture of the window.</span></li>
+          </ol>
+          <p class="tried" id="tried">You tried 0 of 9 features.</p>
+          <button type="button" class="big-button" id="close-feedback" aria-expanded="false" aria-controls="close-form">Send feedback <span aria-hidden="true">→</span></button>
+          <form class="note-form" id="close-form" data-note="close" hidden>
+            <textarea class="field" name="message" maxlength="4800" placeholder="What do you think of Hatch?" aria-label="Your feedback" required></textarea>
+            <button type="submit" class="pill">Send</button>
+            <p class="note-status" aria-live="polite"></p>
+          </form>
+        </div>
+      </div>
+      <footer class="footer">
+        <img src="/assets/hatch-black.svg" width="105" height="36" alt="Hatch">
+        <p class="made">Hatch is a <a href="https://projject.ai">Projject</a>, made with love.</p>
+        <nav aria-label="Hatch links">
+          <span>Hatch 0.1.3</span>
+          <a href="https://github.com/jamiejefferson/Hatch">GitHub</a>
+          <a href="https://github.com/jamiejefferson/Hatch/releases/latest">Update Hatch</a>
+        </nav>
+      </footer>
+    </section>
+  </main>
+
+  <aside class="hint" id="sidebar-hint" aria-label="Where the controls are" hidden>
+    <svg class="hint-arrow" width="24" height="64" viewBox="0 0 24 64" aria-hidden="true"><path d="M12 62V4M3 13l9-9 9 9" fill="none" stroke="#E9C534" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="hint-card">
+      <p>The controls for this page sit in the sidebar. This icon opens it.</p>
+      <button type="button" class="hint-close" id="hint-close" aria-label="Hide this tip">
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 1l10 10M11 1L1 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/script.js" defer></script>
+</body>
+</html>
