@@ -249,7 +249,7 @@ svg { flex-shrink: 0; display: block; }
 .agent-view pre:focus-visible { outline-offset: -2px; }
 
 .notice-anchor { position: absolute; z-index: 3; }
-.notice { display: flex; flex-direction: column; gap: 10px; padding: 16px 20px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--r); box-shadow: 0 12px 32px rgb(0 0 0 / 0.12); cursor: default; }
+.notice { display: flex; flex-direction: column; gap: 10px; padding: 16px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 12px 32px rgb(0 0 0 / 0.12); cursor: default; }
 .notice h3, .page-dialog h3, .working-now h2 { margin: 0; font-size: 12px; font-weight: 600; color: var(--ink); }
 .notice p { margin: 0; font-size: 15px; line-height: 22px; }
 .notice-actions { display: flex; gap: 8px; }
@@ -276,7 +276,15 @@ svg { flex-shrink: 0; display: block; }
 .trace ol { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .activity .trace li { display: flex; flex-direction: column; gap: 0; padding: 0; border: 0; font-size: 12px; line-height: 16px; }
 .trace li span:last-child { color: var(--ink-2); }
-.whats-new { position: fixed; left: 24px; bottom: 24px; z-index: 900; width: 340px; }
+/* The update note shares the guide card's look: the colour ident, one heading and two pills that share the row. */
+.whats-new { position: fixed; left: 24px; bottom: 24px; z-index: 900; display: flex; flex-direction: column; gap: 8px; width: 360px; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 24px 64px rgb(0 0 0 / 0.16); cursor: default; }
+.whats-new header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--ink-2); }
+.whats-new header .round { margin-left: auto; }
+.whats-new h1 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; }
+.whats-new p { margin: 0; font-size: 14px; line-height: 21px; color: var(--ink-2); }
+.whats-new .whats-new-key { font-size: 13px; line-height: 18px; }
+.whats-new-actions { display: flex; gap: 8px; margin-top: 8px; }
+.whats-new-actions .button { flex: 1; white-space: nowrap; }
 .address { margin: 0; padding: 10px 14px; font-size: 12px; line-height: 18px; background: var(--ground); border-radius: var(--r); overflow-wrap: anywhere; user-select: text; }
 
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; text-align: left; line-height: 18px; }
