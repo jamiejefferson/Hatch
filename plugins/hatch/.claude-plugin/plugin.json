@@ -1,0 +1,11 @@
+{
+  "name": "hatch",
+  "version": "0.1.0",
+  "description": "Drive Hatch, the browser on this Mac whose live pages the user watches, from any project.",
+  "author": { "name": "Jamie Jefferson", "email": "jj@eqtr.com" },
+  "homepage": "https://hatch-guide.vercel.app/agents",
+  "repository": "https://github.com/jamiejefferson/Hatch",
+  "license": "MIT",
+  "keywords": ["hatch", "browser", "agent", "canvas", "mcp", "web-design", "web-development"],
+  "mcpServers": "./mcp.claude.json"
+}

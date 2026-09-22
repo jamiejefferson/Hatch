@@ -1,0 +1,20 @@
+{
+  "name": "hatch",
+  "version": "0.1.0",
+  "description": "Drive Hatch, the browser on this Mac whose live pages the user watches, from any project.",
+  "author": { "name": "Jamie Jefferson", "email": "jj@eqtr.com", "url": "https://hatch-guide.vercel.app" },
+  "homepage": "https://hatch-guide.vercel.app/agents",
+  "repository": "https://github.com/jamiejefferson/Hatch.git",
+  "license": "MIT",
+  "keywords": ["hatch", "browser", "agent", "canvas", "mcp"],
+  "mcpServers": "./mcp.codex.json",
+  "interface": {
+    "displayName": "Hatch",
+    "shortDescription": "Drive the browser the user watches.",
+    "longDescription": "Hatch is a macOS browser built for agents. Its live pages sit as frames on a canvas the user watches, so the user sees every page the agent opens and every click it makes. With this plugin Codex reads a page as an outline with a reference on every line, acts by reference, opens local projects at hatch:<name>, reads comments the user pinned, and fills saved sign-ins after the user agrees.",
+    "developerName": "Jamie Jefferson",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://hatch-guide.vercel.app"
+  }
+}

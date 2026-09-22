@@ -33,7 +33,7 @@ Hatch opens with a six-step guide that points at the real controls. Help > Show 
 1. **Open a page.** The plus button in the Hatch panel opens a Hatch, and so does a double tap on empty canvas.
 2. **Add a project.** The Projects panel takes a folder. Hatch starts its dev server and serves it at `hatch:<name>`.
 3. **Pin a comment.** Select a Hatch, choose the comment tool and pick an element.
-4. **Hand Hatch to your agent.** Hatch needs no setup. When you want your agent to use it, press "Copy the details for your agent" in Settings and paste them to the agent. `connect/README.md` holds the setup by hand for Claude Code, Claude Desktop, Cursor, VS Code and Codex CLI.
+4. **Hand Hatch to your agent.** In Claude Code, `claude plugin marketplace add jamiejefferson/Hatch` then `claude plugin install hatch@hatch` gives every project Hatch. For any agent, press "Copy the details for your agent" in Settings and paste them to the agent. `connect/README.md` holds the setup by hand for Claude Code, Claude Desktop, Cursor, VS Code and Codex CLI.
 
 ## Send feedback
 

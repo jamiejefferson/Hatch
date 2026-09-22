@@ -22,7 +22,7 @@ function toolsPage(tools: Tool[]): string {
 export const sessionTools = [
   tool({
     name: 'status',
-    description: 'Start here. Reports the canvas you hold, its Hatches (pages on the canvas) and anything that needs attention, such as an open dialog. New to Hatch? Call get_guide with topic "start".',
+    description: 'Reports the canvas you hold, its Hatches (pages on the canvas) and anything that needs attention, such as an open dialog. Call it when you need to know where you are; to open a page, call navigate straight away.',
     shape: { canvas, hatch: z.string().optional().describe('A link the user copied in Hatch (hatch:@ and an id), to a Hatch or a whole canvas. Pass it here first and status reports that canvas.'), intent },
     readOnly: true,
     async run(args, ctx) {

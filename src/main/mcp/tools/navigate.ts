@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { hatchFor } from '../../agents/agents';
-import { addressOf, ensureNoDialog, waitFor, waitForLoad } from '../../cdp/actions';
-import { HatchError } from '../../cdp/session';
+import { addressOf, arrival, ensureNoDialog, waitFor, waitForLoad } from '../../cdp/actions';
+import { HatchError, type PageSession } from '../../cdp/session';
 import { callInterface } from '../../renderer-rpc';
 import { settingsStore } from '../../store/stores';
 import { openHatch } from './hatches';
@@ -10,8 +10,9 @@ import { waitUntil } from './target';
 import { resolveTarget } from './resolve';
 import { canvas, hatch, intent, shortAddress, timeoutS, tool } from './types';
 
-const describePage = (url: string, title: string, loaded: boolean, seconds: number): string =>
-  `${loaded ? 'Loaded' : `Still loading after ${seconds} seconds:`} ${url} (${JSON.stringify(title)}). ${loaded ? 'Call snapshot to read it.' : 'Hatch keeps loading it. Call wait_for to pick it up.'}`;
+/** A loaded page arrives with the top of its outline, so the agent acts on it with no snapshot in between. */
+const describePage = async (page: PageSession, loaded: boolean, seconds: number): Promise<string> =>
+  `${loaded ? 'Loaded' : `Still loading after ${seconds} seconds:`} ${await addressOf(page)} (${JSON.stringify(page.guest.getTitle())}). ${loaded ? await arrival(page) : 'Hatch keeps loading it. Call wait_for to pick it up.'}`;
 
 export const navigateTools = [
   tool({
@@ -29,7 +30,7 @@ export const navigateTools = [
         page.guest.loadURL(url).catch(() => {});
         const timer = setInterval(() => ctx.progress('The page is loading.'), 5000);
         const loaded = await waitForLoad(page, a.timeout_s * 1000).finally(() => clearInterval(timer));
-        return describePage(await addressOf(page), page.guest.getTitle(), loaded, a.timeout_s);
+        return describePage(page, loaded, a.timeout_s);
       });
     },
   }),
@@ -44,7 +45,7 @@ export const navigateTools = [
         // Never CDP Page.reload: sent to a guest, it reloads Hatch's own window.
         page.guest.reload();
         const loaded = await waitForLoad(page, a.timeout_s * 1000);
-        return describePage(await addressOf(page), page.guest.getTitle(), loaded, a.timeout_s);
+        return describePage(page, loaded, a.timeout_s);
       });
     },
   }),
@@ -59,7 +60,7 @@ export const navigateTools = [
         page.loading = true;
         page.guest.navigationHistory.goBack();
         const loaded = await waitForLoad(page, a.timeout_s * 1000);
-        return describePage(await addressOf(page), page.guest.getTitle(), loaded, a.timeout_s);
+        return describePage(page, loaded, a.timeout_s);
       });
     },
   }),

@@ -4,12 +4,11 @@ const start = `# Hatch in one page
 
 Hatch is a browser you drive through these tools. The user watches the same live pages you act on.
 
-1. Call status. It names the canvas you hold and its Hatches. A Hatch is one live page in a frame on a canvas, and a canvas is a tab.
-2. Call navigate with an address. With no Hatch yet, it opens one.
-3. Call snapshot. It returns the agent view: an outline of the page with a reference such as [e12] on every line.
-4. Act by reference: click, fill, select_option, press_key, hover, scroll.
-5. Read the reply. click and press_key say what changed in the agent view, and a new page arrives with the top of its outline. Call snapshot when you need more. References clear when the page navigates.
-6. Call finish_working when you are done.
+1. Call navigate with an address. With no Hatch yet, it opens one. A Hatch is one live page in a frame on a canvas, and a canvas is a tab. The reply carries the top of the agent view: an outline of the page with a reference such as [e12] on every line.
+2. Act by reference: click, fill, select_option, press_key, hover, scroll.
+3. Read the reply. click and press_key say what changed in the agent view, and a new page arrives with the top of its outline. Call snapshot when you need more of a page. References clear when the page navigates.
+4. Call status when you need to know which canvas you hold and which Hatches it has, and list_canvases for every canvas.
+5. Call finish_working when you are done.
 
 Rules that save you time:
 - Navigate by the agent view. Use screenshot only to judge how something looks.

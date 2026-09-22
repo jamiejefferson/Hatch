@@ -43,10 +43,11 @@
         <p>Hatch listens on this Mac only. The running app writes its real port to a file, so read the file before you trust the default. Give yourself a name, because Hatch shows it to the user beside your work.</p>
       </div>
       <div class="doc-body">
-<pre>address   http://127.0.0.1:42824/mcp?agent=&lt;your-name&gt;
-command   /Applications/Hatch.app/Contents/Resources/hatch-mcp
+<pre>plugin    claude plugin marketplace add jamiejefferson/Hatch, then claude plugin install hatch@hatch
+command   /Applications/Hatch.app/Contents/Resources/hatch-mcp (answers while Hatch is closed)
+address   http://127.0.0.1:42824/mcp?agent=&lt;your-name&gt;
 port      ~/.hatch/server.json holds the port in use
-first     status, then get_guide</pre>
+first     navigate, with an address. The reply carries the page's outline.</pre>
       </div>
     </section>
 
@@ -74,9 +75,9 @@ first     status, then get_guide</pre>
       </div>
       <div class="doc-body">
         <ol class="list steps">
-          <li><span class="key"><code>status</code></span><span class="value">Reports the canvas you hold, its Hatches and anything that needs attention. A canvas is a tab, and any agent may work in any canvas.</span></li>
-          <li><span class="key"><code>navigate</code></span><span class="value">Takes an address, a saved link’s title or <code>hatch:&lt;project&gt;</code>. With no Hatch yet, it opens one.</span></li>
-          <li><span class="key"><code>snapshot</code></span><span class="value">Returns the agent view. <code>find</code> searches it when the page is long.</span></li>
+          <li><span class="key"><code>navigate</code></span><span class="value">Takes an address, a saved link’s title or <code>hatch:&lt;project&gt;</code>. With no Hatch yet, it opens one, and the reply carries the top of the agent view.</span></li>
+          <li><span class="key"><code>status</code></span><span class="value">Reports the canvas you hold, its Hatches and anything that needs attention, when you need to know. A canvas is a tab, and any agent may work in any canvas.</span></li>
+          <li><span class="key"><code>snapshot</code></span><span class="value">Returns the whole agent view when the reply showed too little. <code>find</code> searches it when the page is long.</span></li>
           <li><span class="key"><code>click · fill · …</code></span><span class="value">Act by <code>ref</code>. With the user’s setting on, pass <code>target</code> in plain words and skip step 3.</span></li>
           <li><span class="key">the reply</span><span class="value"><code>click</code> and <code>press_key</code> say what changed, and a new page arrives with the top of its outline. References clear when the page navigates.</span></li>
           <li><span class="key"><code>finish_working</code></span><span class="value">Clears the working indicator. The canvas you worked in stays open for the user.</span></li>
@@ -307,7 +308,7 @@ first     status, then get_guide</pre>
   </main>
 
   <footer class="doc-foot">
-    <p>This page describes Hatch 0.1.7.</p>
+    <p>This page describes Hatch 0.1.15.</p>
     <nav aria-label="More">
       <a href="/agents.md">agents.md</a>
       <a href="https://github.com/jamiejefferson/Hatch">GitHub</a>

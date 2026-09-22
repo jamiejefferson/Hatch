@@ -1,0 +1,15 @@
+{
+  "name": "hatch",
+  "owner": { "name": "Jamie Jefferson", "email": "jj@eqtr.com" },
+  "metadata": {
+    "description": "Hatch is a macOS browser that any MCP-capable agent drives. Live pages sit as frames on a canvas the user watches.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "hatch",
+      "source": "./plugins/hatch",
+      "description": "Gives the agent Hatch's tools in every project, through the command the Hatch app ships."
+    }
+  ]
+}

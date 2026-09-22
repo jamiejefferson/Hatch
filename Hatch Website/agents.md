@@ -2,7 +2,7 @@
 
 Hatch is a macOS browser you drive through MCP tools. The user watches the same live pages you act on. Read this page once, then work from the task list below. The running Hatch carries the same text in `get_guide`.
 
-This page describes Hatch 0.1.7. The same content sits at https://hatch-guide.vercel.app/agents as a web page.
+This page describes Hatch 0.1.15. The same content sits at https://hatch-guide.vercel.app/agents as a web page.
 
 ## Connect to the running Hatch.
 
@@ -11,10 +11,11 @@ Anchor: #connect
 Hatch listens on this Mac only. The running app writes its real port to a file, so read the file before you trust the default. Give yourself a name, because Hatch shows it to the user beside your work.
 
 ```
+plugin    claude plugin marketplace add jamiejefferson/Hatch, then claude plugin install hatch@hatch
+command   /Applications/Hatch.app/Contents/Resources/hatch-mcp (answers while Hatch is closed)
 address   http://127.0.0.1:42824/mcp?agent=<your-name>
-command   /Applications/Hatch.app/Contents/Resources/hatch-mcp
 port      ~/.hatch/server.json holds the port in use
-first     status, then get_guide
+first     navigate, with an address. The reply carries the page's outline.
 ```
 
 ## Hand the mechanical steps to Jev.
@@ -34,9 +35,9 @@ Anchor: #the-loop
 
 You work from the agent view, an outline of the page with a reference such as `[e12]` on every line. A screenshot is for judging how something looks.
 
-1. `status`: Reports the canvas you hold, its Hatches and anything that needs attention. A canvas is a tab, and any agent may work in any canvas.
-2. `navigate`: Takes an address, a saved link’s title or `hatch:<project>`. With no Hatch yet, it opens one.
-3. `snapshot`: Returns the agent view. `find` searches it when the page is long.
+1. `navigate`: Takes an address, a saved link’s title or `hatch:<project>`. With no Hatch yet, it opens one, and the reply carries the top of the agent view.
+2. `status`: Reports the canvas you hold, its Hatches and anything that needs attention, when you need to know. A canvas is a tab, and any agent may work in any canvas.
+3. `snapshot`: Returns the whole agent view when the reply showed too little. `find` searches it when the page is long.
 4. `click · fill · …`: Act by `ref`. With the user’s setting on, pass `target` in plain words and skip step 3.
 5. the reply: `click` and `press_key` say what changed, and a new page arrives with the top of its outline. References clear when the page navigates.
 6. `finish_working`: Clears the working indicator. The canvas you worked in stays open for the user.

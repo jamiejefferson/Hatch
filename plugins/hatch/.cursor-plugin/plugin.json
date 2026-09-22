@@ -1,0 +1,10 @@
+{
+  "name": "hatch",
+  "displayName": "Hatch",
+  "version": "0.1.0",
+  "description": "Drive Hatch, the browser on this Mac whose live pages the user watches, from any project.",
+  "author": { "name": "Jamie Jefferson", "email": "jj@eqtr.com" },
+  "license": "MIT",
+  "keywords": ["cursor", "plugin", "mcp", "browser"],
+  "mcpServers": "./mcp.cursor.json"
+}

@@ -6,6 +6,8 @@ Hatch needs no setup of its own. In Settings, "Copy the details for your agent" 
 
 ## The two connections
 
+**By plugin**, for Claude Code, Codex CLI and Cursor: `plugins/hatch` in the repository holds a plugin that registers the command below. See "Claude Code".
+
 **By address**, for agents that take a URL:
 
 ```
@@ -24,15 +26,20 @@ The command finds Hatch's port by itself. It also answers while Hatch is closed,
 
 ## Claude Code
 
-```
-claude mcp add --transport http hatch "http://127.0.0.1:42824/mcp?agent=claude-code"
-```
-
-Or with the command:
+Install the plugin once, and every project and every later session has Hatch:
 
 ```
-claude mcp add hatch --env HATCH_AGENT=claude-code -- /Applications/Hatch.app/Contents/Resources/hatch-mcp
+claude plugin marketplace add jamiejefferson/Hatch
+claude plugin install hatch@hatch
 ```
+
+Or register the command at user scope, which does the same without the plugin:
+
+```
+claude mcp add -s user hatch --env HATCH_AGENT=claude-code -- /Applications/Hatch.app/Contents/Resources/hatch-mcp
+```
+
+The command is the right choice for Claude Code. `claude mcp add` without `-s user` registers Hatch for the current folder alone, and the address fails for a session that starts while Hatch is closed, which leaves that session without the tools.
 
 ## Claude Desktop
 
@@ -89,7 +96,7 @@ An agent that takes a URL uses the address. An agent that takes a command uses t
 
 ## Check that it works
 
-Ask the agent to call the `status` tool. Hatch answers with the agent's tab and its pages, and the call shows in the Activity panel. Then ask it to call `get_guide`, which explains every tool in one page.
+Ask the agent to open a page in Hatch. It calls `navigate`, Hatch answers with the page's outline, and the call shows in the Activity panel. `get_guide` with the topic `tools` explains every tool in one page.
 
 ## When something fails
 

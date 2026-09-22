@@ -209,6 +209,12 @@ export async function settledOutline(page: PageSession, options: { maxMs?: numbe
 /** A new page arrives with the top of its outline, which is what the agent asks for next. */
 const NEW_PAGE_CHARS = 4000;
 
+/** The top of a page's outline, for the reply that brings an agent to a new page, so it needs no snapshot before its first action. */
+export async function arrival(page: PageSession): Promise<string> {
+  const lines = await outlineOf(page).catch(() => null);
+  return lines ? `Its agent view starts:\n${renderOutline(lines, NEW_PAGE_CHARS)}`.trimEnd() : 'Call snapshot to read it.';
+}
+
 async function afterAction(page: PageSession, before: string, seen: OutlineLine[] | null, brief = false): Promise<string> {
   await sleep(250);
   if (page.dialog) return ` The page opened a ${page.dialog.kind} dialog: ${JSON.stringify(page.dialog.message)}. Answer it with handle_dialog.`;

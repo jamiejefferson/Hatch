@@ -5,7 +5,7 @@ import { HatchError } from '../../cdp/session';
 import { waitForPage } from '../../hatches/registry';
 import { callInterface } from '../../renderer-rpc';
 import { resolveTarget } from './resolve';
-import { addressOf, waitForLoad } from '../../cdp/actions';
+import { addressOf, arrival, waitForLoad } from '../../cdp/actions';
 import { canvas, hatch, intent, shortAddress, timeoutS, tool, type ToolContext } from './types';
 
 const PRESETS = TEMPLATES.map((t) => t.id);
@@ -25,7 +25,7 @@ export async function openHatch(ctx: ToolContext, to: string, size: { preset?: s
     await page.attach();
     page.loading = page.guest.isLoading();
     const loaded = await waitForLoad(page, timeoutSeconds * 1000);
-    return `Opened Hatch ${hatchId} at ${await addressOf(page)} (${JSON.stringify(page.guest.getTitle())}). ${loaded ? 'The page has loaded.' : `The page is still loading after ${timeoutSeconds} seconds. Call wait_for to pick it up.`} It is now your current Hatch. Call snapshot to read it.`;
+    return `Opened Hatch ${hatchId} at ${await addressOf(page)} (${JSON.stringify(page.guest.getTitle())}). ${loaded ? 'The page has loaded.' : `The page is still loading after ${timeoutSeconds} seconds. Call wait_for to pick it up.`} It is now your current Hatch. ${loaded ? await arrival(page) : ''}`.trimEnd();
   });
 }
 
