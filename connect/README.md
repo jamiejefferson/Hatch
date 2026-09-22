@@ -12,7 +12,7 @@ Hatch needs no setup of its own. In Settings, "Copy the details for your agent" 
 http://127.0.0.1:42824/mcp?agent=your-agent-name
 ```
 
-Replace `your-agent-name` with a short name, such as `claude-code`. Hatch shows the name in its Activity panel. Each name gets its own tab, so two agents never share pages.
+Replace `your-agent-name` with a short name, such as `claude-code`. Hatch shows the name in its Activity panel. An agent's first call takes a canvas (a tab) no other agent is working in, and its tools open, close and switch canvases from there.
 
 **By command**, for agents that start a program and talk to it over stdio:
 

@@ -6,7 +6,7 @@ import { pageFor } from '../../hatches/registry';
 import { canAsk, hasKey } from '../../jev/client';
 import { settingsStore } from '../../store/stores';
 import { GUIDE, TOPICS } from '../guide/topics';
-import { intent, tool, type Tool } from './types';
+import { canvas, intent, tool, type Tool } from './types';
 
 /** Every tool on one page: its arguments, with a question mark on the optional ones, and the first sentence of what it does. */
 function toolsPage(tools: Tool[]): string {
@@ -22,22 +22,23 @@ function toolsPage(tools: Tool[]): string {
 export const sessionTools = [
   tool({
     name: 'status',
-    description: 'Start here. Reports your tab, its Hatches (pages on the canvas) and anything that needs attention, such as an open dialog. New to Hatch? Call get_guide with topic "start".',
-    shape: { hatch: z.string().optional().describe('A link the user copied in Hatch (hatch:@ and an id), to a Hatch or a whole canvas. Pass it here first and status reports that canvas.'), intent },
+    description: 'Start here. Reports the canvas you hold, its Hatches (pages on the canvas) and anything that needs attention, such as an open dialog. New to Hatch? Call get_guide with topic "start".',
+    shape: { canvas, hatch: z.string().optional().describe('A link the user copied in Hatch (hatch:@ and an id), to a Hatch or a whole canvas. Pass it here first and status reports that canvas.'), intent },
     readOnly: true,
     async run(args, ctx) {
-      const { tabId, hatchId, state } = await hatchFor(ctx.agent, args.hatch);
+      const { tabId, hatchId, state } = await hatchFor(ctx.agent, args.hatch, args.canvas);
       if (args.hatch && hatchId) ctx.agent.hatchId = hatchId;
       ctx.at(tabId, hatchId);
       const tab = state.tabs.find((t) => t.id === tabId)!;
-      const lines = [`Hatch ${app.getVersion()}. You are agent "${ctx.agent.id}" and you hold one tab.`];
-      if (tab.hatches.length === 0) lines.push('Your tab has no Hatch yet. Call navigate with an address to open a page.');
+      const others = state.tabs.length - 1;
+      const lines = [`Hatch ${app.getVersion()}. You are agent "${ctx.agent.id}". You hold the canvas ${JSON.stringify(tab.label)} (${tabId})${others === 0 ? ', the only one open' : `; ${others === 1 ? 'one other canvas is' : `${others} other canvases are`} open, and list_canvases names them`}. Any agent may open, close and work in any canvas.`];
+      if (tab.hatches.length === 0) lines.push('This canvas has no Hatch yet. Call navigate with an address to open a page.');
       for (const h of tab.hatches) {
         const page = pageFor(h.id);
         const notes = [h.id === hatchId ? 'current' : '', page?.loading ? 'loading' : '', page?.dialog ? `${page.dialog.kind} dialog open` : '', h.view === 'agent' ? 'user sees the agent view' : ''].filter(Boolean);
         lines.push(`- ${h.id}  ${JSON.stringify(h.title || '(no title yet)')}  ${h.url}  ${h.width} × ${h.height}${notes.length ? `  (${notes.join(', ')})` : ''}`);
       }
-      if (ctx.agent.id.startsWith(UNNAMED)) lines.push('You connected with no name, so Hatch named you after your app. Two sessions of one app would then share this tab. Add ?agent=<your-name> to the address, or set HATCH_AGENT for the command.');
+      if (ctx.agent.id.startsWith(UNNAMED)) lines.push('You connected with no name, so Hatch named you after your app. Two sessions of one app then share one identity, so pass canvas and hatch ids on your calls. Add ?agent=<your-name> to the address, or set HATCH_AGENT for the command.');
       if ((await settingsStore.read()).describeElements && (await hasKey())) lines.push('Jev is connected, so finding elements from a description is on: click, fill, select_option, hover and the steps of run_steps take target in plain words in place of ref, which saves you a snapshot. wait_for takes until in plain words.');
       if (await canAsk()) lines.push('jev_run is on: hand it a mechanical goal, such as a search or a known flow, and Jev takes the steps and returns a trace. get_guide with topic "jev" says when to use it.');
       if (await canAsk()) lines.push('jev_decide is on: it answers one closed question about items you choose, with a probability for every answer. Use it when a task needs judgement over a list, and keep the loop yourself.');
@@ -58,7 +59,7 @@ export const sessionTools = [
   }),
   tool({
     name: 'finish_working',
-    description: 'Tell Hatch you have finished. The working indicator clears and another agent may take your tab. Your next page call claims a tab again.',
+    description: 'Tell Hatch you have finished. The working indicator clears. The canvas you worked in stays open for the user, and your next page call claims a canvas again.',
     shape: { summary: z.string().max(400).optional().describe('One or two sentences on what you did, for the user.') },
     summary: () => 'finish_working',
     async run({ summary }, ctx) {

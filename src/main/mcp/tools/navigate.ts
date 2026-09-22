@@ -8,7 +8,7 @@ import { openHatch } from './hatches';
 import { onPage } from './page';
 import { waitUntil } from './target';
 import { resolveTarget } from './resolve';
-import { hatch, intent, shortAddress, timeoutS, tool } from './types';
+import { canvas, hatch, intent, shortAddress, timeoutS, tool } from './types';
 
 const describePage = (url: string, title: string, loaded: boolean, seconds: number): string =>
   `${loaded ? 'Loaded' : `Still loading after ${seconds} seconds:`} ${url} (${JSON.stringify(title)}). ${loaded ? 'Call snapshot to read it.' : 'Hatch keeps loading it. Call wait_for to pick it up.'}`;
@@ -16,12 +16,12 @@ const describePage = (url: string, title: string, loaded: boolean, seconds: numb
 export const navigateTools = [
   tool({
     name: 'navigate',
-    description: 'Sends your current Hatch to an address. With no Hatch in your tab yet, it opens one.',
-    shape: { to: z.string().describe('A hatch: project address such as hatch:acme/pricing, a full link, a domain, an absolute file or folder path, or the title of a saved link.'), timeout_s: timeoutS(30), hatch, intent },
+    description: 'Sends your current Hatch to an address. With no Hatch in your canvas yet, it opens one. Pass canvas to work in a canvas other than the one you hold.',
+    shape: { to: z.string().describe('A hatch: project address such as hatch:acme/pricing, a full link, a domain, an absolute file or folder path, or the title of a saved link.'), timeout_s: timeoutS(30), hatch, canvas, intent },
     summary: (a) => `navigate ${shortAddress(a.to)}`,
     async run(a, ctx) {
-      const { hatchId } = await hatchFor(ctx.agent, a.hatch);
-      if (!hatchId) return openHatch(ctx, a.to, {}, a.timeout_s);
+      const { hatchId } = await hatchFor(ctx.agent, a.hatch, a.canvas);
+      if (!hatchId) return openHatch(ctx, a.to, {}, a.timeout_s, a.canvas);
       const url = await resolveTarget(a.to);
       return onPage(ctx, a.hatch, async (page) => {
         ensureNoDialog(page);

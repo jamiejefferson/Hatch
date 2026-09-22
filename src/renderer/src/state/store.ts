@@ -247,14 +247,21 @@ function serve(method: string, params: unknown): unknown {
         activeTabId: workspace.activeTabId,
         tabs: workspace.tabs.map((t) => ({
           id: t.id,
+          label: tabLabel(state, t),
           selectedHatchId: t.selectedHatchId,
           hatches: t.hatches.map((h) => ({ id: h.id, url: h.url, title: h.title, template: h.template, view: h.view, ...effectiveSize(h) })),
         })),
       };
       return answer;
     }
-    case 'newTab':
-      return actions.newTab(false);
+    case 'newTab': {
+      const { name } = (p as { name?: string }) ?? {};
+      const tabId = actions.newTab(false);
+      if (name) actions.renameTab(tabId, name);
+      return tabId;
+    }
+    case 'closeTab':
+      return actions.closeTab((p as { tabId: string }).tabId);
     case 'openHatch': {
       const { tabId, url, preset, width, height } = p as { tabId: string; url: string; preset?: Exclude<TemplateId, 'custom'>; width?: number; height?: number };
       const opened = actions.openHatch(url, { tabId, byAgent: true });

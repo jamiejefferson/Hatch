@@ -51,13 +51,26 @@ export function agentFor(id: string): Agent {
 
 const holds = (agent: Agent, now: number): boolean => agent.tabId !== null && !agent.finished && (agent.running > 0 || now - agent.lastCall < CLAIM_IDLE_MS);
 
-/** The agent's tab. Its first page call claims the front tab when no agent holds it, and otherwise opens a new tab. */
-export async function tabFor(agent: Agent): Promise<{ tabId: string; state: InterfaceState }> {
+/**
+ * The tab a call acts on. A call that names a canvas goes there, whoever else is at work in it: calls on one tab
+ * run one at a time (see inTabQueue), and a canvas belongs to no agent (JJ, 22 Sep 2026). A call that names none
+ * uses the agent's own tab; an agent with none claims the front tab when no other agent is at work there, and
+ * otherwise opens a new tab, so an unaddressed first call never lands in another agent's pages.
+ */
+export async function tabFor(agent: Agent, canvas?: string): Promise<{ tabId: string; state: InterfaceState }> {
   let state = await callInterface<InterfaceState>('state');
   const now = Date.now();
   const heldByOther = (tabId: string): boolean => [...agents.values()].some((a) => a !== agent && a.tabId === tabId && holds(a, now));
 
-  const mine = agent.tabId && state.tabs.some((t) => t.id === agent.tabId) && !heldByOther(agent.tabId) ? agent.tabId : null;
+  if (canvas) {
+    const id = idFromLink(canvas);
+    if (!state.tabs.some((t) => t.id === id)) throw new HatchError(`No canvas has the id ${id}. Call list_canvases to see them.`);
+    if (agent.tabId !== id) agent.hatchId = null;
+    agent.tabId = id;
+    agent.finished = false;
+    return { tabId: id, state };
+  }
+  const mine = agent.tabId && state.tabs.some((t) => t.id === agent.tabId) ? agent.tabId : null;
   if (!mine) {
     if (!heldByOther(state.activeTabId)) agent.tabId = state.activeTabId;
     else {
@@ -70,11 +83,14 @@ export async function tabFor(agent: Agent): Promise<{ tabId: string; state: Inte
   return { tabId: agent.tabId!, state };
 }
 
-/** The Hatch a call acts on: the one named, else the agent's current Hatch, else the tab's selected or first Hatch. */
-export async function hatchFor(agent: Agent, link?: string): Promise<{ tabId: string; hatchId: string | null; state: InterfaceState }> {
+/**
+ * The Hatch a call acts on: the one named, else the agent's current Hatch, else the selected or first Hatch of
+ * the canvas the call names or the agent holds.
+ */
+export async function hatchFor(agent: Agent, link?: string, canvas?: string): Promise<{ tabId: string; hatchId: string | null; state: InterfaceState }> {
   const named = link ? idFromLink(link) : undefined;
   if (named) await followLink(agent, named);
-  const { tabId, state } = await tabFor(agent);
+  const { tabId, state } = await tabFor(agent, named ? undefined : canvas);
   const tab = state.tabs.find((t) => t.id === tabId)!;
   if (named && named !== tabId) {
     if (!tab.hatches.some((h) => h.id === named)) throw new HatchError(`No Hatch in your tab has the id ${named}. Call list_hatches to see yours.`);
@@ -87,16 +103,14 @@ export async function hatchFor(agent: Agent, link?: string): Promise<{ tabId: st
 }
 
 /**
- * A link the user copied names a Hatch or a canvas, which may sit in a tab the agent does not hold.
- * The user handed the link over, so the agent moves to that tab, unless another agent is at work there.
+ * A named Hatch or canvas may sit in a tab the agent does not hold: a link the user copied, or an id from
+ * list_canvases. The agent moves to that tab. Another agent at work there does not stop it, because calls on one
+ * tab run one at a time and the user asked for canvases that any agent may open, close and use.
  */
 async function followLink(agent: Agent, id: string): Promise<void> {
   const state = await callInterface<InterfaceState>('state');
   const home = state.tabs.find((t) => t.id === id || t.hatches.some((h) => h.id === id));
   if (!home || home.id === agent.tabId) return;
-  const now = Date.now();
-  const holder = [...agents.values()].find((a) => a !== agent && a.tabId === home.id && holds(a, now));
-  if (holder) throw new HatchError(`The agent "${holder.id}" is working in that canvas, and one agent holds a tab at a time. Try again once it has finished.`);
   agent.tabId = home.id;
   agent.hatchId = null;
   agent.finished = false;
