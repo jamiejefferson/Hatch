@@ -45,7 +45,19 @@ test('an agent opens, names, shares, lists and closes canvases, and a canvas out
     expect(listed.text).toContain('"Pricing review"');
     expect(listed.text).toContain('1 Hatch');
 
-    // A second agent works in that same canvas by naming it, while alpha still holds it.
+    // list_canvases names the Hatches in each canvas, so a second agent finds alpha's page in one call.
+    const docsId = listed.text.match(/^ {2}(\S+) {2}"[^"]*" {2}\S+\/docs\.html$/m)![1]!;
+
+    // beta reads and acts on alpha's Hatch by its id, while alpha still holds the canvas.
+    const picked = await call(beta, 'select_hatch', { hatch: docsId });
+    expect(picked.isError).toBe(false);
+    expect(picked.text).toContain(`Your calls now act on ${docsId}`);
+    const read = await call(beta, 'snapshot');
+    expect(read.isError).toBe(false);
+    expect(read.text).toContain('Getting started');
+    expect((await call(beta, 'status')).text).toMatch(new RegExp(`- ${docsId}  "[^"]*"  \\S+/docs\\.html`));
+
+    // beta works in that same canvas by naming it, and both agents see both pages.
     const shared = await call(beta, 'open_hatch', { to: `${site.url}/index.html`, canvas: canvasId, preset: 'mobile' });
     expect(shared.isError).toBe(false);
     expect(shared.text).toContain('Opened Hatch');

@@ -14,14 +14,18 @@ const canvasArg = z.string().describe('Canvas id from list_canvases, or a copied
 
 function describe(state: InterfaceState, held: string | null): string {
   return state.tabs
-    .map((t) => `${t.id}${t.id === held ? ' (yours)' : ''}${t.id === state.activeTabId ? ' (the user is looking at it)' : ''}  ${JSON.stringify(t.label)}  ${t.hatches.length === 1 ? '1 Hatch' : `${t.hatches.length} Hatches`}`)
+    .map((t) => {
+      const head = `${t.id}${t.id === held ? ' (yours)' : ''}${t.id === state.activeTabId ? ' (the user is looking at it)' : ''}  ${JSON.stringify(t.label)}  ${t.hatches.length === 1 ? '1 Hatch' : `${t.hatches.length} Hatches`}`;
+      const pages = t.hatches.map((h) => `  ${h.id}  ${JSON.stringify(h.title || '(no title yet)')}  ${h.url}`);
+      return [head, ...pages].join('\n');
+    })
     .join('\n');
 }
 
 export const canvasTools = [
   tool({
     name: 'list_canvases',
-    description: 'Lists every canvas in the Hatch window with id, name and how many Hatches it holds. A canvas is a tab. Any agent may work in any canvas; pass an id as the canvas argument of a call, or to select_canvas.',
+    description: 'Lists every canvas in the Hatch window with id and name, and under each one its Hatches with id, title and address. A canvas is a tab. Any agent may work in any canvas and act on any Hatch: pass a canvas id as the canvas argument of a call or to select_canvas, or pass a Hatch id to select_hatch or to any page tool.',
     shape: { intent },
     readOnly: true,
     async run(_args, ctx) {

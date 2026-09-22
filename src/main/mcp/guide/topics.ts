@@ -98,9 +98,9 @@ snapshot returns an indented outline built from the browser's accessibility tree
 
 const hatches = `# Hatches and canvases
 
-- A canvas is a tab in the Hatch window. list_canvases names every canvas; open_canvas starts an empty one, with a name the user sees on the tab; select_canvas makes one yours; close_canvas closes one and every Hatch in it. A canvas you opened stays open after you finish, so the user can see what you did.
+- A canvas is a tab in the Hatch window. list_canvases names every canvas and the Hatches in each, with their ids; open_canvas starts an empty one, with a name the user sees on the tab; select_canvas makes one yours; close_canvas closes one and every Hatch in it. A canvas you opened stays open after you finish, so the user can see what you did.
 - Any agent works in any canvas. Pass a canvas id to navigate, open_hatch, list_hatches or status to act there without selecting it first. Calls on one canvas run one at a time.
-- list_hatches shows the Hatches in your canvas. Every page tool takes an optional hatch id and otherwise acts on your current Hatch. A Hatch id from another canvas moves you there.
+- list_hatches shows the Hatches in your canvas. Every page tool takes an optional hatch id and otherwise acts on your current Hatch. A Hatch id from another canvas moves you there, whoever else is at work in it, so two agents on one project read and act on the same pages.
 - open_hatch adds a Hatch beside the others and makes it current. Use it to compare two pages, or one page at two sizes.
 - select_hatch changes your current Hatch. The user's own selection stays as it is.
 - status and list_hatches take that same link, so call one of them with it first to see what the user pointed at.
