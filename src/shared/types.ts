@@ -106,7 +106,7 @@ export interface AgentAct {
 /** What the main process reads from the interface before it routes an agent's call. */
 export interface InterfaceState {
   activeTabId: string;
-  tabs: { id: string; selectedHatchId: string | null; hatches: Pick<Hatch, 'id' | 'url' | 'title' | 'width' | 'height' | 'template' | 'view'>[] }[];
+  tabs: { id: string; /** The canvas as the tab strip names it: the user's name, its project's name, or Canvas N. */ label: string; selectedHatchId: string | null; hatches: Pick<Hatch, 'id' | 'url' | 'title' | 'width' | 'height' | 'template' | 'view'>[] }[];
 }
 
 export interface ViewRequest {

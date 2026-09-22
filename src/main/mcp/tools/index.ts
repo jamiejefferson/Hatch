@@ -1,4 +1,5 @@
 import { actTools } from './act';
+import { canvasTools } from './canvases';
 import { commentTools } from './comments';
 import { credentialTools } from './credentials';
 import { extractTools } from './extract';
@@ -13,4 +14,4 @@ import { stepTools } from './steps';
 import type { Tool } from './types';
 
 /** The tool list is static. A tool that a setting switches off stays listed and explains itself when called. */
-export const TOOLS: Tool[] = [...sessionTools, ...hatchTools, ...navigateTools, ...readTools, ...extractTools, ...actTools, ...stepTools, ...jevRunTools, ...jevDecideTools, ...projectTools, ...linkTools, ...commentTools, ...credentialTools];
+export const TOOLS: Tool[] = [...sessionTools, ...canvasTools, ...hatchTools, ...navigateTools, ...readTools, ...extractTools, ...actTools, ...stepTools, ...jevRunTools, ...jevDecideTools, ...projectTools, ...linkTools, ...commentTools, ...credentialTools];

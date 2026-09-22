@@ -6,16 +6,16 @@ import { waitForPage } from '../../hatches/registry';
 import { callInterface } from '../../renderer-rpc';
 import { resolveTarget } from './resolve';
 import { addressOf, waitForLoad } from '../../cdp/actions';
-import { hatch, intent, shortAddress, timeoutS, tool, type ToolContext } from './types';
+import { canvas, hatch, intent, shortAddress, timeoutS, tool, type ToolContext } from './types';
 
 const PRESETS = TEMPLATES.map((t) => t.id);
 const preset = z.enum(PRESETS as [string, ...string[]]).optional().describe(`Device template: ${TEMPLATES.map((t) => (t.size ? `${t.id} (${t.size.width} × ${t.size.height})` : `${t.id} (fills the window)`)).join(', ')}.`);
 const width = z.number().int().min(240).max(4000).optional().describe('Viewport width in CSS pixels. Pass it with height for a custom size.');
 const height = z.number().int().min(240).max(4000).optional().describe('Viewport height in CSS pixels.');
 
-export async function openHatch(ctx: ToolContext, to: string, size: { preset?: string; width?: number; height?: number }, timeoutSeconds: number): Promise<string> {
+export async function openHatch(ctx: ToolContext, to: string, size: { preset?: string; width?: number; height?: number }, timeoutSeconds: number, inCanvas?: string): Promise<string> {
   const url = await resolveTarget(to);
-  const { tabId } = await tabFor(ctx.agent);
+  const { tabId } = await tabFor(ctx.agent, inCanvas);
   return inTabQueue(tabId, async () => {
     const hatchId = await callInterface<string>('openHatch', { tabId, url, ...size });
     ctx.agent.hatchId = hatchId;
@@ -32,24 +32,24 @@ export async function openHatch(ctx: ToolContext, to: string, size: { preset?: s
 export const hatchTools = [
   tool({
     name: 'list_hatches',
-    description: 'Lists the Hatches in your tab with id, title, address, size and view. A Hatch is one live page in a frame on the canvas. Pass a link the user copied (hatch:@ and an id) and it lists that canvas.',
-    shape: { hatch: z.string().optional().describe('A copied hatch:@ link to a Hatch or a canvas. Leave it out to list your own tab.'), intent },
+    description: 'Lists the Hatches in a canvas with id, title, address, size and view. A Hatch is one live page in a frame on the canvas. With nothing passed it lists the canvas you hold; pass a canvas id, or a link the user copied (hatch:@ and an id), for another.',
+    shape: { canvas, hatch: z.string().optional().describe('A copied hatch:@ link to a Hatch or a canvas. Leave it out to list your own canvas.'), intent },
     readOnly: true,
     async run(args, ctx) {
-      const { tabId, hatchId, state } = await hatchFor(ctx.agent, args.hatch);
+      const { tabId, hatchId, state } = await hatchFor(ctx.agent, args.hatch, args.canvas);
       if (args.hatch && hatchId) ctx.agent.hatchId = hatchId;
       ctx.at(tabId, hatchId);
       const tab = state.tabs.find((t) => t.id === tabId)!;
-      if (tab.hatches.length === 0) return 'Your tab has no Hatch yet. Call navigate or open_hatch with an address.';
+      if (tab.hatches.length === 0) return `The canvas ${JSON.stringify(tab.label)} (${tab.id}) has no Hatch yet. Call navigate or open_hatch with an address.`;
       return tab.hatches.map((h) => `${h.id}${h.id === hatchId ? ' (current)' : ''}  ${JSON.stringify(h.title)}  ${h.url}  ${h.width} × ${h.height}  ${h.template}  shows the ${h.view === 'agent' ? 'agent view' : 'page'}`).join('\n');
     },
   }),
   tool({
     name: 'open_hatch',
-    description: 'Opens a new Hatch beside the others in your tab and makes it your current Hatch. Use it to compare two pages or two sizes of one page. To change the page in an existing Hatch, use navigate.',
-    shape: { to: z.string().describe('A hatch: project address, a full link, a domain, an absolute file or folder path, or the title of a saved link.'), preset, width, height, timeout_s: timeoutS(30), intent },
+    description: 'Opens a new Hatch beside the others in a canvas and makes it your current Hatch. Use it to compare two pages or two sizes of one page. To change the page in an existing Hatch, use navigate. Pass canvas to open it in a canvas other than the one you hold.',
+    shape: { to: z.string().describe('A hatch: project address, a full link, a domain, an absolute file or folder path, or the title of a saved link.'), preset, width, height, canvas, timeout_s: timeoutS(30), intent },
     summary: (a) => `open_hatch ${shortAddress(a.to)}`,
-    run: (a, ctx) => openHatch(ctx, a.to, { preset: a.preset, width: a.width, height: a.height }, a.timeout_s),
+    run: (a, ctx) => openHatch(ctx, a.to, { preset: a.preset, width: a.width, height: a.height }, a.timeout_s, a.canvas),
   }),
   tool({
     name: 'select_hatch',
@@ -66,7 +66,7 @@ export const hatchTools = [
   }),
   tool({
     name: 'close_hatch',
-    description: 'Closes a Hatch in your tab.',
+    description: 'Closes a Hatch, in your canvas or any other.',
     shape: { hatch: z.string().describe('Hatch id from list_hatches.'), intent },
     summary: (a) => `close_hatch ${a.hatch}`,
     async run(a, ctx) {

@@ -44,7 +44,7 @@ Feedback goes to a database that the app can write to and cannot read. A send th
 ## What works
 
 - **Canvas.** Pages sit side by side at their real layout width. The canvas zooms and pans, a Hatch drags taller, and Fit to view gives the look of an ordinary browser.
-- **Agents.** An agent opens pages, reads the agent view, acts by element reference, answers dialogs, takes screenshots, measures an element with `get_element` and asks the user to switch views. A second agent gets its own tab.
+- **Agents.** An agent opens pages, reads the agent view, acts by element reference, answers dialogs, takes screenshots, measures an element with `get_element` and asks the user to switch views. An agent opens, closes and names canvases (tabs) and works in any of them; a canvas it opened stays open for the user after it finishes.
 - **Local projects.** Hatch registers a folder, starts its dev server on a stable port and serves it at `hatch:<name>`, which is `http://<name>.localhost:4282` in any browser. A folder of plain HTML gets the same address and reloads when a file changes.
 - **Comments.** The user pins a comment to an element. An agent reads it, acts on it, replies and resolves it. A project's comments are markdown files in `<project>/.hatch/comments/`.
 - **Sign-ins.** Hatch fills a saved sign-in for an agent after the user agrees. The agent never receives the password. Google refuses to sign anyone in inside an app built on Electron, so for a site that offers Google alone, the Sign-ins panel copies that site's sign-in from Chrome, Arc, Brave or Edge. macOS asks for the user's password first, because the browser keeps its cookie key in the Keychain.

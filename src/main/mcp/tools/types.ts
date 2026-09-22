@@ -26,6 +26,7 @@ export const tool = <S extends z.ZodRawShape>(t: Tool<S>): Tool => t as unknown 
 
 // Schemas stay flat, so every client can render them.
 export const intent = z.string().max(300).optional().describe('One sentence on why you are making this call. Hatch shows it to the user.');
+export const canvas = z.string().optional().describe('Canvas id from list_canvases, or a copied hatch:@ link to a canvas. Leave it out to act in the canvas you hold.');
 export const hatch = z.string().optional().describe('Hatch id from list_hatches, or a link the user copied in Hatch, which reads hatch:@ and an id. Leave it out to act on your current Hatch.');
 export const timeoutS = (fallback: number) => z.number().min(1).max(3600).default(fallback).describe(`Seconds to wait. When they run out Hatch returns the current state and the work carries on. Default ${fallback}, which sits inside every agent app's own limit on one call.`);
 export const ref = z.string().describe('Element reference from the agent view, such as e12.');
