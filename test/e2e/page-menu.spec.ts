@@ -1,10 +1,10 @@
-// A right-click on an image in a page offers to save it, and Hatch says when the file has landed.
+// A right-click on an image in a page offers to save it, and Hatch says when the file has landed. A right-click on a link opens it in a new Hatch, copies it or saves it to Links.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { freshHome, launch, openHatch, serveSite } from './helpers';
 
-test('a right-click on an image saves it, and a right-click elsewhere shows no menu', async () => {
+test('a right-click on an image saves it, a right-click on a link opens or saves it, and a right-click elsewhere shows no menu', async () => {
   const site = await serveSite();
   const home = freshHome();
   const { app, win } = await launch(home, 0);
@@ -43,6 +43,23 @@ test('a right-click on an image saves it, and a right-click elsewhere shows no m
 
     await app.evaluate(() => (globalThis as unknown as { menus: Electron.Menu[] }).menus[0]!.items[2]!.click());
     expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe(`${site.url}/mark.svg`);
+
+    await rightClick('#link');
+    await expect.poll(menus).toEqual([
+      ['Save Image As…', 'Copy Image', 'Copy Image Address'],
+      ['Open Link in New Hatch', 'Copy Link Address', 'Save Link to Links'],
+    ]);
+
+    await app.evaluate(() => (globalThis as unknown as { menus: Electron.Menu[] }).menus[1]!.items[1]!.click());
+    expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe(`${site.url}/docs.html`);
+
+    await app.evaluate(() => (globalThis as unknown as { menus: Electron.Menu[] }).menus[1]!.items[2]!.click());
+    await expect(win.locator('.toast')).toHaveText('Hatch saved this link in Links.');
+    await expect.poll(() => JSON.parse(readFileSync(join(home, 'links.json'), 'utf8')) as { name: string; url: string }[]).toContainEqual(expect.objectContaining({ name: 'Read the docs', url: `${site.url}/docs.html` }));
+
+    await app.evaluate(() => (globalThis as unknown as { menus: Electron.Menu[] }).menus[1]!.items[0]!.click());
+    await expect.poll(() => app.evaluate(({ webContents }) => webContents.getAllWebContents().filter((wc) => wc.getType() === 'webview').map((wc) => wc.getTitle()).sort())).toEqual(['Gallery', 'Getting started | Acme Docs']);
+    await expect(win.locator('.hatch-page')).toHaveCount(2);
   } finally {
     await app.close();
     await site.close();
