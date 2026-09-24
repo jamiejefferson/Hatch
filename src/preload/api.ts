@@ -2,7 +2,7 @@ import type { Anchor, CommentStatus, PageComments } from '@shared/comments';
 import type { BrowserProfile, ImportOutcome } from '@shared/cookie-import';
 import type { FeedbackDetails, FeedbackInput } from '@shared/feedback';
 import type { ConsentAnswer, ConsentRequest, SignIn } from '@shared/signins';
-import type { ActivityEntry, AgentAct, AgentWorkState, DialogState, Project, ProjectsState, ProjectState, SavedLink, Settings, Workspace } from '@shared/types';
+import type { ActivityEntry, AgentAct, AgentWorkState, DialogState, Project, ProjectsState, ProjectState, SavedCanvas, SavedLink, Settings, Workspace } from '@shared/types';
 
 export type Outcome<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -56,8 +56,15 @@ export interface HatchApi {
   loadWorkspace(): Promise<Workspace>;
   saveWorkspace(workspace: Workspace): Promise<void>;
   listLinks(): Promise<SavedLink[]>;
-  addLink(link: { name: string; url: string }): Promise<SavedLink[]>;
+  addLink(link: { name: string; url: string; folder?: string }): Promise<SavedLink[]>;
   removeLink(id: string): Promise<SavedLink[]>;
+  /** Files a link under a folder. An empty folder name takes it back to the top of the list. */
+  moveLink(id: string, folder: string): Promise<SavedLink[]>;
+  renameLinkFolder(from: string, to: string): Promise<SavedLink[]>;
+  savedCanvases(): Promise<SavedCanvas[]>;
+  /** Saves a canvas. One with the same name is replaced. */
+  saveCanvas(saved: SavedCanvas): Promise<SavedCanvas[]>;
+  removeSavedCanvas(id: string): Promise<SavedCanvas[]>;
   getSettings(): Promise<Settings>;
   setSettings(settings: Partial<Settings>): Promise<Settings>;
   /** Whether Hatch holds a Jev key. The key itself never comes back to the interface. */

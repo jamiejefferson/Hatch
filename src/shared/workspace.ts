@@ -47,7 +47,7 @@ function repairTab(raw: unknown): Tab | null {
   return { id: str(source.id, newId('tab')), ...(name ? { name } : {}), hatches, selectedHatchId: selected, pan: { x: num(pan.x, 40), y: num(pan.y, 68) }, zoom: clampZoom(num(source.zoom, 0.62)) };
 }
 
-function repairHatch(raw: unknown): Hatch | null {
+export function repairHatch(raw: unknown): Hatch | null {
   if (!raw || typeof raw !== 'object') return null;
   const source = raw as Record<string, unknown>;
   if (typeof source.url !== 'string' || !source.url) return null;

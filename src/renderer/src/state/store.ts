@@ -8,7 +8,8 @@ import { hatchAddress, projectOf, projectUrl, PROXY_PORT } from '@shared/project
 import type { Anchor, CommentStatus, PageComments } from '@shared/comments';
 import type { ConsentAnswer, ConsentRequest, SignIn } from '@shared/signins';
 import type { ConnectionInfo, Outcome } from '../../../preload/api';
-import type { ProjectsState, ActivityEntry, AgentAct, AgentWorkState, DialogState, Hatch, HatchView, InterfaceState, SavedLink, Settings, Tab, TemplateId, ViewRequest, Workspace } from '@shared/types';
+import type { ProjectsState, ActivityEntry, AgentAct, AgentWorkState, DialogState, Hatch, HatchView, InterfaceState, SavedCanvas, SavedLink, Settings, Tab, TemplateId, ViewRequest, Workspace } from '@shared/types';
+import { savedCanvasFromTab, tabFromSavedCanvas } from '@shared/canvases';
 import { DEFAULT_SETTINGS } from '@shared/types';
 import { emptyTab, emptyWorkspace, newId } from '@shared/workspace';
 
@@ -25,6 +26,8 @@ export interface State {
   ready: boolean;
   workspace: Workspace;
   links: SavedLink[];
+  /** The canvases the user saved to open again. */
+  savedCanvases: SavedCanvas[];
   settings: Settings;
   panel: SidebarPanel;
   newHatchOpen: boolean;
@@ -86,6 +89,7 @@ let state: State = {
   ready: false,
   workspace: emptyWorkspace(),
   links: [],
+  savedCanvases: [],
   settings: DEFAULT_SETTINGS,
   panel: 'hatch',
   newHatchOpen: false,
@@ -177,11 +181,11 @@ export const ACT_MS = 1800;
 const booted = new Promise<void>((resolve) => (markBooted = resolve));
 
 export async function boot(): Promise<void> {
-  const [workspace, links, settings, activity, projects] = await Promise.all([window.hatch.loadWorkspace(), window.hatch.listLinks(), window.hatch.getSettings(), window.hatch.activity(), window.hatch.projects()]);
+  const [workspace, links, savedCanvases, settings, activity, projects] = await Promise.all([window.hatch.loadWorkspace(), window.hatch.listLinks(), window.hatch.savedCanvases(), window.hatch.getSettings(), window.hatch.activity(), window.hatch.projects()]);
   void window.hatch.signIns().then((signIns) => set({ signIns }));
   void window.hatch.connection().then((connection) => set({ connection }));
   reportedFit = '-';
-  set({ projects, workspace, links, settings, activity: activity.entries, work: activity.work, logPath: activity.logPath, mcpPort: activity.port, ready: true, guideOpen: window.hatch.guide && !settings.guideSeen });
+  set({ projects, workspace, links, savedCanvases, settings, activity: activity.entries, work: activity.work, logPath: activity.logPath, mcpPort: activity.port, ready: true, guideOpen: window.hatch.guide && !settings.guideSeen });
   markBooted();
 }
 
@@ -682,11 +686,40 @@ export const actions = {
     actions.showProject(added.value.name);
     return null;
   },
-  async saveLink(name: string, url: string): Promise<void> {
-    set({ links: await window.hatch.addLink({ name, url }) });
+  async saveLink(name: string, url: string, folder = ''): Promise<void> {
+    set({ links: await window.hatch.addLink({ name, url, ...(folder.trim() ? { folder: folder.trim() } : {}) }) });
   },
   async removeLink(id: string): Promise<void> {
     set({ links: await window.hatch.removeLink(id) });
+  },
+  /** Files a link under a folder. An empty name takes it out of its folder. */
+  async moveLink(id: string, folder: string): Promise<void> {
+    set({ links: await window.hatch.moveLink(id, folder) });
+  },
+  async renameLinkFolder(from: string, to: string): Promise<void> {
+    set({ links: await window.hatch.renameLinkFolder(from, to) });
+  },
+
+  // saved canvases
+  /** Saves a tab's Hatches under a name. A saved canvas with that name is replaced. */
+  async saveCanvas(tabId: string, name: string): Promise<string | null> {
+    const tab = state.workspace.tabs.find((t) => t.id === tabId);
+    if (!tab) return 'That canvas has closed.';
+    if (!name.trim()) return 'Give the canvas a name before you save it.';
+    if (tab.hatches.length === 0) return 'This canvas has no Hatches to save.';
+    set({ savedCanvases: await window.hatch.saveCanvas(savedCanvasFromTab(tab, name)) });
+    actions.toast(`Hatch saved this canvas as ${name.trim()}.`);
+    return null;
+  },
+  /** Opens a saved canvas as a new tab, with every Hatch where it was. */
+  openSavedCanvas(id: string): void {
+    const saved = state.savedCanvases.find((c) => c.id === id);
+    if (!saved) return;
+    const tab = tabFromSavedCanvas(saved);
+    set((s) => ({ workspace: { ...s.workspace, tabs: [...s.workspace.tabs, tab], activeTabId: tab.id }, panel: 'hatch' }));
+  },
+  async removeSavedCanvas(id: string): Promise<void> {
+    set({ savedCanvases: await window.hatch.removeSavedCanvas(id) });
   },
   setNewHatchPage: (page: string): Promise<void> => actions.updateSettings({ newHatchPage: page }),
 };

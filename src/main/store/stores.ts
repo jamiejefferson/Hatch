@@ -1,4 +1,5 @@
-import { DEFAULT_SETTINGS, type SavedLink, type Settings, type Workspace } from '@shared/types';
+import { cleanFolderName, repairSavedCanvases } from '@shared/canvases';
+import { DEFAULT_SETTINGS, type SavedCanvas, type SavedLink, type Settings, type Workspace } from '@shared/types';
 import { repairWorkspace } from '@shared/workspace';
 import { dataFile } from '../paths';
 import { JsonStore } from './json-store';
@@ -6,7 +7,12 @@ import { cleanFolder, linksFile } from './folders';
 
 function repairLinks(raw: unknown): SavedLink[] {
   if (!Array.isArray(raw)) return [];
-  return raw.filter((l): l is SavedLink => !!l && typeof l.id === 'string' && typeof l.name === 'string' && typeof l.url === 'string');
+  return raw
+    .filter((l): l is SavedLink => !!l && typeof l.id === 'string' && typeof l.name === 'string' && typeof l.url === 'string')
+    .map(({ folder, ...link }) => {
+      const clean = cleanFolderName(folder);
+      return clean ? { ...link, folder: clean } : link;
+    });
 }
 
 function repairSettings(raw: unknown): Settings {
@@ -27,3 +33,5 @@ function repairSettings(raw: unknown): Settings {
 export const workspaceStore = new JsonStore<Workspace>(dataFile('workspace.json'), repairWorkspace);
 export const linksStore = new JsonStore<SavedLink[]>(linksFile, repairLinks);
 export const settingsStore = new JsonStore<Settings>(dataFile('settings.json'), repairSettings);
+/** The canvases the user saved to open again, in canvases.json beside the workspace. */
+export const canvasesStore = new JsonStore<SavedCanvas[]>(dataFile('canvases.json'), repairSavedCanvases);

@@ -34,6 +34,9 @@ export const FitIcon = make('M9.5 2.5h4v4M13.5 2.5L9 7M6.5 13.5h-4v-4M2.5 13.5L7
 export const ReleaseIcon = make('M13 7H9V3M9 7l4.5-4.5M3 9h4v4M7 9l-4.5 4.5');
 export const ShowAllIcon = make('M2.5 2.5h4.5v4.5H2.5zM9 2.5h4.5v4.5H9zM2.5 9h4.5v4.5H2.5zM9 9h4.5v4.5H9z');
 export const SaveLinkIcon = make('M4 2.5h8v11l-4-3-4 3z');
+export const FolderIcon = make('M2 4.5V12.5h12V5.5H8L6.5 3.5H2z');
+export const ChevronIcon = make('M6 3l5 5-5 5');
+export const SaveIcon = make('M2.5 2.5h9l2 2v9h-11zM5 2.5v3.5h5V2.5M4.5 13.5V9h7v4.5');
 
 // Device templates.
 export const DesktopIcon = make('M2 3h12v8H2zM6 14h4M8 11v3');

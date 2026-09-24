@@ -226,6 +226,18 @@ svg { flex-shrink: 0; display: block; }
 .link-open .name { font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .link-open .url, .choice-list .url { font-size: 12px; color: var(--ink-2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .hatch-row .project-text { flex: 1; }
+.link-folder { display: flex; flex-direction: column; }
+.folder-head { display: flex; align-items: center; gap: 6px; width: calc(100% + 16px); min-height: 32px; margin: 0 -8px; padding: 0 8px; border-radius: var(--r); font-weight: 600; text-align: left; }
+.folder-head:hover { background: var(--ground); }
+.folder-head .chevron { display: grid; place-items: center; width: 14px; color: var(--ink-3); transition: transform 120ms ease; }
+.folder-head[aria-expanded='true'] .chevron { transform: rotate(90deg); }
+.folder-head .name { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.folder-head .count { font-size: 12px; font-weight: 400; color: var(--ink-2); }
+.folder-rename { height: 32px; margin: 0; }
+.link-folder .link-list { padding-left: 12px; }
+.link-move { flex: 1; min-width: 0; padding: 4px 0; }
+.link-move .field { height: 32px; }
+.canvas-list li.current { background: var(--ground); }
 .add-form { display: flex; flex-direction: column; gap: 8px; }
 .add-row { display: flex; align-items: center; gap: 8px; }
 .add-row .field { flex: 1; min-width: 0; }

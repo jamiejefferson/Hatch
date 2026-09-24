@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, type Rectangle } from 'electron';
 import { setUpPagesSession } from './hatches/registry';
 import { flushOutbox } from './feedback/send';
 import { seedFirstRun } from './first-run';
@@ -13,6 +13,7 @@ import { stopWatchingCommentFiles, watchCommentFiles } from './comments/store';
 import { startProxy, stopProxy } from './servers/proxy';
 import { closeWatchers, syncWatchers } from './servers/watch';
 import { workspaceStore } from './store/stores';
+import { watchForCrashes } from './recover';
 import { createWindow } from './window';
 
 // A test run keeps its own Electron profile, so it never collides with the user's Hatch.
@@ -23,10 +24,18 @@ app.userAgentFallback = app.userAgentFallback.replace(/ (?:hatch|electron)\/\S+/
 
 let mainWindow: BrowserWindow | null = null;
 
-function open(): void {
-  mainWindow = createWindow();
-  setInterface(mainWindow.webContents);
-  mainWindow.on('closed', () => {
+function open(bounds?: Rectangle): void {
+  const win = createWindow(bounds);
+  mainWindow = win;
+  setInterface(win.webContents);
+  // A renderer that has died leaves a black window whose preload never runs again, so Hatch opens a new window in its place and closes the dead one after it.
+  watchForCrashes(win, () => {
+    if (mainWindow !== win) return;
+    open(win.isDestroyed() ? undefined : win.getBounds());
+    if (!win.isDestroyed()) win.destroy();
+  });
+  win.on('closed', () => {
+    if (mainWindow !== win) return;
     mainWindow = null;
     setInterface(null);
   });

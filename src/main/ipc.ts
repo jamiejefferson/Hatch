@@ -1,7 +1,8 @@
 import { BrowserWindow, clipboard, dialog, ipcMain, shell, webContents } from 'electron';
 import { parseAddress } from '@shared/address';
 import type { FeedbackInput } from '@shared/feedback';
-import type { SavedLink, Settings, Workspace } from '@shared/types';
+import type { SavedCanvas, SavedLink, Settings, Workspace } from '@shared/types';
+import { cleanFolderName, putSavedCanvas, repairSavedCanvases } from '@shared/canvases';
 import { newId, repairWorkspace } from '@shared/workspace';
 import type { Anchor, CommentStatus } from '@shared/comments';
 import { listActivity, logPath } from './agents/activity';
@@ -23,21 +24,50 @@ import { logOf, projectsState, publish, register, remove, start, stop, update } 
 import { syncWatchers } from './servers/watch';
 import { cleanFolder, linksFile, setFolders } from './store/folders';
 import { hasKey, keyHint, keyProvider, setKey, testKey } from './jev/client';
-import { linksStore, settingsStore, workspaceStore } from './store/stores';
+import { canvasesStore, linksStore, settingsStore, workspaceStore } from './store/stores';
 
 export function registerIpc(): void {
   ipcMain.handle('workspace:load', () => workspaceStore.read());
   ipcMain.handle('workspace:save', (_e, workspace: Workspace) => workspaceStore.write(repairWorkspace(workspace)));
 
   ipcMain.handle('links:list', () => linksStore.read());
-  ipcMain.handle('links:add', (_e, link: { name: string; url: string }) =>
+  ipcMain.handle('links:add', (_e, link: { name: string; url: string; folder?: string }) =>
     linksStore.update((links) => {
       if (links.some((l) => l.url === link.url)) return links;
-      const saved: SavedLink = { id: newId('link'), name: String(link.name).trim() || link.url, url: String(link.url) };
+      const folder = cleanFolderName(link.folder);
+      const saved: SavedLink = { id: newId('link'), name: String(link.name).trim() || link.url, url: String(link.url), ...(folder ? { folder } : {}) };
       return [...links, saved];
     }),
   );
   ipcMain.handle('links:remove', (_e, id: string) => linksStore.update((links) => links.filter((l) => l.id !== id)));
+  // Moves one link into a folder. An empty folder name takes it back to the top of the list.
+  ipcMain.handle('links:move', (_e, id: string, folder: string) =>
+    linksStore.update((links) =>
+      links.map(({ folder: _old, ...l }) => {
+        if (l.id !== id) return _old ? { ...l, folder: _old } : l;
+        const clean = cleanFolderName(folder);
+        return clean ? { ...l, folder: clean } : l;
+      }),
+    ),
+  );
+  // Renames a folder for every link in it. An empty new name empties the folder into the top of the list.
+  ipcMain.handle('links:rename-folder', (_e, from: string, to: string) =>
+    linksStore.update((links) =>
+      links.map(({ folder, ...l }) => {
+        if (folder !== from) return folder ? { ...l, folder } : l;
+        const clean = cleanFolderName(to);
+        return clean ? { ...l, folder: clean } : l;
+      }),
+    ),
+  );
+
+  ipcMain.handle('canvases:list', () => canvasesStore.read());
+  ipcMain.handle('canvases:save', (_e, saved: SavedCanvas) => {
+    const [clean] = repairSavedCanvases([saved]);
+    if (!clean) throw new Error('Give the canvas a name before you save it.');
+    return canvasesStore.update((list) => putSavedCanvas(list, clean));
+  });
+  ipcMain.handle('canvases:remove', (_e, id: string) => canvasesStore.update((list) => list.filter((c) => c.id !== id)));
 
   ipcMain.handle('settings:get', () => settingsStore.read());
   ipcMain.handle('settings:set', async (_e, settings: Partial<Settings>) => {

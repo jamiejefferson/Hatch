@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { cleanFolderName, groupLinks } from '@shared/canvases';
 import { hatchAddress } from '@shared/project-address';
 import { HatchError } from '../../cdp/session';
 import { getProxyPort, logOf, projectsState, register, start, stop } from '../../servers/manager';
@@ -87,27 +88,31 @@ export const projectTools = [
 export const linkTools = [
   tool({
     name: 'list_links',
-    description: 'Lists the user\'s saved links. navigate and open_hatch accept a saved link\'s title.',
+    description: 'Lists the user\'s saved links, grouped by folder. navigate and open_hatch accept a saved link\'s title.',
     shape: { intent },
     readOnly: true,
     async run() {
       const [links, state] = await Promise.all([linksStore.read(), projectsState(false)]);
       if (links.length === 0) return 'The user has saved no links yet.';
-      return links.map((l) => `${JSON.stringify(l.name)}  ${hatchAddress(l.url, state.projects, getProxyPort()) ?? l.url}`).join('\n');
+      const line = (l: { name: string; url: string }): string => `${JSON.stringify(l.name)}  ${hatchAddress(l.url, state.projects, getProxyPort()) ?? l.url}`;
+      return groupLinks(links)
+        .map((g) => (g.folder ? [`Folder ${JSON.stringify(g.folder)}:`, ...g.links.map((l) => `  ${line(l)}`)] : g.links.map(line)).join('\n'))
+        .join('\n');
     },
   }),
   tool({
     name: 'save_link',
     description: 'Saves a link under a title, so the user and any agent can open it by that title later.',
-    shape: { title: z.string().min(1).max(80), url: z.string().describe('A full link or a domain.'), intent },
+    shape: { title: z.string().min(1).max(80), url: z.string().describe('A full link or a domain.'), folder: z.string().max(60).optional().describe('A folder in Links to file it under. list_links names the folders the user has.'), intent },
     summary: (a) => `save_link ${JSON.stringify(a.title)}`,
     async run(a) {
       const parsed = parseAddress(a.url);
       if (!parsed.ok) throw new HatchError(parsed.error);
       if (parsed.kind !== 'url') throw new HatchError('Save the full link. A hatch: address changes when its project is renamed.');
-      const links = await linksStore.update((all) => (all.some((l) => l.url === parsed.url) ? all : [...all, { id: newId('link'), name: a.title.trim(), url: parsed.url }]));
+      const folder = cleanFolderName(a.folder);
+      const links = await linksStore.update((all) => (all.some((l) => l.url === parsed.url) ? all : [...all, { id: newId('link'), name: a.title.trim(), url: parsed.url, ...(folder ? { folder } : {}) }]));
       push('links:state', links);
-      return `Saved ${JSON.stringify(a.title)}.`;
+      return `Saved ${JSON.stringify(a.title)}${folder ? ` in the folder ${JSON.stringify(folder)}` : ''}.`;
     },
   }),
 ];

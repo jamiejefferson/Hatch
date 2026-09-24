@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { DEVICE_TEMPLATES } from '@shared/templates';
 import { pages } from '../canvas/webviews';
 import { DesktopIcon, LaptopIcon, MobileIcon, TabletLandscapeIcon, TabletPortraitIcon } from '../icons';
-import { BackIcon, CheckIcon, CloseIcon, CommentIcon, CopyIcon, EyeIcon, FitIcon, GrabIcon, MinusIcon, OutlineIcon, PlusIcon, ReleaseIcon, ReloadIcon, SaveLinkIcon, ShowAllIcon, StopIcon } from '../icons';
-import { actions, activeTab, displayAddress, effectiveSize, fitHatch, hatchLabel, loadStateOf, resolveAddress, selectedHatch, useStore } from '../state/store';
-import type { Hatch } from '@shared/types';
+import { BackIcon, CheckIcon, CloseIcon, CommentIcon, CopyIcon, EyeIcon, FitIcon, GrabIcon, MinusIcon, OutlineIcon, PlusIcon, ReleaseIcon, ReloadIcon, SaveIcon, SaveLinkIcon, ShowAllIcon, StopIcon } from '../icons';
+import { actions, activeTab, displayAddress, effectiveSize, fitHatch, hatchLabel, loadStateOf, resolveAddress, selectedHatch, tabLabel, useStore } from '../state/store';
+import type { Hatch, Tab } from '@shared/types';
 
 const DEVICE_ICONS: Record<string, (p: { size?: number }) => React.ReactElement> = { desktop: DesktopIcon, laptop: LaptopIcon, tablet: TabletPortraitIcon, 'tablet-landscape': TabletLandscapeIcon, mobile: MobileIcon };
 
@@ -78,6 +78,93 @@ function CanvasOverview() {
             </button>
           </div>
           <p className="hint">Drag the canvas to pan it. Pinch, or hold Cmd and scroll, to zoom. Tap a Hatch twice to fit it to the view.</p>
+        </section>
+      )}
+
+      <CanvasesSection tab={tab} />
+    </>
+  );
+}
+
+const hatchCount = (n: number): string => `${n} ${n === 1 ? 'Hatch' : 'Hatches'}`;
+
+/** Every open canvas, a field that saves this one under a name, and the saved canvases, which open as new tabs. */
+function CanvasesSection({ tab }: { tab: Tab }) {
+  const tabs = useStore((s) => s.workspace.tabs);
+  const labels = useStore((s) => s.workspace.tabs.map((t) => tabLabel(s, t)).join('\n')).split('\n');
+  const working = useStore((s) => s.work.tabs);
+  const saved = useStore((s) => s.savedCanvases);
+  const label = labels[tabs.findIndex((t) => t.id === tab.id)] ?? '';
+  const [name, setName] = useState(label);
+  const [error, setError] = useState<string | null>(null);
+  const [typedFor, setTypedFor] = useState(tab.id);
+
+  // The field offers the canvas's own name until the user types one, and starts again on another canvas.
+  if (typedFor !== tab.id) {
+    setTypedFor(tab.id);
+    setName(label);
+  }
+
+  const save = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    setError(await actions.saveCanvas(tab.id, name));
+  };
+
+  return (
+    <>
+      <section data-testid="canvases">
+        <h2>Canvases</h2>
+        <ul className="hatch-list canvas-list" data-testid="canvas-list">
+          {tabs.map((t, i) => (
+            <li key={t.id} className={t.id === tab.id ? 'current' : ''}>
+              <button className="hatch-row" aria-current={t.id === tab.id ? 'true' : undefined} onClick={() => actions.activateTab(t.id)} title={`Show ${labels[i]}`}>
+                <span className="project-text">
+                  <span className="name">{labels[i]}</span>
+                  <span className="url">{hatchCount(t.hatches.length)}</span>
+                </span>
+                {working[t.id] && <span className="working-dot" role="img" aria-label="An agent is working in this canvas" />}
+              </button>
+              <button className="round small quiet" aria-label={`Close ${labels[i]}`} title="Close this canvas" onClick={() => actions.closeTab(t.id)}>
+                <CloseIcon size={12} />
+              </button>
+            </li>
+          ))}
+        </ul>
+        <form className="add-row" onSubmit={(e) => void save(e)} noValidate>
+          <div className={`field${error ? ' invalid' : ''}`}>
+            <input aria-label="Name for the saved canvas" aria-invalid={error !== null} placeholder="Name this canvas to save it" value={name} onChange={(e) => setName(e.target.value)} onFocus={(e) => e.target.select()} data-testid="canvas-name" />
+          </div>
+          <button type="submit" className="round primary" aria-label="Save this canvas" title="Save this canvas" disabled={!name.trim() || tab.hatches.length === 0} data-testid="save-canvas">
+            <SaveIcon />
+          </button>
+        </form>
+        {error && (
+          <p className="field-error" role="alert">
+            {error}
+          </p>
+        )}
+        <p className="hint">Saving keeps this canvas's Hatches, sizes and places under the name. Saving again under the same name replaces it.</p>
+      </section>
+
+      {saved.length > 0 && (
+        <section data-testid="saved-canvases">
+          <h2>Saved canvases</h2>
+          <ul className="hatch-list" data-testid="saved-canvas-list">
+            {saved.map((c) => (
+              <li key={c.id}>
+                <button className="hatch-row" onClick={() => actions.openSavedCanvas(c.id)} title={`Open ${c.name} as a new canvas`}>
+                  <span className="project-text">
+                    <span className="name">{c.name}</span>
+                    <span className="url">{hatchCount(c.hatches.length)}</span>
+                  </span>
+                </button>
+                <button className="round small quiet" aria-label={`Remove the saved canvas ${c.name}`} title="Remove this saved canvas" onClick={() => void actions.removeSavedCanvas(c.id)}>
+                  <CloseIcon size={12} />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="hint">A saved canvas opens as a new canvas, with every Hatch where it was.</p>
         </section>
       )}
     </>

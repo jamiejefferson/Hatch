@@ -1,11 +1,13 @@
 import { join } from 'node:path';
-import { BrowserWindow, shell } from 'electron';
+import { BrowserWindow, shell, type Rectangle } from 'electron';
 import { watchHost } from './hatches/registry';
 
-export function createWindow(): BrowserWindow {
+/** Opens Hatch's window. A window that replaces one whose renderer died takes that window's place on screen. */
+export function createWindow(bounds?: Rectangle): BrowserWindow {
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
+    ...(bounds ?? {}),
     minWidth: 720,
     minHeight: 480,
     show: false,

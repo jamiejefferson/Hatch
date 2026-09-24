@@ -41,6 +41,19 @@ export interface SavedLink {
   id: string;
   name: string;
   url: string;
+  /** The folder the user filed this link under. Absent for a link at the top of the list. */
+  folder?: string;
+}
+
+/** A canvas the user saved: its Hatches with their places and sizes, and where the view sat. Opening it makes a new tab. */
+export interface SavedCanvas {
+  id: string;
+  name: string;
+  /** When the user saved it, as an ISO date. */
+  savedAt: string;
+  hatches: Hatch[];
+  pan: { x: number; y: number };
+  zoom: number;
 }
 
 export interface Settings {
