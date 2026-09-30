@@ -14,6 +14,7 @@ import { answerConsent } from './credentials/fill';
 import { defaultBrowserState, makeDefaultBrowser } from './default-browser';
 import { captureForFeedback, feedbackDetails, sendFeedback } from './feedback/send';
 import { importSignIn, listBrowserProfiles } from './credentials/import-cookies';
+import { importBookmarks, listBookmarkProfiles } from './links/import-bookmarks';
 import { addSignIn, listSignIns, removeSignIn, setAllow } from './credentials/store';
 import { bindHatch, onPageBound, pageFor, setFitHatches } from './hatches/registry';
 import { mcpPort } from './mcp/http';
@@ -157,6 +158,8 @@ export function registerIpc(): void {
   ipcMain.handle('signins:allow', safely((id: string, allow: 'ask' | 'always') => setAllow(String(id), allow)));
   // Cookies travel from the other browser's file into Hatch's session inside the main process. The interface learns the count alone.
   ipcMain.handle('signins:browsers', () => listBrowserProfiles());
+  ipcMain.handle('links:browsers', () => listBookmarkProfiles());
+  ipcMain.handle('links:import', safely((profileId: string) => importBookmarks(String(profileId))));
   ipcMain.handle('signins:import', safely((pageUrl: string, profileId: string) => importSignIn(String(pageUrl), String(profileId))));
   // The key goes in and never comes back out. The interface learns only whether Hatch holds one.
   ipcMain.handle('jev:has-key', () => hasKey());

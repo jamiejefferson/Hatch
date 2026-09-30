@@ -14,9 +14,9 @@ import { PAGES_PARTITION } from '../paths';
 
 const run = promisify(execFile);
 
-interface Browser { id: string; name: string; folder: string; keychainService: string; keychainAccount: string }
+export interface Browser { id: string; name: string; folder: string; keychainService: string; keychainAccount: string }
 
-const BROWSERS: Browser[] = [
+export const BROWSERS: Browser[] = [
   { id: 'chrome', name: 'Chrome', folder: 'Google/Chrome', keychainService: 'Chrome Safe Storage', keychainAccount: 'Chrome' },
   { id: 'arc', name: 'Arc', folder: 'Arc/User Data', keychainService: 'Arc Safe Storage', keychainAccount: 'Arc' },
   { id: 'brave', name: 'Brave', folder: 'BraveSoftware/Brave-Browser', keychainService: 'Brave Safe Storage', keychainAccount: 'Brave' },
@@ -24,26 +24,29 @@ const BROWSERS: Browser[] = [
 ];
 
 // The tests point these at a folder and a key of their own, so no test touches the user's browser or the Keychain.
-const root = (): string => process.env.HATCH_BROWSER_ROOT || join(homedir(), 'Library', 'Application Support');
-const exists = (path: string): Promise<boolean> => stat(path).then(() => true, () => false);
+export const root = (): string => process.env.HATCH_BROWSER_ROOT || join(homedir(), 'Library', 'Application Support');
+export const exists = (path: string): Promise<boolean> => stat(path).then(() => true, () => false);
 
 async function cookieFile(browser: Browser, profile: string): Promise<string | null> {
   for (const path of [join(root(), browser.folder, profile, 'Cookies'), join(root(), browser.folder, profile, 'Network', 'Cookies')]) if (await exists(path)) return path;
   return null;
 }
 
-/** Every browser profile on this Mac that holds a cookie file. */
-export async function listBrowserProfiles(): Promise<BrowserProfile[]> {
+/** Every browser profile on this Mac for which `fileOf` finds a file. */
+export async function profilesWith(fileOf: (browser: Browser, profile: string) => Promise<string | null>): Promise<BrowserProfile[]> {
   const found: BrowserProfile[] = [];
   for (const browser of BROWSERS) {
     const folders = (await readdir(join(root(), browser.folder)).catch(() => [] as string[])).filter((name) => name === 'Default' || /^Profile \d+$/.test(name));
     const names = await readFile(join(root(), browser.folder, 'Local State'), 'utf8')
       .then((text) => (JSON.parse(text) as { profile?: { info_cache?: Record<string, { name?: string }> } }).profile?.info_cache ?? {})
       .catch(() => ({}) as Record<string, { name?: string }>);
-    for (const folder of folders) if (await cookieFile(browser, folder)) found.push({ id: `${browser.id}:${folder}`, browser: browser.name, profile: names[folder]?.name || folder });
+    for (const folder of folders) if (await fileOf(browser, folder)) found.push({ id: `${browser.id}:${folder}`, browser: browser.name, profile: names[folder]?.name || folder });
   }
   return found;
 }
+
+/** Every browser profile on this Mac that holds a cookie file. */
+export const listBrowserProfiles = (): Promise<BrowserProfile[]> => profilesWith(cookieFile);
 
 /** macOS asks the user before it hands over the key, and the user may refuse. */
 async function safeStorageKey(browser: Browser): Promise<Buffer> {

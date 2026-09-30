@@ -699,6 +699,16 @@ export const actions = {
   async renameLinkFolder(from: string, to: string): Promise<void> {
     set({ links: await window.hatch.renameLinkFolder(from, to) });
   },
+  /** Adds a browser profile's favourites to Links. Returns the sentence the panel shows. */
+  async importBookmarks(profileId: string): Promise<{ ok: boolean; text: string }> {
+    const result = await window.hatch.importBookmarks(profileId);
+    if (!result.ok) return { ok: false, text: result.error };
+    const { browser, added, skipped, links } = result.value;
+    set({ links });
+    const already = skipped ? ` Links already held ${skipped} of them.` : '';
+    if (!added) return { ok: true, text: `Hatch found no new links in ${browser}.${already}` };
+    return { ok: true, text: `Hatch added ${added} ${added === 1 ? 'link' : 'links'} from ${browser} under the folder “${browser}”.${already}` };
+  },
 
   // saved canvases
   /** Saves a tab's Hatches under a name. A saved canvas with that name is replaced. */

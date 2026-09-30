@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { BrowserProfile } from '@shared/cookie-import';
 import { labelForUrl } from '@shared/address';
 import { groupLinks } from '@shared/canvases';
 import type { SavedLink } from '@shared/types';
@@ -148,7 +149,57 @@ export function LinksPanel() {
           ),
         )
       )}
+
+      <BringFavourites />
     </>
+  );
+}
+
+/** Copies the user's favourites from another browser on this Mac into Links, under a folder named after the browser. */
+function BringFavourites() {
+  const [profiles, setProfiles] = useState<BrowserProfile[] | null>(null);
+  const [chosen, setChosen] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [said, setSaid] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => void window.hatch.bookmarkProfiles().then((found) => (setProfiles(found), setChosen(found[0]?.id ?? null))), []);
+
+  const profile = profiles?.find((p) => p.id === chosen) ?? null;
+  const several = (browser: string): boolean => (profiles ?? []).filter((p) => p.browser === browser).length > 1;
+
+  const bring = async (): Promise<void> => {
+    if (!profile) return;
+    setBusy(true);
+    setSaid(null);
+    setSaid(await actions.importBookmarks(profile.id));
+    setBusy(false);
+  };
+
+  return (
+    <section className="bring-favourites" data-testid="bring-favourites">
+      <h2>Bring favourites from another browser</h2>
+      {profiles !== null && profiles.length === 0 && <p className="hint">Hatch found no favourites in Chrome, Arc, Brave or Edge on this Mac.</p>}
+      {profiles !== null && profiles.length > 1 && (
+        <div className="chips" role="radiogroup" aria-label="Browser">
+          {profiles.map((p) => (
+            <button key={p.id} type="button" role="radio" aria-checked={chosen === p.id} className={`chip${chosen === p.id ? ' active' : ''}`} onClick={() => setChosen(p.id)}>
+              {several(p.browser) ? `${p.browser} · ${p.profile}` : p.browser}
+            </button>
+          ))}
+        </div>
+      )}
+      {profile && (
+        <button className="button left" disabled={busy} onClick={() => void bring()} data-testid="bring-favourites-go">
+          {busy ? `Hatch is reading ${profile.browser}` : `Bring my favourites from ${profile.browser}`}
+        </button>
+      )}
+      {profile && !said && <p className="hint">Hatch copies every web address and keeps its folders, under a folder named after the browser.</p>}
+      {said && (
+        <p className={said.ok ? 'hint' : 'field-error'} role={said.ok ? 'status' : 'alert'} data-testid="bring-favourites-said">
+          {said.text}
+        </p>
+      )}
+    </section>
   );
 }
 

@@ -113,6 +113,10 @@ export interface HatchApi {
   browserProfiles(): Promise<BrowserProfile[]>;
   /** Copies the cookies for the page's site from that profile into Hatch's session. macOS asks the user for the browser's Keychain key first. */
   importSignIn(pageUrl: string, profileId: string): Promise<Outcome<ImportOutcome>>;
+  /** Browser profiles that hold favourites. */
+  bookmarkProfiles(): Promise<BrowserProfile[]>;
+  /** Adds a profile's favourites to Links, skipping addresses Links already holds. */
+  importBookmarks(profileId: string): Promise<Outcome<{ browser: string; added: number; skipped: number; links: SavedLink[] }>>;
   answerConsent(hatchId: string, answer: ConsentAnswer): Promise<void>;
   connection(): Promise<ConnectionInfo>;
   openSetupExamples(): Promise<string>;
