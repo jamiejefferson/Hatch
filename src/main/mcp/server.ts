@@ -13,16 +13,21 @@ import { TOOLS } from './tools';
 import type { Tool, ToolContext } from './tools/types';
 
 const INSTRUCTIONS = briefing('unknown');
-/** An agent silent for this long has most likely started a new conversation, which has never seen the briefing. */
-const BRIEF_AGAIN_MS = 5 * 60_000;
+/**
+ * An agent silent for this long has most likely started a new conversation, which has never seen the briefing.
+ * finish_working does not count: an agent such as Hermes finishes after each batch of calls in one conversation,
+ * and a briefing on every batch reads as noise (trial feedback, 24 Sep 2026).
+ */
+const BRIEF_AGAIN_MS = 30 * 60_000;
 
 async function runTool(tool: Tool, args: Record<string, unknown>, agent: Agent, progress: (message: string) => void) {
   const intent = typeof args.intent === 'string' ? args.intent : '';
   const entry = begin({ agent: agent.id, tool: tool.name, summary: tool.summary ? tool.summary(args) : tool.name, intent, tabId: agent.tabId, hatchId: agent.hatchId });
   const where: { tabId: string | null; hatchId: string | null } = { tabId: agent.tabId, hatchId: agent.hatchId };
   const ctx: ToolContext = { agent, progress, at: (tabId, hatchId) => Object.assign(where, { tabId, hatchId }) };
-  // The first call of a piece of work carries the briefing, whichever tool it is, so an agent app that hides the server's instructions still briefs its model.
-  const brief = agent.finished || Date.now() - agent.lastCall > BRIEF_AGAIN_MS;
+  // An agent's first call carries the briefing, whichever tool it is, so an agent app that hides the server's instructions still briefs its model.
+  // Hatch remembers it by the agent's name, so a new connection under the same name is not briefed again.
+  const brief = Date.now() - agent.lastCall > BRIEF_AGAIN_MS;
   callStarted(agent, intent);
   try {
     const result = await tool.run(args, ctx);

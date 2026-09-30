@@ -31,6 +31,9 @@ window.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('input', report, true);
 });
 
+// A press by the user's own pointer lets the interface hand the keyboard to this page (canvas/keyboard.ts).
+window.addEventListener('pointerdown', (e) => e.isTrusted && ipcRenderer.sendToHost('hatch:pointer'), true);
+
 // ---- Comments and picking. Hatch draws pins and highlights in its own layer, and this script tells it where the elements sit.
 
 interface Box { x: number; y: number; w: number; h: number }

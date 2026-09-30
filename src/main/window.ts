@@ -24,6 +24,8 @@ export function createWindow(bounds?: Rectangle): BrowserWindow {
   });
 
   watchHost(win.webContents);
+  // The interface hears no blur of its own while a page holds the focus, and needs one to hand the keyboard back (canvas/keyboard.ts).
+  win.on('blur', () => !win.webContents.isDestroyed() && win.webContents.send('window:blur', null));
   win.once('ready-to-show', () => {
     if (!process.env.HATCH_HIDDEN) win.show();
   });

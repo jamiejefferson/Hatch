@@ -85,9 +85,9 @@ test('jev_decide answers a closed question with a probability for every answer, 
     expect(wrong.text).toContain('label_each needs items');
     expect(jev.requests.length).toBe(asked);
 
-    // A new piece of work after finish_working is briefed again.
+    // An agent that finishes and carries on under the same name is not briefed again.
     await call('finish_working');
-    expect((await call('status')).text).toContain('Briefing from Hatch');
+    expect((await call('status')).text).not.toContain('Briefing from Hatch');
   } finally {
     await agent.close().catch(() => undefined);
     await app.close();

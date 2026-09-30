@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { Rect } from '@shared/geometry';
 import type { Hatch } from '@shared/types';
 import { actions } from '../state/store';
+import { claimKeyboard } from './keyboard';
 import { markReady, registerWebview } from './webviews';
 
 interface Props {
@@ -57,6 +58,9 @@ export function HatchPage({ hatch, rect, hidden }: Props) {
         if (e.isMainFrame === false) return;
         actions.pageChanged(id, { url: e.url });
         navState();
+      }),
+      on<Event & { channel: string }>('ipc-message', (e) => {
+        if (e.channel === 'hatch:pointer') claimKeyboard(page);
       }),
       on<Event & { title: string }>('page-title-updated', (e) => actions.pageChanged(id, { title: e.title })),
       on<Fail>('did-fail-load', (e) => {

@@ -19,6 +19,8 @@ export interface Pushes {
   'agent:act': AgentAct;
   /** The id of a Hatch whose page navigated, loaded or changed. */
   'page:changed': string;
+  /** Hatch's window lost the keyboard to another app, so the next click in a page hands the keyboard back to it. */
+  'window:blur': null;
   /** The id of a Hatch whose page received the Esc key. */
   'page:escape': string;
   /** A page on the canvas tried to open a pop-up, which Hatch opens in Fit to view alone. */
