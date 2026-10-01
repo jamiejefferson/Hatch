@@ -101,6 +101,8 @@ export interface State {
   feedbackShot: string | null;
   /** The Hatches whose page plays sound now, by Hatch id. */
   audible: Record<string, boolean>;
+  /** The window is in macOS full screen, where the toolbar may tuck away at the left edge. */
+  fullScreen: boolean;
   /** What the user closed this session, the latest last. */
   closed: Closed[];
 }
@@ -153,6 +155,7 @@ let state: State = {
   guideOpen: false,
   feedbackShot: null,
   audible: {},
+  fullScreen: false,
   closed: [],
 };
 
@@ -214,6 +217,7 @@ export async function boot(): Promise<void> {
   const [workspace, links, savedCanvases, settings, activity, projects] = await Promise.all([window.hatch.loadWorkspace(), window.hatch.listLinks(), window.hatch.savedCanvases(), window.hatch.getSettings(), window.hatch.activity(), window.hatch.projects()]);
   void window.hatch.signIns().then((signIns) => set({ signIns }));
   void window.hatch.connection().then((connection) => set({ connection }));
+  void window.hatch.isFullScreen().then((fullScreen) => set({ fullScreen }));
   reportedFit = '-';
   set({ projects, workspace, links, savedCanvases, settings, activity: activity.entries, work: activity.work, logPath: activity.logPath, mcpPort: activity.port, ready: true, guideOpen: window.hatch.guide && !settings.guideSeen });
   markBooted();
@@ -237,6 +241,7 @@ export function listen(): () => void {
       setTimeout(() => set((s) => (s.acts[act.hatchId]?.at === at ? { acts: Object.fromEntries(Object.entries(s.acts).filter(([id]) => id !== act.hatchId)) } : {})), ACT_MS);
     }),
     window.hatch.on('page:escape', (hatchId) => actions.escape(hatchId)),
+    window.hatch.on('window:fullscreen', (fullScreen) => set({ fullScreen })),
     window.hatch.on('page:audible', ({ hatchId, audible }) =>
       set((s) => {
         const { [hatchId]: _old, ...rest } = s.audible;

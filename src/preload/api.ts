@@ -21,6 +21,10 @@ export interface Pushes {
   'page:changed': string;
   /** Hatch's window lost the keyboard to another app, so the next click in a page hands the keyboard back to it. */
   'window:blur': null;
+  /** The window entered or left macOS full screen. */
+  'window:fullscreen': boolean;
+  /** In full screen, how far the pointer sits from the window's left edge, up to 160 pixels. */
+  'pointer:edge': number;
   /** A page started or stopped playing sound. */
   'page:audible': { hatchId: string; audible: boolean };
   /** The id of a Hatch whose page received the Esc key. */
@@ -125,6 +129,8 @@ export interface HatchApi {
   openDataFolder(): Promise<string>;
   /** Whether Hatch is the Mac's default browser. 'unavailable' in a checkout, where macOS knows no Hatch app. */
   defaultBrowser(): Promise<'default' | 'other' | 'unavailable'>;
+  /** Whether Hatch's window is in macOS full screen. */
+  isFullScreen(): Promise<boolean>;
   /** Asks macOS to make Hatch the default browser. macOS confirms with the user, so the state may change a moment later. */
   makeDefaultBrowser(): Promise<'default' | 'other' | 'unavailable'>;
   feedbackDetails(): Promise<FeedbackDetails>;

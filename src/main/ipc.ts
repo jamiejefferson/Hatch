@@ -176,6 +176,7 @@ export function registerIpc(): void {
   ipcMain.handle('data:open-folder', () => shell.openPath(hatchHome()));
 
   ipcMain.handle('browser:state', () => defaultBrowserState());
+  ipcMain.handle('window:is-full-screen', (e) => BrowserWindow.fromWebContents(e.sender)?.isFullScreen() ?? false);
   ipcMain.handle('browser:make-default', () => makeDefaultBrowser());
 
   ipcMain.handle('feedback:details', () => feedbackDetails());

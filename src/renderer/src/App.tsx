@@ -92,7 +92,8 @@ export function App() {
 }
 
 function Shell({ tabs, activeTabId, sidebarOpen, leftOpen }: { tabs: Tab[]; activeTabId: string; sidebarOpen: boolean; leftOpen: boolean }) {
-  const toolbarAtEdge = useStore((s) => s.settings.toolbarAtEdge);
+  // The toolbar tucks away in full screen alone, where the window's left edge is the screen's edge and the pointer stops there.
+  const toolbarAtEdge = useStore((s) => s.settings.toolbarAtEdge && s.fullScreen);
   return (
     <div className="app">
       <TopStrip />
@@ -117,23 +118,35 @@ function Shell({ tabs, activeTabId, sidebarOpen, leftOpen }: { tabs: Tab[]; acti
   );
 }
 
-/** While the left column is shut, the toolbar waits behind a handle at the left edge and slides out over the canvas while the pointer rests there. */
+/**
+ * In full screen with the left column shut, the toolbar waits off the left edge. A handle fades in as the pointer nears the edge,
+ * and resting the pointer on the edge slides the toolbar in; it slides out again once the pointer leaves it.
+ * The toolbar stays mounted, so it eases both ways, and `inert` keeps its buttons out of reach while it is away.
+ */
 function ToolbarAtEdge() {
-  const [peek, setPeek] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [near, setNear] = useState(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const later = (next: boolean, ms: number): void => {
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setPeek(next), ms);
+    timer.current = setTimeout(() => setOpen(next), ms);
   };
-  useEffect(() => () => void (timer.current && clearTimeout(timer.current)), []);
+  useEffect(() => {
+    const off = window.hatch.on('pointer:edge', (distance) => setNear(Math.max(0, Math.min(1, 1 - distance / 160))));
+    return () => {
+      off();
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
   // A short wait keeps a pointer that only passes the edge from opening the toolbar.
-  return peek ? (
-    <div className="toolbar-peek" onPointerEnter={() => later(true, 0)} onPointerLeave={() => later(false, 250)} data-testid="toolbar-peek">
-      <Toolbar />
-    </div>
-  ) : (
-    <div className="edge-zone" onPointerEnter={() => later(true, 150)} onPointerLeave={() => timer.current && clearTimeout(timer.current)} data-testid="toolbar-edge">
-      <span className="edge-handle" aria-hidden="true" />
-    </div>
+  return (
+    <>
+      <div className="edge-zone" onPointerEnter={() => later(true, 150)} onPointerLeave={() => !open && timer.current && clearTimeout(timer.current)} data-testid="toolbar-edge">
+        <span className="edge-handle" style={{ opacity: open ? 0 : near }} aria-hidden="true" data-near={near.toFixed(2)} />
+      </div>
+      <div className={`toolbar-drawer${open ? ' open' : ''}`} inert={!open} onPointerEnter={() => later(true, 0)} onPointerLeave={() => later(false, 250)} data-testid={open ? 'toolbar-peek' : 'toolbar-away'}>
+        <Toolbar />
+      </div>
+    </>
   );
 }

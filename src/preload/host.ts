@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { HatchApi, Pushes } from './api';
 
-const PUSHES: (keyof Pushes)[] = ['command', 'activity:event', 'agents:work', 'agent:act', 'page:changed', 'window:blur', 'page:escape', 'page:audible', 'popup:blocked', 'dialog:state', 'projects:state', 'projects:log', 'links:state', 'comments:changed', 'signins:state', 'consent:state', 'connection:state', 'toast'];
+const PUSHES: (keyof Pushes)[] = ['command', 'activity:event', 'agents:work', 'agent:act', 'page:changed', 'window:blur', 'window:fullscreen', 'pointer:edge', 'page:escape', 'page:audible', 'popup:blocked', 'dialog:state', 'projects:state', 'projects:log', 'links:state', 'comments:changed', 'signins:state', 'consent:state', 'connection:state', 'toast'];
 
 const api: HatchApi = {
   intro: process.env.HATCH_INTRO === '1' || !process.env.HATCH_HIDDEN,
@@ -57,6 +57,7 @@ const api: HatchApi = {
   editComment: (url, id, index, text) => ipcRenderer.invoke('comments:edit', url, id, index, text),
   removeComment: (url, id) => ipcRenderer.invoke('comments:remove', url, id),
   defaultBrowser: () => ipcRenderer.invoke('browser:state'),
+  isFullScreen: () => ipcRenderer.invoke('window:is-full-screen'),
   makeDefaultBrowser: () => ipcRenderer.invoke('browser:make-default'),
   feedbackDetails: () => ipcRenderer.invoke('feedback:details'),
   captureForFeedback: () => ipcRenderer.invoke('feedback:capture'),
