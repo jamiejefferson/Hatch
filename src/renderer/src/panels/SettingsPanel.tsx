@@ -53,8 +53,8 @@ export function SettingsPanel() {
           </button>
         ))}
       </div>
-      <Switch label="Show the sidebar at the right edge" checked={settings.sidebarAtEdge} onChange={(sidebarAtEdge) => void actions.updateSettings({ sidebarAtEdge })} />
-      <p className="hint">The theme changes Hatch’s own panels. Pages keep their own look. With the sidebar hidden, a handle marks the right edge, and resting the pointer there slides the sidebar out.</p>
+      <Switch label="Hide the toolbar while the left column is shut" checked={settings.toolbarAtEdge} onChange={(toolbarAtEdge) => void actions.updateSettings({ toolbarAtEdge })} />
+      <p className="hint">The theme changes Hatch’s own panels. Pages keep their own look. With the left column shut, a handle marks the left edge, and resting the pointer there slides the toolbar out.</p>
     </section>
     <section>
       <h2 id="new-hatch-page">Hatch Home</h2>

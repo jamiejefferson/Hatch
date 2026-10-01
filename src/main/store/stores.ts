@@ -28,7 +28,7 @@ function repairSettings(raw: unknown): Settings {
     linksFolder: cleanFolder(source.linksFolder),
     commentsFolder: cleanFolder(source.commentsFolder),
     theme: THEMES.includes(source.theme as Theme) ? (source.theme as Theme) : DEFAULT_SETTINGS.theme,
-    sidebarAtEdge: typeof source.sidebarAtEdge === 'boolean' ? source.sidebarAtEdge : DEFAULT_SETTINGS.sidebarAtEdge,
+    toolbarAtEdge: typeof source.toolbarAtEdge === 'boolean' ? source.toolbarAtEdge : DEFAULT_SETTINGS.toolbarAtEdge,
   };
 }
 

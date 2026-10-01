@@ -97,14 +97,14 @@ export interface Settings {
   commentsFolder: string;
   /** Hatch's own interface follows the Mac, or stays light or dark. Pages keep their own look. */
   theme: Theme;
-  /** With the sidebar hidden, a handle sits at the right edge and the sidebar slides out while the pointer rests there. */
-  sidebarAtEdge: boolean;
+  /** While the left column is shut, the toolbar hides behind a handle at the left edge and slides out while the pointer rests there. */
+  toolbarAtEdge: boolean;
 }
 
 export type Theme = 'system' | 'light' | 'dark';
 export const THEMES: Theme[] = ['system', 'light', 'dark'];
 
-export const DEFAULT_SETTINGS: Settings = { newHatchPage: '', askBeforeViewSwitch: true, allowEvaluate: false, describeElements: false, showComments: true, guideSeen: false, jevRunSeen: false, linksFolder: '', commentsFolder: '', theme: 'system', sidebarAtEdge: true };
+export const DEFAULT_SETTINGS: Settings = { newHatchPage: '', askBeforeViewSwitch: true, allowEvaluate: false, describeElements: false, showComments: true, guideSeen: false, jevRunSeen: false, linksFolder: '', commentsFolder: '', theme: 'system', toolbarAtEdge: true };
 
 /** One step of a jev_run, as the Activity panel lists it. */
 export interface TraceLine { step: number; action: string; detail: string; confidence: number }

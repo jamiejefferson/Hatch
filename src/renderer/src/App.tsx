@@ -92,20 +92,21 @@ export function App() {
 }
 
 function Shell({ tabs, activeTabId, sidebarOpen, leftOpen }: { tabs: Tab[]; activeTabId: string; sidebarOpen: boolean; leftOpen: boolean }) {
+  const toolbarAtEdge = useStore((s) => s.settings.toolbarAtEdge);
   return (
     <div className="app">
       <TopStrip />
       <ConnectionBanner />
       <div className="main">
         {leftOpen && <LeftColumn />}
-        <Toolbar />
+        {leftOpen || !toolbarAtEdge ? <Toolbar /> : <ToolbarAtEdge />}
         {/* Every tab's canvas stays mounted, because removing a webview reloads its page. */}
         <div className="canvases">
           {tabs.map((tab) => (
             <Canvas key={tab.id} tab={tab} active={tab.id === activeTabId} />
           ))}
         </div>
-        {sidebarOpen ? <Sidebar /> : <SidebarAtEdge />}
+        {sidebarOpen && <Sidebar />}
       </div>
       <NewHatchModal />
       <ContextMenu />
@@ -116,9 +117,8 @@ function Shell({ tabs, activeTabId, sidebarOpen, leftOpen }: { tabs: Tab[]; acti
   );
 }
 
-/** With the sidebar hidden, a handle marks the right edge, and the sidebar slides out over the canvas while the pointer rests there. */
-function SidebarAtEdge() {
-  const on = useStore((s) => s.settings.sidebarAtEdge);
+/** While the left column is shut, the toolbar waits behind a handle at the left edge and slides out over the canvas while the pointer rests there. */
+function ToolbarAtEdge() {
   const [peek, setPeek] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const later = (next: boolean, ms: number): void => {
@@ -126,14 +126,13 @@ function SidebarAtEdge() {
     timer.current = setTimeout(() => setPeek(next), ms);
   };
   useEffect(() => () => void (timer.current && clearTimeout(timer.current)), []);
-  if (!on) return null;
-  // A short wait keeps a pointer that only passes the edge, such as one on its way to a page's scroll bar, from opening the sidebar.
+  // A short wait keeps a pointer that only passes the edge from opening the toolbar.
   return peek ? (
-    <div className="sidebar-peek" onPointerEnter={() => later(true, 0)} onPointerLeave={() => later(false, 250)} data-testid="sidebar-peek">
-      <Sidebar />
+    <div className="toolbar-peek" onPointerEnter={() => later(true, 0)} onPointerLeave={() => later(false, 250)} data-testid="toolbar-peek">
+      <Toolbar />
     </div>
   ) : (
-    <div className="edge-zone" onPointerEnter={() => later(true, 150)} onPointerLeave={() => timer.current && clearTimeout(timer.current)} data-testid="sidebar-edge">
+    <div className="edge-zone" onPointerEnter={() => later(true, 150)} onPointerLeave={() => timer.current && clearTimeout(timer.current)} data-testid="toolbar-edge">
       <span className="edge-handle" aria-hidden="true" />
     </div>
   );

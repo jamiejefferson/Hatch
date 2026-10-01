@@ -89,7 +89,7 @@ export function registerIpc(): void {
       linksFolder: typeof settings.linksFolder === 'string' ? cleanFolder(settings.linksFolder) : current.linksFolder,
       commentsFolder: typeof settings.commentsFolder === 'string' ? cleanFolder(settings.commentsFolder) : current.commentsFolder,
       theme: THEMES.includes(settings.theme as Theme) ? (settings.theme as Theme) : current.theme,
-      sidebarAtEdge: typeof settings.sidebarAtEdge === 'boolean' ? settings.sidebarAtEdge : current.sidebarAtEdge,
+      toolbarAtEdge: typeof settings.toolbarAtEdge === 'boolean' ? settings.toolbarAtEdge : current.toolbarAtEdge,
     })).then(async (saved) => {
       // The links file may have moved, so the interface reads the list again. Comments read fresh on every call.
       setFolders(saved);
