@@ -35,7 +35,7 @@ export function NewHatchModal() {
         <h1 id="new-hatch-title">Choose a page for this Hatch</h1>
         <form onSubmit={submit} noValidate>
           <div className={`field large${error ? ' invalid' : ''}`}>
-            <input className="mono" aria-label="Link" aria-invalid={error !== null} placeholder="Paste a link or type a project name" spellCheck={false} autoCapitalize="off" value={text} onChange={(e) => setText(e.target.value)} autoFocus data-testid="new-hatch-url" />
+            <input className="mono" aria-label="Link" aria-invalid={error !== null} placeholder="Paste a link, or type a site or project name" spellCheck={false} autoCapitalize="off" value={text} onChange={(e) => setText(e.target.value)} autoFocus data-testid="new-hatch-url" />
             <button type="submit" className="button primary">
               Open
             </button>

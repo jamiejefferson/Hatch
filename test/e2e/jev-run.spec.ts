@@ -103,7 +103,7 @@ test('jev_run takes a goal through a sign-in form, returns a trace and fresh ref
     expect((await call('get_element', { ref })).isError).toBe(false);
 
     // The user sees the call, its result with the cost, the trace and the session's spend.
-    await win.getByRole('tab', { name: 'Activity' }).click();
+    await win.getByTestId('panel-activity').click();
     const entry = win.getByTestId('activity-entry').filter({ hasText: 'jev_run(goal:' }).last();
     await expect(entry).toContainText('max_steps: 20');
     await expect(entry.getByTestId('activity-result')).toHaveText(/→ done \(3 steps, \$0\.0008, \d+\.\ds\)/);
@@ -181,7 +181,7 @@ test('Settings shows the end of the saved key and tests the connection', async (
   const home = freshHome();
   const { app, win } = await launch(home, 0, { HATCH_JEV_URL: jev.url });
   try {
-    await win.getByRole('tab', { name: 'Settings' }).click();
+    await win.getByTestId('panel-settings').click();
     await win.getByTestId('jev-key').fill('key-for-the-test-9f3a');
     await win.getByTestId('jev-save').click();
     await expect(win.getByTestId('jev-hint')).toHaveText('The saved TypeSafe key ends in ••••9f3a');
@@ -221,7 +221,7 @@ test('an OpenRouter key sends the same questions under OpenRouter\'s model name,
   const call = async (name: string, args: Record<string, unknown> = {}): Promise<string> => ((await agent.callTool({ name, arguments: args })) as { content: { text: string }[] }).content[0]!.text;
 
   try {
-    await win.getByRole('tab', { name: 'Settings' }).click();
+    await win.getByTestId('panel-settings').click();
     await win.getByTestId('jev-key').fill('sk-or-v1-key-for-the-test-7c2e');
     await win.getByTestId('jev-save').click();
     await expect(win.getByTestId('jev-hint')).toHaveText('The saved OpenRouter key ends in ••••7c2e');

@@ -35,6 +35,8 @@ export interface Workspace {
   tabs: Tab[];
   activeTabId: string;
   sidebarOpen: boolean;
+  /** The left column, which lists canvases, Hatches, projects and links. An older workspace lacks it and shows the column. */
+  leftOpen?: boolean;
 }
 
 export interface SavedLink {

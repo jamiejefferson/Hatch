@@ -39,7 +39,7 @@ test('an agent that starts before Hatch keeps its connection, then drives Hatch 
       await expect.poll(() => announced).toEqual(expect.arrayContaining(['navigate', 'snapshot']));
       expect(((await early.callTool({ name: 'snapshot', arguments: {} })) as Reply).content[0]!.text).toContain('heading 1');
       // The name from HATCH_AGENT reaches the Activity panel.
-      await win.getByRole('tab', { name: 'Activity' }).click();
+      await win.getByTestId('panel-activity').click();
       await expect(win.getByTestId('activity-entry').first()).toBeVisible();
       expect(readFileSync(join(home, 'logs', readdirSync(join(home, 'logs'))[0]!), 'utf8')).toContain('desk-agent');
 

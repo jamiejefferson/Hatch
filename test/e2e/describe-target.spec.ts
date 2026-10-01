@@ -186,7 +186,7 @@ test('the user connects Jev with a Save button, hears about a wrong key, and can
   const home = freshHome();
   const { app, win } = await launch(home, 0, { HATCH_JEV_URL: jev.url });
   try {
-    await win.getByRole('tab', { name: 'Settings' }).click();
+    await win.getByTestId('panel-settings').click();
     const section = win.getByTestId('jev');
     await expect(section.getByRole('heading', { name: 'Connect Jev' })).toBeVisible();
     await expect(win.getByTestId('jev-save')).toBeDisabled();

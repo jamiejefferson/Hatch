@@ -59,15 +59,13 @@ export function inPages<T>(app: ElectronApplication, expression: string): Promis
   }, expression) as Promise<T[]>;
 }
 
-/** The zoom control and the list of Hatches show in the Hatch panel while no Hatch is selected. */
+/** The list of canvases and Hatches sits in the left column's Canvases tab. The zoom sits in the toolbar. */
 export async function showCanvasPanel(win: Page): Promise<void> {
-  await win.getByTestId('panel-hatch').click();
-  const back = win.getByRole('button', { name: 'Show all Hatches' });
-  if (await back.isVisible()) await back.click();
+  await win.getByTestId('left-canvases').click();
 }
 
 export async function openHatch(win: Page, address: string): Promise<void> {
-  await win.getByTestId('panel-hatch').click();
+  await win.getByTestId('left-canvases').click();
   await win.getByTestId('new-hatch').click();
   await win.getByTestId('new-hatch-url').fill(address);
   await win.getByTestId('new-hatch-url').press('Enter');

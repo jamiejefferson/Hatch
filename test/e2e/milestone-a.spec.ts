@@ -179,7 +179,7 @@ test('set_view needs a reason, shows it to the user, and the agent view on scree
   const outline = (await call(agent, 'snapshot')).text;
   await expect(win.locator('[data-testid^="agent-view-"] pre')).toHaveText(outline.trimEnd());
 
-  await win.getByRole('tab', { name: 'Activity' }).click();
+  await win.getByTestId('panel-activity').click();
   await expect(win.getByTestId('activity-entry').filter({ hasText: 'Open the contact form.' }).first()).toBeVisible();
   await agent.close();
 });
@@ -188,10 +188,10 @@ test('a second agent gets its own tab, and each agent sees only its own Hatches'
   const alpha = await connect(url, 'alpha', 'auto');
   const beta = await connect(url, 'beta');
   await call(alpha, 'status');
-  const tabsBefore = await win.getByRole('tab').filter({ hasNot: win.locator('.sidebar *') }).count();
+  const tabsBefore = await win.getByTestId('canvas-list').getByRole('tab').count();
 
   expect((await call(beta, 'navigate', { to: `${site.url}/docs.html` })).text).toContain('docs.html');
-  await expect(win.locator('.tabs [role="tab"]')).toHaveCount(2);
+  await expect(win.getByTestId('canvas-list').getByRole('tab')).toHaveCount(2);
   expect(tabsBefore).toBeGreaterThan(0);
 
   const mine = (await call(alpha, 'list_hatches')).text;

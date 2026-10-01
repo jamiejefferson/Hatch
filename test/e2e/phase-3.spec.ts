@@ -117,7 +117,7 @@ test('an unknown project name gets a clear answer', async () => {
 
 test('the Projects panel lists the projects and starts one for the user', async () => {
   await call('navigate', { to: 'hatch:shop' });
-  await win.getByRole('tab', { name: 'Projects' }).click();
+  await win.getByTestId('left-library').click();
   await expect(win.locator('.project-list .name', { hasText: 'brochure' })).toBeVisible();
   await expect(win.locator('.project-list .name', { hasText: 'shop' })).toBeVisible();
   await expect(win.locator('.project-list .name', { hasText: 'campaign' })).toBeVisible();
@@ -137,10 +137,10 @@ test('the Projects panel lists the projects and starts one for the user', async 
 });
 
 test('the link field shows a project page in its hatch: form', async () => {
-  await win.getByRole('tab', { name: 'Projects' }).click();
+  await win.getByTestId('left-library').click();
   await win.getByRole('button', { name: 'All projects' }).click();
   await win.locator('.project-list li', { hasText: 'brochure' }).getByRole('button', { name: 'Open' }).click();
   await expect.poll(async () => (await inPages<string>(app, 'location.hostname')).filter((h) => h === 'brochure.localhost').length).toBeGreaterThan(0);
-  await win.getByRole('tab', { name: 'Hatch', exact: true }).click();
+  await win.getByTestId('panel-hatch').click();
   await expect(win.getByTestId('link-field')).toHaveValue('hatch:brochure');
 });

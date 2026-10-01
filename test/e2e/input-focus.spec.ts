@@ -26,7 +26,7 @@ test('fill and press_key land with no click before them, and after the user clic
     expect(await state()).toBe('email|first');
 
     // The user clicks in Hatch's own interface, which takes input focus away from the page.
-    await win.getByRole('tab', { name: 'Links' }).click();
+    await win.getByTestId('left-library').click();
     await call('press_key', { key: 'k' });
     expect(await state()).toBe('email|firstk');
     await call('press_key', { key: 'Tab' });

@@ -49,10 +49,10 @@ export const setAllow = async (id: string, allow: SignIn['allow']): Promise<Sign
 /** Only the fill routine calls this. The value never goes into a tool reply, a log line or a message to the interface. */
 export async function passwordOf(id: string): Promise<string> {
   const cipher = (await secrets.read())[id];
-  if (!cipher) throw new HatchError('Hatch holds no password for that sign-in. Save it again in the Sign-ins panel.');
+  if (!cipher) throw new HatchError('Hatch holds no password for that sign-in. Save it again under Sign-ins in Settings.');
   try {
     return safeStorage.decryptString(Buffer.from(cipher, 'base64'));
   } catch {
-    throw new HatchError('Hatch could not unlock that password from the Keychain. Save the sign-in again in the Sign-ins panel.');
+    throw new HatchError('Hatch could not unlock that password from the Keychain. Save the sign-in again under Sign-ins in Settings.');
   }
 }

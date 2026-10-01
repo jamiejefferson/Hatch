@@ -58,7 +58,7 @@ test('links and site comments land in the folders the user chose, and the saved 
     await win.evaluate(`window.hatch.setSettings({ linksFolder: ${JSON.stringify(chosen)}, commentsFolder: ${JSON.stringify(chosen)} })`);
     await expect.poll(() => existsSync(join(chosen, 'links.json'))).toBe(true);
     expect(readFileSync(join(chosen, 'links.json'), 'utf8')).toContain('/index.html');
-    await win.getByRole('tab', { name: 'Links' }).click();
+    await win.getByTestId('left-library').click();
     await expect(win.locator('.link-list li')).toHaveCount(1);
 
     const { url } = JSON.parse(readFileSync(join(home, 'server.json'), 'utf8'));

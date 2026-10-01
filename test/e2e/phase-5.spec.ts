@@ -58,7 +58,7 @@ test('get_element measures a paragraph and reports its failing contrast', async 
 });
 
 test('the user saves a sign-in, and no file holds the password as text', async () => {
-  await win.getByRole('tab', { name: 'Sign-ins' }).click();
+  await win.getByTestId('panel-settings').click();
   await win.getByTestId('signin-site').fill(`${site.url}/login.html`);
   await win.getByTestId('signin-username').fill('sam@studio.example');
   await win.getByTestId('signin-password').fill(PASSWORD);
@@ -75,7 +75,7 @@ test('the user saves a sign-in, and no file holds the password as text', async (
 test('a fill waits for the user, fills the form, and hides values from the agent until the page navigates', async () => {
   const filling = call('fill_credentials', { timeout_s: 30 });
   await expect(win.getByTestId('consent')).toContainText('sam@studio.example');
-  await win.getByRole('tab', { name: 'Activity' }).click();
+  await win.getByTestId('panel-activity').click();
   await expect(win.getByTestId('waiting-for-you')).toBeVisible();
   await capture(app, 'test-results/screens/14-sign-in-consent.png');
   expect(await inPages<string>(app, `document.querySelector('[name=password]').value`)).toEqual(['']);
@@ -105,7 +105,7 @@ test('a refusal reaches the agent, and "always" stops the question', async () =>
   const always = call('fill_credentials', { timeout_s: 30 });
   await win.getByRole('button', { name: 'Always allow on this site' }).click();
   expect((await always).text).toMatch(/^filled/);
-  await win.getByRole('tab', { name: 'Sign-ins' }).click();
+  await win.getByTestId('panel-settings').click();
   await expect(win.locator('.signin-list')).toContainText('Always allowed');
 
   await call('navigate', { to: `${site.url}/login.html` });

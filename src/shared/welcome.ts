@@ -12,7 +12,7 @@ export const WELCOME_URL = 'https://hatch-guide.vercel.app/';
 export function welcomeWorkspace(url: string): Workspace {
   const tab = emptyTab();
   const hatch = { id: newId('hatch'), url, title: '', x: 0, y: 0, width: 960, height: 752, template: 'fit' as const, view: 'page' as const };
-  return { version: 1, tabs: [{ ...tab, hatches: [hatch], selectedHatchId: hatch.id }], activeTabId: tab.id, sidebarOpen: false };
+  return { version: 1, tabs: [{ ...tab, hatches: [hatch], selectedHatchId: hatch.id }], activeTabId: tab.id, sidebarOpen: false, leftOpen: false };
 }
 
 export const welcomeLinks = (url: string): SavedLink[] => [

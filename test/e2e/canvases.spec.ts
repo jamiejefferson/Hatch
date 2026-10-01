@@ -26,7 +26,7 @@ test('an agent opens, names, shares, lists and closes canvases, and a canvas out
   const { url } = JSON.parse(readFileSync(join(home, 'server.json'), 'utf8'));
   const alpha = await connect(url, 'alpha');
   const beta = await connect(url, 'beta');
-  const tabs = win.locator('.tabs [role="tab"]');
+  const tabs = win.getByTestId('canvas-list').getByRole('tab');
 
   try {
     // The window starts with one canvas, which status names.

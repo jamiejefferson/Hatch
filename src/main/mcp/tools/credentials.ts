@@ -17,7 +17,7 @@ export const credentialTools = [
     readOnly: true,
     async run() {
       const all = await listSignIns();
-      if (all.length === 0) return 'The user has saved no sign-ins. They add one in the Sign-ins panel in Hatch.';
+      if (all.length === 0) return 'The user has saved no sign-ins. They add one under Sign-ins in Hatch Settings.';
       return all.map((s) => `${s.site}  ${s.username}  ${s.allow === 'always' ? 'fills without asking' : 'Hatch asks the user before each fill'}`).join('\n');
     },
   }),
@@ -31,7 +31,7 @@ export const credentialTools = [
         const site = await siteFor(page.guest.getURL());
         if (!site) throw new HatchError('failed: this Hatch shows no web page.');
         const matches = (await listSignIns()).filter((s) => s.site === site);
-        if (matches.length === 0) throw new HatchError(`failed: the user has saved no sign-in for ${site}. Ask them to add one in the Sign-ins panel in Hatch.`);
+        if (matches.length === 0) throw new HatchError(`failed: the user has saved no sign-in for ${site}. Ask them to add one under Sign-ins in Hatch Settings.`);
         const wanted = a.username ? matches.filter((s) => s.username === a.username) : matches;
         if (wanted.length !== 1) throw new HatchError(`failed: ${site} has these saved sign-ins: ${matches.map((s) => s.username).join(', ')}. Pass one as username.`);
         return { signIn: wanted[0] as SignIn, site, hatchId: page.hatchId };

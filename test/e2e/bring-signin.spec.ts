@@ -32,7 +32,7 @@ test('a sign-in comes across from another browser, for the one site the Hatch sh
     await openHatch(win, `${site.url}/whoami`);
     await expect.poll(() => inPages<string>(app, 'document.getElementById("who")?.textContent').then((r) => r[0])).toBe('Signed out');
 
-    await win.getByTestId('panel-signins').click();
+    await win.getByTestId('panel-settings').click();
     const go = win.getByTestId('bring-signin-go');
     await expect(win.getByTestId('bring-signin-site')).toHaveText('The selected Hatch shows 127.0.0.1.');
     await expect(go).toHaveText('Bring my sign-in from Chrome');
@@ -60,7 +60,7 @@ test('a browser with no cookies for the site says to sign in there first', async
   const { app, win } = await launch(home, 0, { HATCH_BROWSER_ROOT: join(home, 'browsers'), HATCH_BROWSER_KEY: PASSWORD });
   try {
     await openHatch(win, `${site.url}/whoami`);
-    await win.getByTestId('panel-signins').click();
+    await win.getByTestId('panel-settings').click();
     await win.getByTestId('bring-signin-go').click();
     await expect(win.getByTestId('bring-signin-said')).toHaveText('Chrome holds no cookies for 127.0.0.1. Sign in to 127.0.0.1 in Chrome first, then try again.');
   } finally {

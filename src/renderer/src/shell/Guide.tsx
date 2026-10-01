@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { actions, useStore, type SidebarPanel } from '../state/store';
+import { actions, useStore, type LeftPanel } from '../state/store';
 
 interface Step {
   title: string;
@@ -7,15 +7,15 @@ interface Step {
   /** The control the step points at. With none on screen the step falls back, and with no fallback the card sits in the middle. */
   target?: string;
   fallback?: string;
-  /** The panel the step needs open before it measures its target. */
-  panel?: SidebarPanel;
+  /** The left column's tab the step needs open before it measures its target. */
+  left?: LeftPanel;
 }
 
 const STEPS: Step[] = [
-  { title: 'Open a page in a Hatch', body: 'A Hatch is a live page on the canvas. This button opens one, and so does a double tap on empty canvas.', target: '[data-testid="new-hatch"]', fallback: '[data-testid="panel-hatch"]', panel: 'hatch' },
-  { title: 'Move around the canvas', body: 'Two fingers pan the canvas and a pinch zooms it. Select a Hatch to scroll its page. The bar above a selected Hatch holds back, forward and Fit to view, which fills the window with that one page.' },
-  { title: 'Pin a comment to an element', body: 'Select a Hatch and this panel holds its controls. The comment tool pins a note to any element on the page. Your agent reads the note and replies with what it changed.', target: '[data-testid="panel-hatch"]' },
-  { title: 'Run a local project', body: 'Projects takes a folder from your Mac. Hatch starts its dev server and gives it a short address, such as hatch:my-site.', target: '[data-testid="panel-projects"]' },
+  { title: 'Open a page in a Hatch', body: 'A Hatch is a live page on the canvas. The plus beside Hatches opens one, and so does a double tap on empty canvas.', target: '[data-testid="new-hatch"]', fallback: '[data-testid="left-toggle"]', left: 'canvases' },
+  { title: 'Move around the canvas', body: 'Two fingers pan the canvas and a pinch zooms it. Select a Hatch to scroll its page. The row above a selected Hatch holds Fit to view, which fills the window with that one page.' },
+  { title: 'Work on the page', body: 'The toolbar holds back, forward and reload, the agent view, the comment tool and Grab for Paper. A comment pins a note to any element, and your agent reads it and replies with what it changed.', target: '[data-testid="toolbar"]' },
+  { title: 'Run a local project', body: 'Library holds your projects and links. Add a folder from your Mac and Hatch starts its dev server and gives it a short address, such as hatch:my-site.', target: '[data-testid="left-library"]', fallback: '[data-testid="left-toggle"]' },
   { title: 'Hand Hatch to your agent', body: 'Hatch holds no AI and needs no setup. When you want your agent to use Hatch, Settings has one button that copies the details, and you paste them to the agent.', target: '[data-testid="panel-settings"]' },
   { title: 'Tell us what you find', body: 'This icon sends feedback to the people who make Hatch. The Help menu opens this guide again.', target: '[data-testid="panel-feedback"]' },
 ];
@@ -49,7 +49,7 @@ export function Guide() {
 
   useEffect(() => {
     if (!open || !armed) return;
-    if (step.panel) actions.showPanel(step.panel);
+    if (step.left) actions.showLeft(step.left);
     const measure = (): void => {
       const el = (step.target && document.querySelector(step.target)) || (step.fallback && document.querySelector(step.fallback)) || null;
       const r = el?.getBoundingClientRect();

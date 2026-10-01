@@ -246,7 +246,7 @@ export async function start(name: string, waitMs: number, tick?: (elapsedMs: num
     void watchPort(project, entry);
   }
 
-  // The port watch runs whether or not a caller waits, so a start from the Projects panel reaches "running" too.
+  // The port watch runs whether or not a caller waits, so a start from the Library reaches "running" too.
   const began = Date.now();
   while (running.get(project.name) === mine && mine.status === 'starting') {
     const elapsed = Date.now() - began;

@@ -16,20 +16,26 @@ test('capture the canvas, Fit to view, the collapsed sidebar and the New Hatch m
     await openHatch(win, `${site.url}/index.html`);
     await openHatch(win, `${site.url}/docs.html`);
     await win.getByTestId('template-tablet').click();
-    await win.locator('[data-testid^="shield-"]').click();
+    await win.getByTestId('hatch-list').getByRole('button').first().click();
     await win.waitForTimeout(500);
     await capture(app, `${OUT}/1-canvas.png`);
 
     await win.getByTestId('fit-toggle').click();
     await win.waitForTimeout(500);
     await capture(app, `${OUT}/2-fit.png`);
-    await win.getByTestId('fit-toggle').click();
+    await win.getByTestId('leave-fit').click();
 
-    await win.getByRole('button', { name: 'Show all Hatches' }).click();
     await win.getByTestId('show-all').click();
+    await win.getByTestId('panel-comments').click();
     await win.waitForTimeout(400);
-    await capture(app, `${OUT}/1b-hatches.png`);
-    await win.getByTestId('hatch-list').locator('.hatch-row').first().click();
+    await capture(app, `${OUT}/1b-comments.png`);
+    await win.getByTestId('left-library').click();
+    await win.getByTestId('panel-activity').click();
+    await win.waitForTimeout(300);
+    await capture(app, `${OUT}/1c-library.png`);
+    await win.getByTestId('left-canvases').click();
+    await win.getByTestId('panel-hatch').click();
+    await win.getByTestId('hatch-list').getByRole('button').first().click();
 
     await win.getByTestId('sidebar-toggle').click();
     await win.waitForTimeout(300);

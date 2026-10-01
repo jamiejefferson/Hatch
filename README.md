@@ -30,14 +30,14 @@ Hatch has no automatic update. The install line above fetches whichever version 
 
 Hatch opens with a six-step guide that points at the real controls. Help > Show the Guide runs it again.
 
-1. **Open a page.** The plus button in the Hatch panel opens a Hatch, and so does a double tap on empty canvas.
-2. **Add a project.** The Projects panel takes a folder. Hatch starts its dev server and serves it at `hatch:<name>`.
-3. **Pin a comment.** Select a Hatch, choose the comment tool and pick an element.
+1. **Open a page.** The plus beside Hatches in the left column opens a Hatch, and so does a double tap on empty canvas.
+2. **Add a project.** Projects, in the Library tab of the left column, takes a folder. Hatch starts its dev server and serves it at `hatch:<name>`.
+3. **Pin a comment.** Select a Hatch, choose the comment tool in the toolbar and pick an element. The Comments tab in the sidebar lists every thread on the canvas.
 4. **Hand Hatch to your agent.** In Claude Code, `claude plugin marketplace add jamiejefferson/Hatch` then `claude plugin install hatch@hatch` gives every project Hatch. For any agent, press "Copy the details for your agent" in Settings and paste them to the agent. `connect/README.md` holds the setup by hand for Claude Code, Claude Desktop, Cursor, VS Code and Codex CLI.
 
 ## Send feedback
 
-The speech-bubble icon in the top strip, and Help > Send Feedback, open a short form that takes a kind, such as a bug or an idea, and a message. Hatch adds its own version and the macOS version. A picture of the Hatch window goes along when the switch is on, and the form shows that picture first. Hatch sends no name and no address.
+The speech-bubble button in the top strip, and Help > Send Feedback, open a short form that takes a kind, such as a bug or an idea, and a message. Hatch adds its own version and the macOS version. A picture of the Hatch window goes along when the switch is on, and the form shows that picture first. Hatch sends no name and no address.
 
 Feedback goes to a database that the app can write to and cannot read. A send that fails stays in `~/.hatch/feedback-outbox/` and goes out the next time Hatch opens.
 
@@ -47,7 +47,7 @@ Feedback goes to a database that the app can write to and cannot read. A send th
 - **Agents.** An agent opens pages, reads the agent view, acts by element reference, answers dialogs, takes screenshots, measures an element with `get_element` and asks the user to switch views. An agent opens, closes and names canvases (tabs) and works in any of them; a canvas it opened stays open for the user after it finishes.
 - **Local projects.** Hatch registers a folder, starts its dev server on a stable port and serves it at `hatch:<name>`, which is `http://<name>.localhost:4282` in any browser. A folder of plain HTML gets the same address and reloads when a file changes.
 - **Comments.** The user pins a comment to an element. An agent reads it, acts on it, replies and resolves it. A project's comments are markdown files in `<project>/.hatch/comments/`.
-- **Sign-ins.** Hatch fills a saved sign-in for an agent after the user agrees. The agent never receives the password. Google refuses to sign anyone in inside an app built on Electron, so for a site that offers Google alone, the Sign-ins panel copies that site's sign-in from Chrome, Arc, Brave or Edge. macOS asks for the user's password first, because the browser keeps its cookie key in the Keychain.
+- **Sign-ins.** Hatch fills a saved sign-in for an agent after the user agrees. The agent never receives the password. Google refuses to sign anyone in inside an app built on Electron, so for a site that offers Google alone, Sign-ins, in Settings, copies that site's sign-in from Chrome, Arc, Brave or Edge. macOS asks for the user's password first, because the browser keeps its cookie key in the Keychain.
 - **Grab for Paper.** The user picks an element and pastes it into the Paper design tool. The clipboard holds the form Paper's own Chrome extension writes; a paste into Paper still needs one check by a person.
 - **Default browser.** Settings has a button that makes Hatch the Mac's default browser, so a link clicked in another app opens in a new Hatch.
 - **Elements by description.** With Jev connected in Settings, an agent names an element in plain words, such as "the button that refuses optional cookies", and Hatch clicks or fills it in one call. Hatch asks Jev, TypeSafe's decision model, which element the words name, and acts when the answer reaches 0.8 confidence. Below that it does nothing and lists the closest elements. Jev stays off until the user connects it: they paste their own key from typesafe.ai or from openrouter.ai under "Connect Jev", Hatch checks the key and keeps it encrypted with the Keychain. Each use sends a text outline of the page to TypeSafe, a service outside the Mac, and an OpenRouter key sends it through OpenRouter on the way. A page where Hatch filled a saved sign-in is never sent.

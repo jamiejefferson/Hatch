@@ -41,7 +41,7 @@ test('a copied Hatch link takes an agent to that exact Hatch, in a tab it did no
     expect(await clipboard()).toMatch(/^hatch:@tab_\w+$/);
 
     // The user moves to a second tab, which is the one a new agent would otherwise claim.
-    await win.getByRole('button', { name: 'New tab' }).click();
+    await win.getByTestId('new-canvas').click();
     await openHatch(win, `${site.url}/docs.html`);
 
     const agent = new Client({ name: 'pointed', version: '1.0.0' });
@@ -70,7 +70,7 @@ test('the control bar closes its Hatch, and a zoomed-out canvas shows the title 
     await win.getByRole('button', { name: 'Zoom out' }).click();
     await win.getByRole('button', { name: 'Zoom out' }).click();
     await expect(win.getByTestId('zoom-level')).toHaveText('40%');
-    await win.getByTestId('hatch-list').locator('.hatch-row').last().click();
+    await win.getByTestId('hatch-list').locator('.row-main').last().click();
     await expect(win.locator('.hatch-bar')).toHaveCount(0);
     await win.locator('.hatch-label.selected').hover();
     await expect(win.locator('.hatch-bar')).toHaveCount(1);
@@ -113,7 +113,7 @@ test('a pop-up is blocked on the canvas with a way into Fit to view, and opens t
     expect((await inPages<string>(app, 'location.pathname'))[0]).toBe('/popup-login.html');
 
     await win.getByTestId('popup-fit').click();
-    await expect(win.locator('.tab .fit-bar')).toBeVisible();
+    await expect(win.locator('.top-strip .fit-bar')).toBeVisible();
     await expect(win.getByTestId('popup-blocked')).toHaveCount(0);
     await press();
     // The provider window answers its opener and closes, which only a real pop-up can do.
@@ -166,7 +166,7 @@ test('an agent takes an element out of a page: markup, CSS and an image, and rea
     const refused = await call('grab_element', { ref: heading });
     expect(refused.isError).toBe(true);
     expect(refused.text).toContain('Settings');
-    await win.getByRole('tab', { name: 'Settings' }).click();
+    await win.getByTestId('panel-settings').click();
     await win.getByRole('switch', { name: 'Let agents run script in pages' }).click();
     await expect(win.getByRole('switch', { name: 'Let agents run script in pages' })).toHaveAttribute('aria-checked', 'true');
     const grabbed = await call('grab_element', { ref: heading });

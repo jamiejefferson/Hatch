@@ -16,6 +16,7 @@ export function buildMenu(getWindow: () => BrowserWindow | null): void {
       submenu: [
         item('New Hatch', 'CmdOrCtrl+N', 'new-hatch'),
         item('New Tab', 'CmdOrCtrl+T', 'new-tab'),
+        item('Duplicate Hatch', 'CmdOrCtrl+D', 'duplicate-hatch'),
         { type: 'separator' },
         item('Close Hatch', 'CmdOrCtrl+W', 'close-hatch'),
         item('Close Tab', 'CmdOrCtrl+Shift+W', 'close-tab'),
@@ -34,6 +35,7 @@ export function buildMenu(getWindow: () => BrowserWindow | null): void {
         item('Canvas at 100%', 'CmdOrCtrl+0', 'zoom-actual'),
         { type: 'separator' },
         item('Switch Between Page and Agent View', 'CmdOrCtrl+Shift+A', 'toggle-view'),
+        item('Show or Hide Left Column', 'Alt+CmdOrCtrl+\\', 'toggle-left'),
         item('Show or Hide Sidebar', 'CmdOrCtrl+\\', 'toggle-sidebar'),
         item('Inspect Hatch', 'Alt+CmdOrCtrl+I', 'inspect-hatch'),
         { type: 'separator' },

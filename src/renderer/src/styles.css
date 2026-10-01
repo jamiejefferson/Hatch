@@ -20,6 +20,7 @@
   --r: 12px;
   --strip: 48px;
   --sidebar: 320px;
+  --left: 260px;
 }
 
 * { box-sizing: border-box; }
@@ -48,32 +49,83 @@ svg { flex-shrink: 0; display: block; }
 .app { display: flex; flex-direction: column; height: 100%; }
 .main { display: flex; flex: 1; min-height: 0; }
 
-/* ---- top strip: one row for the tabs, the panel icons and the sidebar switch ---- */
+/* ---- top strip: the left column's switch, the canvas name, Feedback, Settings and the sidebar's switch ---- */
 .top-strip {
   display: flex; align-items: center; gap: 8px; flex-shrink: 0;
   height: var(--strip); padding: 0 12px 0 84px;
   background: var(--ground); border-bottom: 1px solid var(--line);
   -webkit-app-region: drag;
 }
-.top-strip button, .top-strip input, .tab { -webkit-app-region: no-drag; }
+.top-strip button, .top-strip input { -webkit-app-region: no-drag; }
 .strip-space { flex: 1; min-width: 12px; }
-.tabs { display: flex; align-items: center; gap: 4px; min-width: 0; }
-.tab {
-  display: flex; align-items: center; gap: 6px; height: 32px; width: 168px; min-width: 72px; flex-shrink: 1;
-  padding: 0 6px 0 14px; border: 1px solid transparent; border-radius: var(--pill); color: var(--ink-2);
-}
-.tab:hover { background: var(--fill); }
-.tab.active { background: var(--surface); border-color: var(--line); color: var(--ink); font-weight: 600; }
-.tab.wide { width: auto; max-width: 560px; flex-shrink: 0; }
-.tab-label { flex: 1; min-width: 0; height: 100%; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.tab.wide .tab-label { flex: 0 1 auto; }
-.tab-rename { flex: 1; min-width: 0; height: 22px; padding: 0 6px; border: 0; border-radius: var(--pill); background: var(--fill); font-weight: 400; user-select: text; cursor: text; }
-.tab-close { display: grid; place-items: center; width: 20px; height: 20px; flex-shrink: 0; border-radius: var(--pill); color: var(--ink-3); }
-.tab.active .tab-close { color: var(--ink-2); }
-.tab-close:hover { color: var(--ink); }
-.fit-bar { display: flex; align-items: center; gap: 4px; min-width: 0; margin-left: 4px; padding-left: 8px; border-left: 1px solid var(--line); font-weight: 400; }
-.fit-bar .hatch-title { max-width: 220px; }
-.panel-nav { display: flex; align-items: center; gap: 2px; }
+.strip-title { display: flex; align-items: center; gap: 8px; min-width: 0; padding-left: 4px; }
+.strip-title strong { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.strip-count { color: var(--ink-2); font-weight: 300; white-space: nowrap; }
+.fit-bar { display: flex; align-items: center; gap: 4px; min-width: 0; padding-left: 10px; border-left: 1px solid var(--line); -webkit-app-region: no-drag; }
+.fit-bar .hatch-title { max-width: 360px; color: var(--ink-2); }
+
+/* ---- the two columns' tabs ---- */
+.column-tabs { display: flex; align-items: center; gap: 4px; flex-shrink: 0; height: 44px; padding: 0 12px; border-bottom: 1px solid var(--line); }
+.column-tab { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: var(--pill); color: var(--ink-2); }
+.column-tab:hover { color: var(--ink); }
+.column-tab.current { background: var(--fill); color: var(--ink); font-weight: 600; }
+.tab-count { min-width: 18px; padding: 0 5px; border: 1px solid var(--line); border-radius: var(--pill); font-size: 11px; line-height: 14px; font-weight: 600; text-align: center; color: var(--ink-2); }
+
+/* ---- left column: canvases and Hatches, or the library ---- */
+.left-column { display: flex; flex-direction: column; flex-shrink: 0; width: var(--left); background: var(--surface); border-right: 1px solid var(--line); }
+.column-body { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; }
+.fold { display: flex; flex-direction: column; padding: 8px 0; }
+.fold + .fold { border-top: 1px solid var(--line); }
+.fold-head { display: flex; align-items: center; gap: 4px; height: 32px; padding: 0 8px 0 12px; }
+.fold-toggle { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; height: 100%; text-align: left; }
+.fold-toggle h2 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; color: var(--ink-2); }
+.fold-toggle .chevron { display: grid; place-items: center; width: 12px; color: var(--ink-3); transition: transform 120ms ease; }
+.fold-toggle[aria-expanded='true'] .chevron { transform: rotate(90deg); }
+.fold-hint { padding: 4px 16px 8px; }
+.fold-body { display: flex; flex-direction: column; gap: 8px; }
+.fold-body .add-row, .fold-body .field-error { margin: 0 12px; }
+.row-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.row-list li { display: flex; align-items: center; gap: 8px; height: 32px; margin: 0 8px; padding: 0 8px; border-radius: 8px; }
+.row-list li:hover { background: var(--ground); }
+.row-list li.current { background: var(--accent-soft); }
+.row-list li.current .row-main { font-weight: 600; }
+.row-icon { display: grid; place-items: center; width: 16px; flex-shrink: 0; color: var(--ink-2); }
+.row-list li.current .row-icon { color: var(--ink); }
+.row-main { flex: 1; min-width: 0; height: 100%; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.row-count { flex-shrink: 0; min-width: 20px; text-align: right; font-size: 12px; font-weight: 300; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.row-close, .row-action { display: none; place-items: center; width: 20px; height: 20px; flex-shrink: 0; border-radius: var(--pill); color: var(--ink-2); }
+.row-close:hover, .row-action:hover { color: var(--ink); background: var(--fill); }
+.row-list li:hover .row-close, .row-list li:hover .row-action, .row-close:focus-visible, .row-action:focus-visible { display: grid; }
+.row-list li:hover .row-count { display: none; }
+.row-rename { flex: 1; min-width: 0; height: 24px; padding: 0 6px; border: 0; border-radius: 6px; background: var(--fill); user-select: text; cursor: text; }
+.library-part { display: flex; flex-direction: column; gap: 16px; padding: 16px; }
+.library-part + .library-part { border-top: 1px solid var(--line); }
+.library-part section { display: flex; flex-direction: column; gap: 8px; }
+.library-part h2 { margin: 0; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.library-part .panel-title { font-size: 12px; line-height: 16px; letter-spacing: 0.02em; color: var(--ink-2); }
+.library-part .panel-head { min-height: 24px; }
+.library-part .button { height: auto; min-height: 32px; padding: 6px 16px; text-align: center; line-height: 18px; }
+
+/* ---- toolbar: the page tools in one column beside the canvas ---- */
+.toolbar { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 48px; padding: 8px 0; background: var(--surface); border-right: 1px solid var(--line); }
+.tool-group { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; }
+.tool-group + .tool-group { border-top: 1px solid var(--line); }
+.tool-space { flex: 1; }
+.tool-space + .tool-group { border-top: 1px solid var(--line); }
+.tool { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--pill); color: var(--ink); }
+.tool:hover:not(:disabled) { background: var(--fill); }
+.tool:disabled { color: var(--line-strong); }
+.tool[aria-pressed='true'] { background: var(--accent); color: var(--on-accent); }
+.tool.level { width: 40px; height: 24px; font-size: 11px; font-weight: 600; }
+
+/* ---- comments tab ---- */
+.segmented { display: flex; align-self: flex-start; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: var(--pill); }
+.segmented button { height: 26px; padding: 0 12px; border-radius: var(--pill); color: var(--ink-2); font-size: 12px; }
+.segmented button.current { background: var(--fill); color: var(--ink); font-weight: 600; }
+.comment-group { padding-top: 12px; border-top: 1px solid var(--line); }
+.comment-group-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.thread-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; padding: 8px 0; }
+.thread-text .name { white-space: normal; overflow: visible; line-height: 18px; }
 
 /* ---- shared controls ---- */
 /* Every button answers the pointer the same way: its shape grows by 1 px under the pointer and shrinks by 1 px when pressed.
@@ -143,14 +195,14 @@ svg { flex-shrink: 0; display: block; }
 .overlay > * { pointer-events: auto; }
 .drag-cover { position: fixed; inset: 0; z-index: 1000; }
 
-/* The selected Hatch carries the control bar. Every other Hatch carries its title alone. */
+/* The selected Hatch's title row carries Fit to view and close at its right end. Every other Hatch carries its title alone. */
 .hatch-bar {
-  position: absolute; display: flex; align-items: center; gap: 4px; width: max-content; height: 32px; padding: 0 4px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--pill); cursor: grab;
-  /* The bar sits in front of the titles of the Hatches beside it. */
-  z-index: 4; box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
+  position: absolute; display: flex; align-items: center; gap: 2px; height: 28px; padding: 0;
+  background: var(--ground); cursor: grab;
+  /* The row sits in front of the titles of the Hatches beside it. */
+  z-index: 4;
 }
-.hatch-bar .hatch-title { padding-left: 4px; font-weight: 600; }
+.hatch-bar .hatch-title { flex: 1; font-size: 12px; font-weight: 600; }
 .hatch-label { position: absolute; display: flex; align-items: center; gap: 6px; height: 24px; color: var(--ink-2); font-size: 12px; cursor: grab; }
 .hatch-label:hover, .hatch-label.selected { color: var(--ink); }
 .hatch-label.selected { font-weight: 600; }

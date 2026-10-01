@@ -25,9 +25,9 @@ test.describe.configure({ mode: 'serial' });
 test('an empty tab offers New Hatch, and a bad link shows an error', async () => {
   await expect(win.getByText('This tab has no pages yet.')).toBeVisible();
   await win.getByTestId('new-hatch').click();
-  await win.getByTestId('new-hatch-url').fill('not a link');
+  await win.getByTestId('new-hatch-url').fill('javascript:alert(1)');
   await win.getByTestId('new-hatch-url').press('Enter');
-  await expect(win.getByRole('alert')).toHaveText('A link has no spaces.');
+  await expect(win.getByRole('alert')).toHaveText('Hatch opens http, https, file and hatch links.');
   await win.keyboard.press('Escape');
   await expect(win.getByTestId('new-hatch-modal')).toBeHidden();
 });
@@ -37,7 +37,7 @@ test('two sites open side by side at their real layout width', async () => {
   await openHatch(win, `${site.url.replace('http://', '')}/docs.html`);
   await expect.poll(async () => (await sizes()).map((s) => `${s.w}x${s.h}`)).toEqual(['960x752', '960x752']);
   // A tab is a canvas, so it keeps its own name while its pages change.
-  await expect(win.locator('.tabs').getByRole('tab', { name: 'Canvas' })).toBeVisible();
+  await expect(win.getByTestId('canvas-list').getByRole('tab', { name: 'Canvas' })).toBeVisible();
   await expect(win.getByRole('heading', { name: 'Getting started | Acme Docs' })).toBeVisible();
   await expect(win.getByTestId('link-field')).toHaveValue(`${site.url}/docs.html`);
 });
@@ -76,7 +76,12 @@ test('dragging the bottom handle makes the Hatch taller with no reload', async (
 test('an unselected Hatch leaves the wheel to the canvas, and the selected Hatch scrolls', async () => {
   const shield = win.locator('[data-testid^="shield-"]');
   await expect(shield).toHaveCount(1);
-  const box = (await shield.boundingBox())!;
+  // The pointer goes to the middle of the part of the Hatch the canvas shows, because the columns cover the rest.
+  const whole = (await shield.boundingBox())!;
+  const area = (await win.locator('.canvas:not(.behind)').boundingBox())!;
+  const left = Math.max(whole.x, area.x);
+  const top = Math.max(whole.y, area.y);
+  const box = { x: left, y: top, width: Math.min(whole.x + whole.width, area.x + area.width) - left, height: Math.min(whole.y + whole.height, area.y + area.height) - top };
   await win.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await win.mouse.wheel(0, 120);
   await win.waitForTimeout(300);
@@ -84,8 +89,7 @@ test('an unselected Hatch leaves the wheel to the canvas, and the selected Hatch
 
   await win.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect(win.getByTestId('link-field')).toHaveValue(`${site.url}/index.html`);
-  const moved = (await win.locator('[data-testid^="header-"]').first().boundingBox())!;
-  await win.mouse.move(moved.x + 200, moved.y + 150);
+  await win.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 40);
   // The first wheel event after a tap releases the shield that waits for a double tap, and the ones after it scroll the page.
   await win.mouse.wheel(0, 1);
   await win.mouse.wheel(0, 120);
@@ -98,24 +102,28 @@ test('Fit to view fills the canvas area, and leaving it restores the size', asyn
   const canvas = (await win.getByTestId('canvas').boundingBox())!;
   // The control bar moves into the tab, so the page takes the whole canvas area.
   await expect.poll(async () => (await sizes())[0]).toMatchObject({ w: Math.round(canvas.width), h: Math.round(canvas.height), id: before.id });
-  await expect(win.locator('.tab .fit-bar')).toBeVisible();
+  await expect(win.locator('.top-strip .fit-bar')).toBeVisible();
 
   // Fit to view is a toggle: the same control releases the Hatch to its size on the canvas.
   await win.getByTestId('leave-fit').click();
   await expect.poll(async () => (await sizes())[0]).toMatchObject({ w: 960, h: 752, id: before.id });
-  await expect(win.locator('.tab .fit-bar')).toBeHidden();
+  await expect(win.locator('.top-strip .fit-bar')).toBeHidden();
 });
 
 test('a double tap on an unselected Hatch fits it to the view, and Esc returns to the canvas', async () => {
   const shield = win.locator('[data-testid^="shield-"]');
   const box = (await shield.boundingBox())!;
   await win.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2);
-  await expect(win.locator('.tab .fit-bar')).toBeVisible();
+  await expect(win.locator('.top-strip .fit-bar')).toBeVisible();
 
-  // Esc from inside the page reaches Hatch as well as the page.
-  await win.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-  await win.keyboard.press('Escape');
-  await expect(win.locator('.tab .fit-bar')).toBeHidden();
+  // Esc from inside the page reaches Hatch as well as the page. Playwright's keyboard never reaches a page, so the key goes to the page through Electron.
+  await app.evaluate(({ webContents }) => {
+    const page = webContents.getAllWebContents().find((w) => w.getType() === 'webview')!;
+    page.focus();
+    page.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
+    page.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
+  });
+  await expect(win.locator('.top-strip .fit-bar')).toBeHidden();
   await expect(win.getByTestId('fit-toggle')).toHaveAttribute('aria-pressed', 'false');
 
   await win.locator('[data-testid^="bar-close-"]').click();

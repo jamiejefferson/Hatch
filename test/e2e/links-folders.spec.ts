@@ -14,7 +14,7 @@ test('links group into folders in the panel and the file, and an agent reads and
   const saved = (): Link[] => JSON.parse(readFileSync(join(home, 'links.json'), 'utf8')) as Link[];
   const folderOf = (name: string): string | undefined => saved().find((l) => l.name === name)?.folder;
   try {
-    await win.getByTestId('panel-links').click();
+    await win.getByTestId('left-library').click();
 
     // A link added with a folder name lands under that folder. One added without sits at the top of the list.
     await win.getByTestId('link-address').fill(`${site.url}/index.html`);

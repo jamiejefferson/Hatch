@@ -13,7 +13,7 @@ export function emptyTab(): Tab {
 
 export function emptyWorkspace(): Workspace {
   const tab = emptyTab();
-  return { version: 1, tabs: [tab], activeTabId: tab.id, sidebarOpen: true };
+  return { version: 1, tabs: [tab], activeTabId: tab.id, sidebarOpen: true, leftOpen: true };
 }
 
 const TEMPLATE_IDS: TemplateId[] = ['fit', 'desktop', 'laptop', 'tablet', 'tablet-landscape', 'mobile', 'custom'];
@@ -27,7 +27,7 @@ export function repairWorkspace(raw: unknown): Workspace {
   const tabs = (Array.isArray(source.tabs) ? source.tabs : []).map(repairTab).filter((t): t is Tab => t !== null);
   if (tabs.length === 0) return emptyWorkspace();
   const activeTabId = tabs.some((t) => t.id === source.activeTabId) ? (source.activeTabId as string) : tabs[0]!.id;
-  return { version: 1, tabs, activeTabId, sidebarOpen: source.sidebarOpen !== false };
+  return { version: 1, tabs, activeTabId, sidebarOpen: source.sidebarOpen !== false, leftOpen: source.leftOpen !== false };
 }
 
 function repairTab(raw: unknown): Tab | null {

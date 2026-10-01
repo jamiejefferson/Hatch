@@ -18,7 +18,7 @@ test('capture the agent-facing states', async () => {
     await agent.connect(new StreamableHTTPClientTransport(new URL(`${url}?agent=screens`)));
     const call = (name: string, args: Record<string, unknown> = {}) => agent.callTool({ name, arguments: args });
 
-    await win.getByRole('tab', { name: 'Activity' }).click();
+    await win.getByTestId('panel-activity').click();
     await capture(app, `${OUT}/5-activity-empty.png`);
 
     await call('navigate', { to: `${site.url}/index.html`, intent: 'Open the pricing page.' });
@@ -39,8 +39,8 @@ test('capture the agent-facing states', async () => {
     await call('click', { ref, intent: 'Delete the draft to test the confirm step.' });
     // The view switch sits in the Hatch panel, so the second Hatch is selected from the panel's list first.
     await win.getByTestId('panel-hatch').click();
-    await win.getByTestId('hatch-list').locator('.hatch-row').last().click();
-    await win.locator('[data-testid^="view-page-"]').click();
+    await win.getByTestId('hatch-list').locator('.row-main').last().click();
+    await win.getByTestId('view-toggle').click();
     await win.getByTestId('sidebar-toggle').click();
     await win.waitForTimeout(400);
     await capture(app, `${OUT}/8-page-dialog.png`);

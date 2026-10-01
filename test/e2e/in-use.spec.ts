@@ -46,7 +46,7 @@ test('a Hatch an agent uses wears an outline and a chip, and each action marks i
 
     // In the agent view the same action marks its line.
     await win.locator('[data-testid^="header-"]').first().click();
-    await win.locator('[data-testid^="view-agent-"]').click();
+    await win.getByTestId('view-toggle').click();
     await expect(win.locator('.agent-view')).toBeVisible();
     await call('fill', { ref: email, text: 'sam@studio.example' });
     await expect(win.locator('.agent-line.acted')).toContainText('textbox "Email"');

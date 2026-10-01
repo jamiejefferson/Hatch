@@ -16,7 +16,7 @@ export const TEMPLATES: DeviceTemplate[] = [
   { id: 'mobile', name: 'Mobile', size: { width: 390, height: 844 } },
 ];
 
-/** The sizes the Hatch panel offers. Fit to view is a toggle, so it sits outside this list. */
+/** The sizes the Hatch tab offers. Fit to view is a toggle, so it sits outside this list. */
 export const DEVICE_TEMPLATES = TEMPLATES.filter((t): t is DeviceTemplate & { size: { width: number; height: number } } => t.size !== null);
 
 export const MIN_SIZE = 240;

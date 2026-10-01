@@ -19,7 +19,7 @@ test('favourites come across from Chrome into a folder of their own, once', asyn
   } }));
   const { app, win } = await launch(home, 0, { HATCH_BROWSER_ROOT: browsers });
   try {
-    await win.getByTestId('panel-links').click();
+    await win.getByTestId('left-library').click();
     const go = win.getByTestId('bring-favourites-go');
     await expect(go).toHaveText('Bring my favourites from Chrome');
     await go.click();

@@ -14,7 +14,7 @@ test('a fresh Hatch opens on its canvas, and Settings holds the details an agent
     await expect(win.getByText('This tab has no pages yet.')).toBeVisible();
     await expect(win.getByText('Connect an agent')).toHaveCount(0);
 
-    await win.getByRole('tab', { name: 'Settings' }).click();
+    await win.getByTestId('panel-settings').click();
     await expect(win.getByRole('heading', { name: 'Details for your agent' })).toBeVisible();
     // A build run from source has no place in the macOS browser list, so the button waits for the installed app.
     await expect(win.getByTestId('make-default')).toBeDisabled();

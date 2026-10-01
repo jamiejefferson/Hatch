@@ -33,6 +33,19 @@ export function parseAddress(input: string): ParsedAddress {
   return { ok: false, error: 'Type a full link, a domain such as example.com, or hatch:project.' };
 }
 
+/**
+ * The link field also takes a site's name, such as "Awwwards". Text that is no link goes to
+ * DuckDuckGo's jump search, which loads the first result in place of a results page.
+ */
+export function parseAddressOrName(input: string): ParsedAddress {
+  const parsed = parseAddress(input);
+  const text = input.trim();
+  if (parsed.ok || !text || /^[a-z][a-z0-9+.-]*:/i.test(text)) return parsed;
+  return { ok: true, kind: 'url', url: jumpSearch(text) };
+}
+
+export const jumpSearch = (text: string): string => `https://duckduckgo.com/?q=${encodeURIComponent(`\\${text.trim()}`)}`;
+
 function finish(candidate: string): ParsedAddress {
   return URL.canParse(candidate) ? { ok: true, kind: 'url', url: new URL(candidate).href } : { ok: false, error: 'Hatch cannot read that link.' };
 }

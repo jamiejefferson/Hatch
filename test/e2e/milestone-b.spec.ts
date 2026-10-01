@@ -121,6 +121,8 @@ test('a hand edit to the file shows in Hatch, and a file Hatch cannot read stays
 
   const broken = readFileSync(commentFile, 'utf8').replace(/- anchor: .*/, '- anchor: {broken');
   writeFileSync(commentFile, broken);
+  // The Comments tab says when a page's file cannot be read.
+  await win.getByTestId('panel-comments').click();
   await expect(win.getByRole('alert').filter({ hasText: 'Hatch cannot read' })).toBeVisible({ timeout: 6000 });
   const refused = await call('reply_comment', { id: commentId, text: 'This must fail.' });
   expect(refused.isError).toBe(true);
@@ -145,7 +147,8 @@ test('an agent pins its own comment, and a comment whose element has gone report
   await expect.poll(async () => (await call('get_comment', { id: secondId })).text, { timeout: 10_000 }).toContain('Element not found');
   // The comment stays on its page: the pin waits at the Hatch's corner, marked as detached.
   await expect(win.getByTestId('pin-2')).toHaveClass(/detached/);
-  await expect(win.locator('.thread-list li', { hasText: 'Three days of offers' })).toContainText('Element not found');
+  await win.getByTestId('panel-comments').click();
+  await expect(win.locator('.thread-list li', { hasText: 'This tagline has no offer dates.' })).toContainText('Element not found');
 });
 
 test('the user edits a message, hides the pins and deletes a thread', async () => {

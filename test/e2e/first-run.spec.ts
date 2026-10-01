@@ -12,7 +12,7 @@ test('a first start shows the guide page in Fit to view, and a second start keep
   const first = await launch(home, 0, { HATCH_WELCOME: '1', HATCH_WELCOME_URL: welcome, HATCH_GUIDE: '1' });
   try {
     await expect.poll(async () => (await inPages<string>(first.app, 'location.href'))[0] ?? '').toBe(welcome);
-    await expect(first.win.locator('.tab .fit-bar')).toBeVisible();
+    await expect(first.win.locator('.top-strip .fit-bar')).toBeVisible();
     await expect(first.win.locator('.sidebar')).toHaveCount(0);
     // The guide page stands in for the coach marks.
     await expect(first.win.getByTestId('guide')).toHaveCount(0);
@@ -24,7 +24,7 @@ test('a first start shows the guide page in Fit to view, and a second start keep
     // The user opens the sidebar and leaves Fit to view, and both choices last.
     await first.win.getByTestId('sidebar-toggle').click();
     await first.win.keyboard.press('Escape');
-    await expect(first.win.locator('.tab .fit-bar')).toHaveCount(0);
+    await expect(first.win.locator('.top-strip .fit-bar')).toHaveCount(0);
     await first.win.waitForTimeout(800);
   } finally {
     await first.app.close();
@@ -33,7 +33,7 @@ test('a first start shows the guide page in Fit to view, and a second start keep
   const second = await launch(home, 0, { HATCH_WELCOME: '1', HATCH_WELCOME_URL: `${site.url}/contact.html` });
   try {
     await expect(second.win.locator('.sidebar')).toHaveCount(1);
-    await expect(second.win.locator('.tab .fit-bar')).toHaveCount(0);
+    await expect(second.win.locator('.top-strip .fit-bar')).toHaveCount(0);
     expect((await inPages<string>(second.app, 'location.href'))[0]).toBe(welcome);
   } finally {
     await second.app.close();
@@ -62,11 +62,11 @@ test('the first start of a new version opens the guide at #new in its own tab, a
   const first = await launch(home, 0, { HATCH_WELCOME: '1', HATCH_WELCOME_URL: welcome });
   try {
     await expect.poll(async () => (await inPages<string>(first.app, 'location.href'))[0] ?? '').toBe(`${welcome}#new`);
-    await expect(first.win.locator('.tab')).toHaveCount(2);
-    await expect(first.win.locator('.tab.active')).toContainText('New in Hatch');
-    await expect(first.win.locator('.tab .fit-bar')).toBeVisible();
+    await expect(first.win.getByTestId('canvas-list').locator('li')).toHaveCount(2);
+    await expect(first.win.getByTestId('canvas-list').locator('li.current')).toContainText('New in Hatch');
+    await expect(first.win.locator('.top-strip .fit-bar')).toBeVisible();
     await expect(first.win.locator('.sidebar')).toHaveCount(0);
-    await expect(first.win.locator('.tab').first()).toContainText('Shop');
+    await expect(first.win.getByTestId('canvas-list').locator('li').first()).toContainText('Shop');
     expect(typeof JSON.parse(readFileSync(join(home, 'version.json'), 'utf8')).seen).toBe('string');
     await first.win.waitForTimeout(800);
   } finally {
@@ -75,7 +75,7 @@ test('the first start of a new version opens the guide at #new in its own tab, a
 
   const second = await launch(home, 0, { HATCH_WELCOME: '1', HATCH_WELCOME_URL: welcome });
   try {
-    await expect(second.win.locator('.tab')).toHaveCount(2);
+    await expect(second.win.getByTestId('canvas-list').locator('li')).toHaveCount(2);
   } finally {
     await second.app.close();
     await site.close();

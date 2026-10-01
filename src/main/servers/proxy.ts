@@ -68,7 +68,7 @@ async function forward(project: ProjectState, req: IncomingMessage, res: ServerR
     const title = starting ? `Starting ${project.name}` : `${project.name} is not running`;
     const body = starting
       ? 'Hatch is running the dev command and waiting for the port to open. This page loads as soon as the server answers.'
-      : 'Start it from the Projects panel in Hatch. This page loads as soon as the server answers.';
+      : 'Start it from Projects in the Hatch Library. This page loads as soon as the server answers.';
     return send(res, 503, page(title, body, true));
   }
   // The Host header stays as the browser sent it. Vite and Next.js accept .localhost names by default.
@@ -103,7 +103,7 @@ export async function startProxy(): Promise<number> {
   const handler = (req: IncomingMessage, res: ServerResponse): void => {
     void (async () => {
       const project = await projectFor(req);
-      if (!project) return send(res, 404, page('No project answers here', 'Hatch knows no project by this name. The Projects panel lists the registered ones.'));
+      if (!project) return send(res, 404, page('No project answers here', 'Hatch knows no project by this name. Projects in the Hatch Library lists the registered ones.'));
       return project.kind === 'server' ? forward(project, req, res) : serveStatic(project, req, res);
     })().catch(() => !res.headersSent && send(res, 500, page('Hatch hit an error', 'Try the page again.')));
   };

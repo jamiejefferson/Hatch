@@ -44,8 +44,8 @@ export function ProjectsPanel() {
     <>
       <header className="panel-head">
         <h1 className="panel-title">Projects</h1>
-        <button className="round primary" aria-label="Add a project" title="Add a project folder" onClick={() => run(actions.addProject())} data-testid="add-project">
-          <PlusIcon />
+        <button className="round small quiet" aria-label="Add a project" title="Add a project folder" onClick={() => run(actions.addProject())} data-testid="add-project">
+          <PlusIcon size={14} />
         </button>
       </header>
       {projects.length === 0 && found.length === 0 && <p className="hint">Add a project folder and Hatch gives it a stable address, starts its dev server and keeps it on one port. A folder of plain HTML works too.</p>}

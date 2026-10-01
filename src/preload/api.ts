@@ -7,8 +7,8 @@ import type { ActivityEntry, AgentAct, AgentWorkState, DialogState, Project, Pro
 export type Outcome<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export type MenuCommand =
-  | 'new-hatch' | 'new-tab' | 'close-hatch' | 'close-tab' | 'reload-hatch' | 'back' | 'forward'
-  | 'zoom-in' | 'zoom-out' | 'zoom-actual' | 'toggle-sidebar' | 'inspect-hatch' | 'deselect' | 'toggle-view' | 'show-guide' | 'send-feedback';
+  | 'new-hatch' | 'new-tab' | 'close-hatch' | 'duplicate-hatch' | 'close-tab' | 'reload-hatch' | 'back' | 'forward'
+  | 'zoom-in' | 'zoom-out' | 'zoom-actual' | 'toggle-sidebar' | 'toggle-left' | 'inspect-hatch' | 'deselect' | 'toggle-view' | 'show-guide' | 'send-feedback';
 
 /** Messages the main process pushes to the interface. */
 export interface Pushes {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { labelForUrl, parseAddress } from '@shared/address';
+import { labelForUrl, parseAddress, parseAddressOrName } from '@shared/address';
 
 describe('parseAddress', () => {
   it.each([
@@ -24,6 +24,19 @@ describe('parseAddress', () => {
 
   it.each(['', '   ', 'pricing page', 'javascript:alert(1)', 'chrome://settings', 'hatch:', 'hatch:bad_name', 'word'])('rejects %j', (input) => {
     expect(parseAddress(input).ok).toBe(false);
+  });
+});
+
+describe('parseAddressOrName', () => {
+  it('sends a site name to the first search result', () => {
+    expect(parseAddressOrName('Awwwards')).toEqual({ ok: true, kind: 'url', url: 'https://duckduckgo.com/?q=%5CAwwwards' });
+    expect(parseAddressOrName(' new york times ')).toEqual({ ok: true, kind: 'url', url: 'https://duckduckgo.com/?q=%5Cnew%20york%20times' });
+  });
+  it('leaves links and refused schemes as they are', () => {
+    expect(parseAddressOrName('example.com')).toEqual(parseAddress('example.com'));
+    expect(parseAddressOrName('hatch:acme')).toEqual(parseAddress('hatch:acme'));
+    expect(parseAddressOrName('javascript:alert(1)').ok).toBe(false);
+    expect(parseAddressOrName('  ').ok).toBe(false);
   });
 });
 

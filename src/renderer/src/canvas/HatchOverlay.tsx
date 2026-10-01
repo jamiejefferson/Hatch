@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Rect } from '@shared/geometry';
 import type { Hatch } from '@shared/types';
-import { BackIcon, CloseIcon, FitIcon, ForwardIcon } from '../icons';
+import { CloseIcon, FitIcon } from '../icons';
 import { actions, hatchLabel, loadStateOf, useStore } from '../state/store';
 import { startDrag } from './drag';
 import { AgentView } from './AgentView';
@@ -22,17 +22,17 @@ interface Props {
   docked: boolean;
 }
 
-const BAR_MIN = 260;
+const BAR_MIN = 200;
 /** Below this zoom the canvas is an overview, so the selected Hatch keeps its title and shows the bar only under the pointer. */
 const BAR_ZOOM = 0.5;
 
 /** The control bar stays on screen while part of its Hatch is, so its buttons remain reachable on a Hatch panned half out of view. */
-function barBox(screen: Rect): { left: number; top: number; maxWidth: number } {
+function barBox(screen: Rect): { left: number; top: number; width: number } {
   const right = screen.x + Math.max(screen.width, BAR_MIN);
   const left = Math.min(Math.max(screen.x, 8), right - BAR_MIN);
   // A Hatch whose top edge has scrolled above the canvas keeps its bar at the canvas top, until the Hatch itself leaves.
-  const top = Math.min(Math.max(screen.y - 40, 8), screen.y + screen.height - 40);
-  return { left, top, maxWidth: right - left };
+  const top = Math.min(Math.max(screen.y - 34, 4), screen.y + screen.height - 34);
+  return { left, top, width: right - left };
 }
 
 /** An unselected Hatch carries its title alone, cut to the Hatch's width on screen, so a zoomed-out canvas stays clear of controls. */
@@ -46,7 +46,7 @@ function noticeBox(screen: Rect, canvasWidth: number): { left: number; top: numb
 }
 
 /** Everything Hatch draws around a page. It sits above the canvas and never scales, so it stays crisp at every zoom. */
-export function HatchOverlay({ tabId, hatch, size, screen, zoom, selected, docked }: Props) {
+export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked }: Props) {
   const [hover, setHover] = useState(false);
   const load = useStore((s) => loadStateOf(s, hatch.id));
   const work = useStore((s) => s.work.hatches[hatch.id]);
@@ -69,6 +69,20 @@ export function HatchOverlay({ tabId, hatch, size, screen, zoom, selected, docke
 
   const move = (e: React.PointerEvent): void => {
     if (docked || (e.target as HTMLElement).closest('button')) return;
+    // Cmd-drag, or Option-drag as in Figma, leaves this Hatch in place and drags a copy of it.
+    if (e.metaKey || e.altKey) {
+      let copy: string | null = null;
+      return startDrag(e, {
+        cursor: 'copy',
+        onMove: (dx, dy) => {
+          copy ??= actions.duplicateHatch(id, { x: hatch.x, y: hatch.y });
+          if (copy) actions.moveHatch(copy, hatch.x + dx / zoom, hatch.y + dy / zoom);
+        },
+        onEnd: (moved) => {
+          if (!moved) actions.select(id);
+        },
+      });
+    }
     startDrag(e, {
       cursor: 'grabbing',
       onMove: (dx, dy) => actions.moveHatch(id, hatch.x + dx / zoom, hatch.y + dy / zoom),
@@ -87,20 +101,12 @@ export function HatchOverlay({ tabId, hatch, size, screen, zoom, selected, docke
   // A bar wider than its Hatch would sit over the Hatch beside it.
   const compact = zoom < BAR_ZOOM || screen.width < BAR_MIN;
 
+  // The selected Hatch's title row holds the two controls that act on the frame itself. Page tools sit in the toolbar.
   const header = docked ? null : selected && (!compact || hover) ? (
     <div className="hatch-bar" style={barBox(screen)} onPointerDown={move} onPointerLeave={() => setHover(false)} onContextMenu={menu} data-testid={`header-${id}`}>
-      <button className="round small quiet" aria-label="Back" title="Back" disabled={!load.canGoBack} onClick={run(() => pages.back(id))}>
-        <BackIcon size={14} />
-      </button>
-      <button className="round small quiet" aria-label="Forward" title="Forward" disabled={!load.canGoForward} onClick={run(() => pages.forward(id))}>
-        <ForwardIcon size={14} />
-      </button>
       {working && <span className="working-dot" role="status" aria-label="An agent is working in this Hatch" />}
       <span className="hatch-title">{hatchLabel(hatch)}</span>
-      <span className="hatch-size mono">
-        {size.width} × {size.height}
-      </span>
-      <button className="round small quiet" aria-label="Fit to view" title="Fit to view" onClick={run(() => actions.toggleFit(id))}>
+      <button className="round small quiet" aria-label="Fit to view" title="Fit to view" aria-pressed={false} onClick={run(() => actions.toggleFit(id))} data-testid="fit-toggle">
         <FitIcon size={14} />
       </button>
       <button className="round small quiet" aria-label="Close this Hatch" title="Close this Hatch" onClick={() => actions.closeHatch(id)} data-testid={`bar-close-${id}`}>

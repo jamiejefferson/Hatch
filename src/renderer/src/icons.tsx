@@ -17,6 +17,7 @@ export const CloseIcon = make('M4 4l8 8M12 4l-8 8');
 export const PlusIcon = make('M8 3v10M3 8h10');
 export const MinusIcon = make('M3 8h10');
 export const SidebarIcon = make('M2.5 3.5h11v9h-11zM10 3.5v9');
+export const LeftColumnIcon = make('M2.5 3.5h11v9h-11zM6 3.5v9');
 export const BackIcon = make('M10 3L5 8l5 5');
 export const ForwardIcon = make('M6 3l5 5-5 5');
 export const ReloadIcon = make('M13 8a5 5 0 1 1-1.5-3.5M13 2.5v3h-3');
@@ -24,6 +25,7 @@ export const StopIcon = make('M4.5 4.5h7v7h-7z');
 export const PlayIcon = make('M5.5 3.5l7 4.5-7 4.5z');
 export const OpenIcon = make('M6 3.5H3.5v9h9V10M9 3.5h3.5V7M12.5 3.5L7.5 8.5');
 export const CopyIcon = make('M5.5 5.5h8v8h-8zM10.5 5.5v-3h-8v8h3');
+export const DuplicateIcon = make('M5.5 5.5h8v8h-8zM10.5 5.5v-3h-8v8h3M9.5 7.5v4M7.5 9.5h4');
 export const BinIcon = make('M3 4.5h10M6 4.5V3h4v1.5M4.2 4.5l.6 8.5h6.4l.6-8.5M6.7 7v3.5M9.3 7v3.5');
 export const EditIcon = make('M3 13l.6-2.8L10.8 3l2.2 2.2-7.2 7.2z');
 export const CommentIcon = make('M2.5 3.5h11v7.5h-6l-3 2.5v-2.5h-2z');
@@ -45,7 +47,7 @@ export const TabletPortraitIcon = make('M4 2h8v12H4zM7.2 12h1.6');
 export const TabletLandscapeIcon = make('M2 4h12v8H2zM12 7.2v1.6');
 export const MobileIcon = make('M5 2h6v12H5zM7.2 12h1.6');
 
-// The six panels of the top strip.
+// Panels and the top strip.
 export const HatchIcon = make('M2.5 3.5h11v9h-11zM2.5 6h11');
 export const ProjectsIcon = make('M2 4.5V12.5h12V5.5H8L6.5 3.5H2z');
 export const LinksIcon = SaveLinkIcon;

@@ -1,6 +1,6 @@
 // One store for the whole interface. The workspace half persists; the rest lives for the session.
 import { useSyncExternalStore } from 'react';
-import { labelForUrl, parseAddress } from '@shared/address';
+import { labelForUrl, parseAddress, parseAddressOrName } from '@shared/address';
 import { clampZoom, nextZoomStep, panToReveal, placeNewHatch, zoomAround, type Point } from '@shared/geometry';
 import { clampSize, TEMPLATES, templateForSize } from '@shared/templates';
 import { hatchLink } from '@shared/hatch-link';
@@ -13,7 +13,10 @@ import { savedCanvasFromTab, tabFromSavedCanvas } from '@shared/canvases';
 import { DEFAULT_SETTINGS } from '@shared/types';
 import { emptyTab, emptyWorkspace, newId } from '@shared/workspace';
 
-export type SidebarPanel = 'hatch' | 'projects' | 'links' | 'activity' | 'signins' | 'settings' | 'feedback';
+/** The right sidebar's three tabs, and the two pages its top-strip buttons open. */
+export type SidebarPanel = 'hatch' | 'comments' | 'activity' | 'settings' | 'feedback';
+/** The left column's two tabs. */
+export type LeftPanel = 'canvases' | 'library';
 
 export interface LoadState {
   loading: boolean;
@@ -30,6 +33,9 @@ export interface State {
   savedCanvases: SavedCanvas[];
   settings: Settings;
   panel: SidebarPanel;
+  leftPanel: LeftPanel;
+  /** Which threads the Comments tab lists. */
+  commentFilter: 'open' | 'resolved';
   newHatchOpen: boolean;
   /** The canvas area in screen pixels, which Fit to view and New Hatch placement need. */
   viewport: { width: number; height: number };
@@ -47,7 +53,7 @@ export interface State {
   /** Counts page changes per Hatch, so an open agent view knows when to read again. */
   pageVersion: Record<string, number>;
   projects: ProjectsState;
-  /** The project whose detail the Projects panel shows. */
+  /** The project whose detail the Library shows. */
   openProject: string | null;
   projectLogs: Record<string, string[]>;
   /** The comments for the page each Hatch shows. */
@@ -92,6 +98,8 @@ let state: State = {
   savedCanvases: [],
   settings: DEFAULT_SETTINGS,
   panel: 'hatch',
+  leftPanel: 'canvases',
+  commentFilter: 'open',
   newHatchOpen: false,
   viewport: { width: 960, height: 752 },
   load: {},
@@ -393,6 +401,9 @@ export const actions = {
   toggleSidebar(): void {
     set((s) => ({ workspace: { ...s.workspace, sidebarOpen: !s.workspace.sidebarOpen } }));
   },
+  toggleLeft(): void {
+    set((s) => ({ workspace: { ...s.workspace, leftOpen: s.workspace.leftOpen === false } }));
+  },
 
   // canvas
   panBy(dx: number, dy: number): void {
@@ -456,11 +467,12 @@ export const actions = {
       // Fit to view shows one Hatch, so selecting nothing or another Hatch leaves it.
       return { ...t, selectedHatchId: hatchId, hatches: t.hatches.map((h) => (h.id === hatchId ? h : leaveFit(h))) };
     });
-    if (hatchId) set({ panel: 'hatch' });
+    if (hatchId && state.panel !== 'comments') set({ panel: 'hatch' });
   },
   /** Opens a Hatch for an address, or returns an error message when the address does not parse. */
   openHatch(input: string, options: { tabId?: string; byAgent?: boolean } = {}): { hatchId: string } | { error: string } {
-    const resolved = resolveAddress(input);
+    // The user may type a site's name. An agent passes links.
+    const resolved = resolveAddress(input, !options.byAgent);
     if ('error' in resolved) return resolved;
     const hatch: Hatch = { id: newId('hatch'), url: resolved.url, title: '', x: 0, y: 0, width: 960, height: 752, template: 'desktop', view: 'page' };
     editTab(options.tabId ?? state.workspace.activeTabId, (t) => {
@@ -501,6 +513,23 @@ export const actions = {
       const { [hatchId]: _popup, ...popups } = s.popups;
       return { load, viewRequests, dialogs, popups };
     });
+  },
+  /**
+   * Opens a second Hatch on the same page at the same size, selected, and returns its id.
+   * With `at` it sits there, as a Cmd-drag places it; otherwise it joins the end of the row.
+   */
+  duplicateHatch(hatchId: string, at?: Point): string | null {
+    const tabId = tabOf(hatchId);
+    const source = state.workspace.tabs.find((t) => t.id === tabId)?.hatches.find((h) => h.id === hatchId);
+    if (!tabId || !source) return null;
+    const copy: Hatch = { ...leaveFit(source), id: newId('hatch'), title: source.title };
+    editTab(tabId, (t) => {
+      Object.assign(copy, at ?? placeNewHatch(t.hatches));
+      const pan = at ? t.pan : panToReveal(copy, t.pan, t.zoom, state.viewport);
+      return { ...t, hatches: [...t.hatches.map(leaveFit), copy], selectedHatchId: copy.id, pan };
+    });
+    if (state.panel !== 'comments') set({ panel: 'hatch' });
+    return copy.id;
   },
   moveHatch(hatchId: string, x: number, y: number): void {
     editHatch(hatchId, (h) => ({ ...h, x: Math.round(x), y: Math.round(y) }));
@@ -571,7 +600,9 @@ export const actions = {
     set({ picking: null });
     if (!result.html) return set({ grabbed: { hatchId, ok: false, text: result.error ?? 'Hatch could not copy that element.' } });
     await window.hatch.copyForPaper(result.html);
-    set({ grabbed: { hatchId, ok: true, text: `Copied “${result.label}”, ${result.elements} ${result.elements === 1 ? 'layer' : 'layers'}. Paste it into Paper with Cmd+V.` } });
+    const text = `Copied “${result.label}”, ${result.elements} ${result.elements === 1 ? 'layer' : 'layers'}. Paste it into Paper with Cmd+V.`;
+    set({ grabbed: { hatchId, ok: true, text } });
+    actions.toast(text);
   },
   stopPicking(): void {
     set({ picking: null });
@@ -642,10 +673,22 @@ export const actions = {
   },
 
   // sidebar
-  /** The panel icons sit in the top strip, so choosing one also opens a closed sidebar. */
+  /** Choosing a panel also opens a closed sidebar. */
   showPanel(panel: SidebarPanel): void {
     set((st) => ({ panel, workspace: st.workspace.sidebarOpen ? st.workspace : { ...st.workspace, sidebarOpen: true } }));
-    if (panel === 'projects') void window.hatch.refreshProjects();
+  },
+  /** Choosing a tab of the left column also opens the column. */
+  showLeft(leftPanel: LeftPanel): void {
+    set((st) => ({ leftPanel, workspace: st.workspace.leftOpen !== false ? st.workspace : { ...st.workspace, leftOpen: true } }));
+    if (leftPanel === 'library') void window.hatch.refreshProjects();
+  },
+  setCommentFilter(commentFilter: 'open' | 'resolved'): void {
+    set({ commentFilter });
+  },
+  /** Selects a thread's Hatch, brings it into view and opens the thread over its pin. */
+  showThread(hatchId: string, threadId: string): void {
+    actions.reveal(hatchId);
+    actions.openThread(hatchId, threadId);
   },
 
   /** Captures the window first, so the image holds what the user was looking at and leaves the form out. */
@@ -664,7 +707,8 @@ export const actions = {
 
   // projects
   showProject(name: string | null): void {
-    set({ openProject: name, panel: 'projects' });
+    set({ openProject: name });
+    actions.showLeft('library');
     if (name) void window.hatch.projectLog(name).then((lines) => set((s) => ({ projectLogs: { ...s.projectLogs, [name]: lines } })));
   },
   /** Opens a project in a new Hatch. A stopped dev server starts first, and the page loads as soon as it answers. */
@@ -734,13 +778,16 @@ export const actions = {
   setNewHatchPage: (page: string): Promise<void> => actions.updateSettings({ newHatchPage: page }),
 };
 
-/** Turns what a person types into a link a Hatch loads. A hatch: address resolves through the registered projects. */
-export function resolveAddress(input: string): { url: string } | { error: string } {
-  const parsed = parseAddress(input);
+/**
+ * Turns what a person types into a link a Hatch loads. A hatch: address resolves through the registered projects.
+ * With `byName`, text that is no link, such as a site's name, opens the first search result.
+ */
+export function resolveAddress(input: string, byName = false): { url: string } | { error: string } {
+  const parsed = byName ? parseAddressOrName(input) : parseAddress(input);
   if (!parsed.ok) return { error: parsed.error };
   if (parsed.kind === 'url') return { url: parsed.url };
   const project = state.projects.projects.find((p) => p.name === parsed.project);
-  if (!project) return { error: `No project is named ${parsed.project}. The Projects panel lists the registered ones.` };
+  if (!project) return { error: `No project is named ${parsed.project}. Projects in the Library lists the registered ones.` };
   return { url: projectUrl(project, state.projects.proxyPort ?? PROXY_PORT, parsed.path) };
 }
 

@@ -20,7 +20,7 @@ test('a canvas is saved by name, closed, and opened again with its Hatches', asy
     // Every open canvas is listed, and the current one carries its Hatch count.
     const canvases = win.getByTestId('canvas-list');
     await expect(canvases.locator('li')).toHaveCount(1);
-    await expect(canvases).toContainText('2 Hatches');
+    await expect(canvases.locator('.row-count')).toHaveText('2');
 
     // The field offers the canvas's own name. The user names it and saves.
     await expect(win.getByTestId('canvas-name')).toHaveValue('Canvas');
@@ -37,6 +37,8 @@ test('a canvas is saved by name, closed, and opened again with its Hatches', asy
     await expect.poll(() => saved().length).toBe(1);
 
     // The canvas closes, and the saved one opens as a new tab with both pages.
+    // A row's close button shows under the pointer.
+    await canvases.locator('li').first().hover();
     await canvases.getByRole('button', { name: 'Close Canvas' }).click();
     await expect.poll(async () => (await inPages<string>(app, 'document.title')).length).toBe(0);
     await win.getByTestId('saved-canvas-list').getByRole('button', { name: /^Research/ }).click();
@@ -46,10 +48,11 @@ test('a canvas is saved by name, closed, and opened again with its Hatches', asy
     await expect(canvases.locator('li.current')).toContainText('Research');
 
     // A row in the list switches the canvas, and the saved canvas can be removed.
-    await canvases.getByRole('button', { name: /^Canvas 0 Hatches/ }).click();
-    await expect(canvases.locator('li.current')).toContainText('0 Hatches');
+    await canvases.getByRole('tab', { name: 'Canvas', exact: true }).click();
+    await expect(canvases.locator('li.current .row-count')).toHaveText('0');
+    await win.getByTestId('saved-canvas-list').locator('li').first().hover();
     await win.getByRole('button', { name: 'Remove the saved canvas Research' }).click();
-    await expect(win.getByTestId('saved-canvases')).toHaveCount(0);
+    await expect(win.getByTestId('saved-canvas-list')).toHaveCount(0);
     await expect.poll(() => saved()).toEqual([]);
   } finally {
     await app.close();
