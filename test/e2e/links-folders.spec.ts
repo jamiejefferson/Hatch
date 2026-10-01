@@ -21,6 +21,8 @@ test('links group into folders in the panel and the file, and an agent reads and
     await win.getByTestId('link-name').fill('Pricing');
     await win.getByTestId('link-folder').fill('Work');
     await win.getByTestId('link-add').click();
+    // The form clears once the save lands, so wait for it before typing the next link.
+    await expect(win.getByTestId('link-address')).toHaveValue('');
     await win.getByTestId('link-address').fill(`${site.url}/docs.html`);
     await win.getByTestId('link-name').fill('Docs');
     await win.getByTestId('link-folder').fill('');
