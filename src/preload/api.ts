@@ -8,7 +8,7 @@ export type Outcome<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export type MenuCommand =
   | 'new-hatch' | 'new-tab' | 'close-hatch' | 'duplicate-hatch' | 'close-tab' | 'reload-hatch' | 'back' | 'forward'
-  | 'zoom-in' | 'zoom-out' | 'zoom-actual' | 'toggle-sidebar' | 'toggle-left' | 'inspect-hatch' | 'deselect' | 'toggle-view' | 'show-guide' | 'send-feedback';
+  | 'zoom-in' | 'zoom-out' | 'zoom-actual' | 'toggle-sidebar' | 'toggle-left' | 'inspect-hatch' | 'deselect' | 'toggle-view' | 'show-guide' | 'send-feedback' | 'reopen-closed';
 
 /** Messages the main process pushes to the interface. */
 export interface Pushes {
@@ -21,6 +21,8 @@ export interface Pushes {
   'page:changed': string;
   /** Hatch's window lost the keyboard to another app, so the next click in a page hands the keyboard back to it. */
   'window:blur': null;
+  /** A page started or stopped playing sound. */
+  'page:audible': { hatchId: string; audible: boolean };
   /** The id of a Hatch whose page received the Esc key. */
   'page:escape': string;
   /** A page on the canvas tried to open a pop-up, which Hatch opens in Fit to view alone. */

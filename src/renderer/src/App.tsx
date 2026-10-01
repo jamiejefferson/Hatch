@@ -24,6 +24,7 @@ function run(command: MenuCommand): void {
     case 'close-hatch': return selected ? actions.closeHatch(selected) : actions.closeTab(tab.id);
     case 'duplicate-hatch': return void (selected && actions.duplicateHatch(selected));
     case 'close-tab': return actions.closeTab(tab.id);
+    case 'reopen-closed': return actions.reopenClosed();
     case 'reload-hatch': return void (selected && pages.reload(selected));
     case 'back': return void (selected && pages.back(selected));
     case 'forward': return void (selected && pages.forward(selected));

@@ -30,7 +30,8 @@ export function seedFirstRun(version: string): void {
     mkdirSync(hatchHome(), { recursive: true });
     write('links.json', welcomeLinks(url));
     // The guide page stands in for the coach marks on a first open. Help > Show the Guide still runs them.
-    write('settings.json', { ...DEFAULT_SETTINGS, newHatchPage: url, guideSeen: true, jevRunSeen: true });
+    // New Hatch asks for a page: the guide sits in Links and in the first tab, so it needs no other place.
+    write('settings.json', { ...DEFAULT_SETTINGS, guideSeen: true, jevRunSeen: true });
     write('workspace.json', welcomeWorkspace(url));
     // A fresh install has nothing to catch up on.
     write('version.json', { seen: version });
@@ -45,4 +46,14 @@ function showUpdate(version: string, url: string): void {
   const workspace = repairWorkspace(JSON.parse(readFileSync(dataFile('workspace.json'), 'utf8')));
   writeFileSync(dataFile('workspace.json'), JSON.stringify(withUpdateTab(workspace, url), null, 2));
   writeFileSync(dataFile('version.json'), JSON.stringify({ seen: version }, null, 2));
+  forgetGuideAsNewHatchPage(url);
+}
+
+/** Up to 0.1.18 a fresh install made the guide the New Hatch page, so New Hatch opened the guide and never asked. An update clears that seed. */
+function forgetGuideAsNewHatchPage(url: string): void {
+  const file = dataFile('settings.json');
+  if (!existsSync(file)) return;
+  const settings = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>;
+  if (settings.newHatchPage !== url) return;
+  writeFileSync(file, JSON.stringify({ ...settings, newHatchPage: '' }, null, 2));
 }

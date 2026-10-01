@@ -37,7 +37,7 @@ Hatch opens with a six-step guide that points at the real controls. Help > Show 
 
 ## Send feedback
 
-The speech-bubble button in the top strip, and Help > Send Feedback, open a short form that takes a kind, such as a bug or an idea, and a message. Hatch adds its own version and the macOS version. A picture of the Hatch window goes along when the switch is on, and the form shows that picture first. Hatch sends no name and no address.
+The speech-bubble button in the top strip, and Help > Send Feedback, open a short form that takes a kind, such as a bug or an idea, and a message. Hatch adds its own version, the macOS version and a random number made when the first feedback goes, which tells one copy of Hatch apart from another. A picture of the Hatch window goes along when the switch is on, and the form shows that picture first. Hatch sends no name and no address.
 
 Feedback goes to a database that the app can write to and cannot read. A send that fails stays in `~/.hatch/feedback-outbox/` and goes out the next time Hatch opens.
 

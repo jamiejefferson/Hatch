@@ -62,5 +62,6 @@ export function repairHatch(raw: unknown): Hatch | null {
     height: clampSize(num(source.height, 752)),
     template,
     view: source.view === 'agent' ? 'agent' : 'page',
+    ...(source.muted === true ? { muted: true } : null),
   };
 }

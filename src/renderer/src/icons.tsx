@@ -38,6 +38,8 @@ export const ShowAllIcon = make('M2.5 2.5h4.5v4.5H2.5zM9 2.5h4.5v4.5H9zM2.5 9h4.
 export const SaveLinkIcon = make('M4 2.5h8v11l-4-3-4 3z');
 export const FolderIcon = make('M2 4.5V12.5h12V5.5H8L6.5 3.5H2z');
 export const ChevronIcon = make('M6 3l5 5-5 5');
+export const SoundIcon = make('M2.5 6h2.5l3.5-3v10L5 10H2.5zM11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.5a6 6 0 0 1 0 9');
+export const MutedIcon = make('M2.5 6h2.5l3.5-3v10L5 10H2.5zM11 6l3.5 4M14.5 6L11 10');
 export const SaveIcon = make('M2.5 2.5h9l2 2v9h-11zM5 2.5v3.5h5V2.5M4.5 13.5V9h7v4.5');
 
 // Device templates.

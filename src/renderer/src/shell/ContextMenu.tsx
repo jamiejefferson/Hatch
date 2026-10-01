@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { CloseIcon, CopyIcon, DuplicateIcon, FitIcon, ReleaseIcon, SaveLinkIcon } from '../icons';
+import { CloseIcon, CopyIcon, DuplicateIcon, MutedIcon, SoundIcon, FitIcon, ReleaseIcon, SaveLinkIcon } from '../icons';
 import { actions, hatchLabel, useStore } from '../state/store';
 
 /** The right-click menu for a Hatch, a canvas or a tab. Its first job is the link a user pastes to an agent. */
@@ -68,6 +68,9 @@ export function ContextMenu() {
             <hr />
             <button role="menuitem" onClick={run(() => actions.duplicateHatch(hatch.id))} data-testid="menu-duplicate">
               <DuplicateIcon /> Duplicate this Hatch
+            </button>
+            <button role="menuitem" onClick={run(() => actions.toggleMute(hatch.id))} data-testid="menu-mute">
+              {hatch.muted ? <SoundIcon /> : <MutedIcon />} {hatch.muted ? 'Let this Hatch play sound' : 'Mute this Hatch'}
             </button>
             <button role="menuitem" onClick={run(() => actions.toggleFit(hatch.id))}>
               {hatch.template === 'fit' ? <ReleaseIcon /> : <FitIcon />} {hatch.template === 'fit' ? 'Leave Fit to view' : 'Fit to view'}

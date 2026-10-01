@@ -20,6 +20,7 @@ export function buildMenu(getWindow: () => BrowserWindow | null): void {
         { type: 'separator' },
         item('Close Hatch', 'CmdOrCtrl+W', 'close-hatch'),
         item('Close Tab', 'CmdOrCtrl+Shift+W', 'close-tab'),
+        item('Reopen Closed Hatch or Canvas', 'CmdOrCtrl+Shift+T', 'reopen-closed'),
       ],
     },
     { role: 'editMenu' },

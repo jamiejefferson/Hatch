@@ -1,6 +1,7 @@
 import { CloseIcon, FeedbackIcon, LeftColumnIcon, ReleaseIcon, SettingsIcon, SidebarIcon } from '../icons';
 import { actions, activeTab, fitHatch, hatchLabel, tabLabel, useStore } from '../state/store';
 import type { Hatch } from '@shared/types';
+import { SoundButton } from '../canvas/HatchOverlay';
 
 /** One row: the left column's switch, the canvas the user is on, then Feedback, Settings and the sidebar's switch. */
 export function TopStrip() {
@@ -40,6 +41,7 @@ function FitBar({ hatch }: { hatch: Hatch }) {
   return (
     <div className="fit-bar" data-testid={`header-${hatch.id}`}>
       <span className="hatch-title">{hatchLabel(hatch)}</span>
+      <SoundButton hatch={hatch} />
       <button className="round small quiet" aria-label="Leave Fit to view" title="Leave Fit to view (Esc)" onClick={() => actions.toggleFit(hatch.id)} data-testid="leave-fit">
         <ReleaseIcon size={14} />
       </button>

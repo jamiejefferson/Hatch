@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronIcon, CloseIcon, DuplicateIcon, PlusIcon, SaveIcon, ShowAllIcon } from '../icons';
+import { ChevronIcon, CloseIcon, DuplicateIcon, HatchIcon, PlusIcon, SaveIcon, ShowAllIcon } from '../icons';
 import { LinksPanel } from '../panels/LinksPanel';
 import { ProjectsPanel } from '../panels/ProjectsPanel';
 import { actions, activeTab, hatchLabel, tabLabel, useStore, type LeftPanel } from '../state/store';
@@ -49,7 +49,8 @@ function Fold({ title, open, onToggle, action, children, testId }: { title: stri
 
 function CanvasesTab() {
   const tab = useStore(activeTab);
-  const [open, setOpen] = useState({ canvases: true, hatches: true, saved: true });
+  const [open, setOpen] = useState({ canvases: true, hatches: true, closed: true, saved: true });
+  const closed = useStore((s) => s.closed.length > 0);
   const flip = (key: keyof typeof open) => () => setOpen({ ...open, [key]: !open[key] });
   return (
     <>
@@ -78,6 +79,11 @@ function CanvasesTab() {
       >
         <HatchList tab={tab} />
       </Fold>
+      {closed && (
+        <Fold title="Recently closed" open={open.closed} onToggle={flip('closed')} testId="recently-closed">
+          <ClosedList />
+        </Fold>
+      )}
       <Fold title="Saved canvases" open={open.saved} onToggle={flip('saved')} testId="saved-canvases">
         <SavedCanvases tab={tab} />
       </Fold>
@@ -160,6 +166,34 @@ function HatchList({ tab }: { tab: Tab }) {
             <button className="row-close" aria-label={`Close ${hatchLabel(h)}`} title="Close this Hatch" onClick={() => actions.closeHatch(h.id)}>
               <CloseIcon size={12} />
             </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** What the user closed this session, the latest first. A click brings it back where it was, as Cmd+Shift+T does for the latest. */
+function ClosedList() {
+  const closed = useStore((s) => s.closed);
+  return (
+    <ul className="row-list" data-testid="closed-list">
+      {[...closed].reverse().map((c, i) => {
+        const label = c.kind === 'hatch' ? hatchLabel(c.hatch) : c.name;
+        const shortcut = i === 0 ? ' (Cmd+Shift+T)' : '';
+        return (
+          <li key={c.id}>
+            <span className="row-icon" aria-hidden="true">
+              {c.kind === 'hatch' ? <HatchIcon size={14} /> : <ShowAllIcon size={14} />}
+            </span>
+            <button className="row-main" onClick={() => actions.reopenClosed(c.id)} title={`Reopen ${c.kind === 'hatch' ? 'this Hatch' : 'this canvas'}${shortcut}`}>
+              {label}
+            </button>
+            {c.kind === 'canvas' && (
+              <span className="row-count" title={hatchCount(c.tab.hatches.length)}>
+                {c.tab.hatches.length}
+              </span>
+            )}
           </li>
         );
       })}

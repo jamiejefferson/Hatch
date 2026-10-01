@@ -3,7 +3,7 @@ import type { Rect } from '@shared/geometry';
 import type { Hatch } from '@shared/types';
 import { actions } from '../state/store';
 import { claimKeyboard } from './keyboard';
-import { markReady, registerWebview } from './webviews';
+import { markReady, pages, registerWebview } from './webviews';
 
 interface Props {
   hatch: Hatch;
@@ -18,6 +18,8 @@ export function HatchPage({ hatch, rect, hidden }: Props) {
   // React must never write src again: a second write reloads the page.
   const firstUrl = useRef(hatch.url).current;
   const id = hatch.id;
+  const muted = useRef(hatch.muted === true);
+  muted.current = hatch.muted === true;
 
   useEffect(() => {
     const page = ref.current;
@@ -38,6 +40,7 @@ export function HatchPage({ hatch, rect, hidden }: Props) {
       on('dom-ready', () => {
         markReady(id);
         window.hatch.bindHatch(id, page.getWebContentsId());
+        if (muted.current) page.setAudioMuted(true);
         navState();
       }),
       on('did-start-loading', () => actions.setLoad(id, { loading: true })),
@@ -74,6 +77,8 @@ export function HatchPage({ hatch, rect, hidden }: Props) {
       registerWebview(id, null);
     };
   }, [id]);
+
+  useEffect(() => pages.setMuted(id, hatch.muted === true), [id, hatch.muted]);
 
   return (
     <webview

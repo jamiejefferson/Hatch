@@ -74,7 +74,7 @@ export function FeedbackPanel() {
         )}
         {details && (
           <p className="hint" data-testid="feedback-details">
-            Hatch adds its version ({details.appVersion}) and your system ({details.osVersion}). It sends no name and no address.
+            Hatch adds its version ({details.appVersion}), your system ({details.osVersion}) and a random number that tells this copy of Hatch apart from others. It sends no name and no address.
           </p>
         )}
         {error && (

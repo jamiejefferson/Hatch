@@ -19,7 +19,8 @@ test('a first start shows the guide page in Fit to view, and a second start keep
 
     const links = JSON.parse(readFileSync(join(home, 'links.json'), 'utf8')) as { name: string; url: string }[];
     expect(links.map((l) => [l.name, l.url])).toEqual([['Hatch guide', welcome], ['Google', 'https://www.google.com/']]);
-    expect(JSON.parse(readFileSync(join(home, 'settings.json'), 'utf8')).newHatchPage).toBe(welcome);
+    // New Hatch asks for a page, so the guide is no New Hatch page.
+    expect(JSON.parse(readFileSync(join(home, 'settings.json'), 'utf8')).newHatchPage).toBe('');
 
     // The user opens the sidebar and leaves Fit to view, and both choices last.
     await first.win.getByTestId('sidebar-toggle').click();
@@ -58,7 +59,8 @@ test('the first start of a new version opens the guide at #new in its own tab, a
   const welcome = `${site.url}/docs.html`;
   // The user already has a canvas from an earlier version, which wrote no version.json.
   writeFileSync(join(home, 'workspace.json'), JSON.stringify({ version: 1, sidebarOpen: true, activeTabId: 'tab_mine', tabs: [{ id: 'tab_mine', name: 'Shop', hatches: [], selectedHatchId: null, pan: { x: 0, y: 0 }, zoom: 1 }] }));
-  writeFileSync(join(home, 'settings.json'), JSON.stringify({ guideSeen: true, jevRunSeen: true }));
+  // An earlier fresh install made the guide the New Hatch page, which the update clears.
+  writeFileSync(join(home, 'settings.json'), JSON.stringify({ newHatchPage: welcome, guideSeen: true, jevRunSeen: true }));
   const first = await launch(home, 0, { HATCH_WELCOME: '1', HATCH_WELCOME_URL: welcome });
   try {
     await expect.poll(async () => (await inPages<string>(first.app, 'location.href'))[0] ?? '').toBe(`${welcome}#new`);
@@ -68,6 +70,7 @@ test('the first start of a new version opens the guide at #new in its own tab, a
     await expect(first.win.locator('.sidebar')).toHaveCount(0);
     await expect(first.win.getByTestId('canvas-list').locator('li').first()).toContainText('Shop');
     expect(typeof JSON.parse(readFileSync(join(home, 'version.json'), 'utf8')).seen).toBe('string');
+    expect(JSON.parse(readFileSync(join(home, 'settings.json'), 'utf8')).newHatchPage).toBe('');
     await first.win.waitForTimeout(800);
   } finally {
     await first.app.close();

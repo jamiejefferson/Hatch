@@ -20,6 +20,7 @@ declare global {
     canGoForward(): boolean;
     isLoading(): boolean;
     openDevTools(): void;
+    setAudioMuted(muted: boolean): void;
     /** Sends a message to the script Hatch runs inside the page. */
     send(channel: string, ...args: unknown[]): Promise<void>;
   }

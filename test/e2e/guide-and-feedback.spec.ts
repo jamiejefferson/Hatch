@@ -1,6 +1,6 @@
 // A new user meets the guide once, and sends feedback from the strip. A stand-in service takes the place of the real one.
 import { createServer, type Server } from 'node:http';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { capture, freshHome, launch } from './helpers';
@@ -90,7 +90,11 @@ test('feedback sends the message, the versions and a picture, and a failed send 
     expect(sent).toMatchObject({ kind: 'idea', message: 'Let a Hatch snap to another Hatch.', screenshot_path: upload.path.split('/').pop() });
     expect(sent.app_version).toMatch(/^\d+\.\d+\.\d+/);
     expect(sent.os_version).toContain('macOS');
-    expect(Object.keys(sent).sort()).toEqual(['app_version', 'id', 'kind', 'message', 'os_version', 'screenshot_path']);
+    expect(Object.keys(sent).sort()).toEqual(['app_version', 'id', 'install_id', 'kind', 'message', 'os_version', 'screenshot_path']);
+    // The install keeps one random id, saved beside its other files.
+    const install = JSON.parse(readFileSync(join(home, 'install.json'), 'utf8')).id;
+    expect(sent.install_id).toBe(install);
+    expect(install).toMatch(/^[0-9a-f-]{36}$/);
 
     // With the service down, the feedback stays on disk. Without the picture, no upload is tried.
     service.fail(true);
@@ -106,7 +110,7 @@ test('feedback sends the message, the versions and a picture, and a failed send 
     service.fail(false);
     ({ app, win } = await launch(home, 0, { HATCH_FEEDBACK_URL: service.url }));
     await expect.poll(() => service.received.length, { timeout: 15_000 }).toBe(3);
-    expect(JSON.parse(service.received[2]!.body.toString())).toMatchObject({ message: 'The service was down for this one.', screenshot_path: null });
+    expect(JSON.parse(service.received[2]!.body.toString())).toMatchObject({ message: 'The service was down for this one.', screenshot_path: null, install_id: install });
     await expect.poll(() => existsSync(join(home, 'feedback-outbox')) ? readdirSync(join(home, 'feedback-outbox')).length : 0).toBe(0);
   } finally {
     await app.close();

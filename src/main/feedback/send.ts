@@ -3,13 +3,15 @@ import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { app, net, type WebContents } from 'electron';
 import { FEEDBACK_KINDS, type FeedbackDetails, type FeedbackInput, type FeedbackKind } from '@shared/feedback';
-import { dataFile } from '../paths';
+import { dataFile, hatchHome } from '../paths';
 import { FEEDBACK_KEY, feedbackUrl, SCREENSHOT_BUCKET } from './config';
 
 const SHOT_WIDTH = 1600;
 
 interface Queued {
   id: string;
+  /** Older outbox files lack it, and the send adds this install's. */
+  install_id?: string;
   kind: FeedbackKind;
   message: string;
   app_version: string;
@@ -21,6 +23,28 @@ interface Queued {
 let shot: Buffer | null = null;
 
 const outbox = (): string => dataFile('feedback-outbox');
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+let install: string | null = null;
+
+/**
+ * A random id this copy of Hatch makes once and keeps in install.json. It names no person; it tells installs apart in the feedback table,
+ * so a tester whose sends never arrive shows up as an install that has gone quiet.
+ */
+export async function installId(): Promise<string> {
+  if (install) return install;
+  const file = dataFile('install.json');
+  try {
+    const saved = (JSON.parse(await readFile(file, 'utf8')) as { id?: unknown }).id;
+    if (typeof saved === 'string' && UUID.test(saved)) return (install = saved);
+  } catch {
+    // No file yet, or one Hatch cannot read: make a fresh id.
+  }
+  install = randomUUID();
+  await mkdir(hatchHome(), { recursive: true });
+  await writeFile(file, JSON.stringify({ id: install }, null, 2));
+  return install;
+}
 
 export const feedbackDetails = (): FeedbackDetails => ({ appVersion: app.getVersion(), osVersion: `macOS ${process.getSystemVersion()}, ${process.arch}` });
 
@@ -57,7 +81,7 @@ async function post(path: string, type: string, body: string | Buffer): Promise<
 async function deliver(item: Queued, image: Buffer | null): Promise<void> {
   if (image) await post(`/storage/v1/object/${SCREENSHOT_BUCKET}/${item.id}.jpg`, 'image/jpeg', image);
   const { screenshot: _flag, ...row } = item;
-  await post('/rest/v1/feedback', 'application/json', JSON.stringify({ ...row, screenshot_path: image ? `${item.id}.jpg` : null }));
+  await post('/rest/v1/feedback', 'application/json', JSON.stringify({ ...row, install_id: row.install_id ?? (await installId()), screenshot_path: image ? `${item.id}.jpg` : null }));
 }
 
 /** Sends one piece of feedback. A send that fails stays in the outbox, and Hatch tries it again the next time it opens. */
@@ -67,7 +91,7 @@ export async function sendFeedback(input: FeedbackInput): Promise<'sent' | 'save
   const kind = FEEDBACK_KINDS.includes(input.kind) ? input.kind : 'other';
   const details = feedbackDetails();
   const image = input.screenshot ? shot : null;
-  const item: Queued = { id: randomUUID(), kind, message, app_version: details.appVersion, os_version: details.osVersion, screenshot: image !== null };
+  const item: Queued = { id: randomUUID(), install_id: await installId(), kind, message, app_version: details.appVersion, os_version: details.osVersion, screenshot: image !== null };
   try {
     await deliver(item, image);
     void flushOutbox();

@@ -207,6 +207,10 @@ svg { flex-shrink: 0; display: block; }
 .hatch-label:hover, .hatch-label.selected { color: var(--ink); }
 .hatch-label.selected { font-weight: 600; }
 .hatch-title { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+/* The speaker beside a title: ink while the page plays, quieter once muted. */
+.round.sound { flex-shrink: 0; color: var(--ink); cursor: pointer; }
+.round.sound.muted, .round.sound.muted[aria-pressed='true'] { background: none; border-color: transparent; color: var(--ink-3); }
+.round.sound.muted[aria-pressed='true']:hover { color: var(--ink); }
 .hatch-size { flex-shrink: 0; padding: 0 6px; font-size: 12px; color: var(--ink-3); }
 .hatch-border { position: absolute; pointer-events: none !important; outline: 1px solid var(--line-strong); }
 .hatch-border.selected { outline: 2px solid var(--ink); }

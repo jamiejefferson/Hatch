@@ -18,6 +18,11 @@ export type SidebarPanel = 'hatch' | 'comments' | 'activity' | 'settings' | 'fee
 /** The left column's two tabs. */
 export type LeftPanel = 'canvases' | 'library';
 
+/** A Hatch or a canvas the user closed this session, which Reopen brings back with its pages and places. */
+export type Closed = { id: string; kind: 'hatch'; tabId: string; hatch: Hatch } | { id: string; kind: 'canvas'; tab: Tab; index: number; name: string; blank?: string };
+/** Reopen remembers this many closed Hatches and canvases. */
+const CLOSED_LIMIT = 20;
+
 export interface LoadState {
   loading: boolean;
   canGoBack: boolean;
@@ -87,6 +92,10 @@ export interface State {
   guideOpen: boolean;
   /** The capture of Hatch's window that the feedback form offers to attach, as a data URL. */
   feedbackShot: string | null;
+  /** The Hatches whose page plays sound now, by Hatch id. */
+  audible: Record<string, boolean>;
+  /** What the user closed this session, the latest last. */
+  closed: Closed[];
 }
 
 const IDLE: LoadState = { loading: false, canGoBack: false, canGoForward: false, error: null };
@@ -132,6 +141,8 @@ let state: State = {
   toast: null,
   guideOpen: false,
   feedbackShot: null,
+  audible: {},
+  closed: [],
 };
 
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -215,6 +226,12 @@ export function listen(): () => void {
       setTimeout(() => set((s) => (s.acts[act.hatchId]?.at === at ? { acts: Object.fromEntries(Object.entries(s.acts).filter(([id]) => id !== act.hatchId)) } : {})), ACT_MS);
     }),
     window.hatch.on('page:escape', (hatchId) => actions.escape(hatchId)),
+    window.hatch.on('page:audible', ({ hatchId, audible }) =>
+      set((s) => {
+        const { [hatchId]: _old, ...rest } = s.audible;
+        return { audible: audible ? { ...rest, [hatchId]: true } : rest };
+      }),
+    ),
     window.hatch.on('toast', (text) => actions.toast(text)),
     window.hatch.on('popup:blocked', ({ hatchId, url }) => set((s) => ({ popups: { ...s.popups, [hatchId]: { url } } }))),
     window.hatch.on('page:changed', (hatchId) => set((s) => ({ pageVersion: { ...s.pageVersion, [hatchId]: (s.pageVersion[hatchId] ?? 0) + 1 } }))),
@@ -314,6 +331,10 @@ function serve(method: string, params: unknown): unknown {
   }
 }
 
+function remember(entry: Closed): void {
+  set((s) => ({ closed: [...s.closed, entry].slice(-CLOSED_LIMIT) }));
+}
+
 function findHatch(hatchId: string): Hatch | null {
   for (const t of state.workspace.tabs) {
     const h = t.hatches.find((x) => x.id === hatchId);
@@ -385,10 +406,15 @@ export const actions = {
     set((s) => ({ workspace: { ...s.workspace, activeTabId: tabId } }));
   },
   closeTab(tabId: string): void {
+    const index = state.workspace.tabs.findIndex((t) => t.id === tabId);
+    const closing = state.workspace.tabs[index];
+    if (!closing) return;
+    // Hatch always shows a canvas, so closing the last one leaves an empty one, which reopening the closed canvas replaces.
+    const blank = state.workspace.tabs.length === 1 ? emptyTab() : null;
+    if (closing.hatches.length > 0) remember({ id: newId('closed'), kind: 'canvas', tab: { ...closing, hatches: closing.hatches.map(leaveFit) }, index, name: tabLabel(state, closing), ...(blank ? { blank: blank.id } : null) });
     set((s) => {
-      const index = s.workspace.tabs.findIndex((t) => t.id === tabId);
       let tabs = s.workspace.tabs.filter((t) => t.id !== tabId);
-      if (tabs.length === 0) tabs = [emptyTab()];
+      if (tabs.length === 0) tabs = [blank ?? emptyTab()];
       const activeTabId = s.workspace.activeTabId === tabId ? tabs[Math.min(index, tabs.length - 1)]!.id : s.workspace.activeTabId;
       return { workspace: { ...s.workspace, tabs, activeTabId } };
     });
@@ -504,15 +530,45 @@ export const actions = {
   },
   closeHatch(hatchId: string): void {
     const tabId = tabOf(hatchId);
-    if (!tabId) return;
+    const hatch = findHatch(hatchId);
+    if (!tabId || !hatch) return;
+    remember({ id: newId('closed'), kind: 'hatch', tabId, hatch: leaveFit(hatch) });
     editTab(tabId, (t) => ({ ...t, hatches: t.hatches.filter((h) => h.id !== hatchId), selectedHatchId: t.selectedHatchId === hatchId ? null : t.selectedHatchId }));
     set((s) => {
       const { [hatchId]: _load, ...load } = s.load;
       const { [hatchId]: _request, ...viewRequests } = s.viewRequests;
       const { [hatchId]: _dialog, ...dialogs } = s.dialogs;
       const { [hatchId]: _popup, ...popups } = s.popups;
-      return { load, viewRequests, dialogs, popups };
+      const { [hatchId]: _audible, ...audible } = s.audible;
+      return { load, viewRequests, dialogs, popups, audible };
     });
+  },
+  /**
+   * Brings back the last thing the user closed, or the one entry they chose, with fresh ids: a Hatch to its canvas and place, a canvas as a tab where it sat.
+   */
+  reopenClosed(closedId?: string): void {
+    const entry = closedId ? state.closed.find((c) => c.id === closedId) : state.closed[state.closed.length - 1];
+    if (!entry) return;
+    set((s) => ({ closed: s.closed.filter((c) => c.id !== entry.id) }));
+    if (entry.kind === 'hatch') {
+      const tabId = state.workspace.tabs.some((t) => t.id === entry.tabId) ? entry.tabId : state.workspace.activeTabId;
+      const hatch: Hatch = { ...entry.hatch, id: newId('hatch') };
+      editTab(tabId, (t) => ({ ...t, hatches: [...t.hatches.map(leaveFit), hatch], selectedHatchId: hatch.id, pan: panToReveal(hatch, t.pan, t.zoom, state.viewport) }));
+      set((s) => ({ workspace: { ...s.workspace, activeTabId: tabId }, panel: s.panel === 'comments' ? s.panel : 'hatch' }));
+      return;
+    }
+    const ids = new Map(entry.tab.hatches.map((h) => [h.id, newId('hatch')]));
+    const tab: Tab = { ...entry.tab, id: newId('tab'), hatches: entry.tab.hatches.map((h) => ({ ...h, id: ids.get(h.id)! })), selectedHatchId: entry.tab.selectedHatchId ? (ids.get(entry.tab.selectedHatchId) ?? null) : null };
+    set((s) => {
+      // The empty canvas that stood in for the closed one gives way to it, while the user has left it empty.
+      const tabs = s.workspace.tabs.filter((t) => t.id !== entry.blank || t.hatches.length > 0 || t.name);
+      const at = Math.min(entry.index, tabs.length);
+      return { workspace: { ...s.workspace, tabs: [...tabs.slice(0, at), tab, ...tabs.slice(at)], activeTabId: tab.id } };
+    });
+  },
+  /** A muted Hatch keeps its mute through navigations and restarts. */
+  toggleMute(hatchId: string): void {
+    editHatch(hatchId, ({ muted, ...rest }) => (muted ? rest : { ...rest, muted: true }));
   },
   /**
    * Opens a second Hatch on the same page at the same size, selected, and returns its id.

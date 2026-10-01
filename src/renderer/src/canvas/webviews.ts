@@ -34,4 +34,6 @@ export const pages = {
   back: (hatchId: string): void => withPage(hatchId, (p) => p.canGoBack() && p.goBack()),
   forward: (hatchId: string): void => withPage(hatchId, (p) => p.canGoForward() && p.goForward()),
   inspect: (hatchId: string): void => withPage(hatchId, (p) => p.openDevTools()),
+  // Chromium keeps the mute on the page's webContents across navigations, so HatchPage sets it once the page attaches and again when it changes.
+  setMuted: (hatchId: string, muted: boolean): void => withPage(hatchId, (p) => p.setAudioMuted(muted)),
 };

@@ -55,6 +55,8 @@ export function bindHatch(hatchId: string, guest: WebContents): void {
   guest.on('before-input-event', (_event, input) => {
     if (input.type === 'keyDown' && input.key === 'Escape' && !input.meta && !input.control && !input.alt) guest.hostWebContents?.send('page:escape', hatchId);
   });
+  // The Hatch's title row shows a speaker while the page plays sound.
+  guest.on('audio-state-changed', (event) => guest.hostWebContents?.send('page:audible', { hatchId, audible: event.audible }));
   guest.on('devtools-closed', () => void page.attach().catch(() => {}));
   observers.forEach((o) => o(page));
   void page.attach().catch(() => {});

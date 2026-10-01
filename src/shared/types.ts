@@ -16,6 +16,8 @@ export interface Hatch {
   template: TemplateId;
   /** What the Hatch displays. The agent always reads the agent view, whatever this says. */
   view: HatchView;
+  /** The user muted this Hatch's sound. Absent means it plays. */
+  muted?: boolean;
 }
 
 export type HatchView = 'page' | 'agent';

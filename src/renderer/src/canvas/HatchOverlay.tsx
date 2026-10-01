@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Rect } from '@shared/geometry';
 import type { Hatch } from '@shared/types';
-import { CloseIcon, FitIcon } from '../icons';
+import { CloseIcon, FitIcon, MutedIcon, SoundIcon } from '../icons';
 import { actions, hatchLabel, loadStateOf, useStore } from '../state/store';
 import { startDrag } from './drag';
 import { AgentView } from './AgentView';
@@ -43,6 +43,18 @@ function noticeBox(screen: Rect, canvasWidth: number): { left: number; top: numb
   const width = Math.min(520, canvasWidth - 32);
   const left = Math.min(Math.max(screen.x + 16, 16), canvasWidth - width - 16);
   return { left, top: Math.max(screen.y, 8) + 12, width };
+}
+
+/** A speaker beside a Hatch's title while its page plays sound, and while it is muted. A press mutes the Hatch or lets it play again. */
+export function SoundButton({ hatch }: { hatch: Hatch }) {
+  const audible = useStore((s) => s.audible[hatch.id] === true);
+  if (!audible && !hatch.muted) return null;
+  const label = hatch.muted ? 'Let this Hatch play sound' : 'Mute this Hatch';
+  return (
+    <button className={`round small quiet sound${hatch.muted ? ' muted' : ''}`} aria-label={label} title={label} aria-pressed={hatch.muted === true} onClick={(e) => { e.stopPropagation(); actions.toggleMute(hatch.id); }} data-testid={`sound-${hatch.id}`}>
+      {hatch.muted ? <MutedIcon size={14} /> : <SoundIcon size={14} />}
+    </button>
+  );
 }
 
 /** Everything Hatch draws around a page. It sits above the canvas and never scales, so it stays crisp at every zoom. */
@@ -106,6 +118,7 @@ export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked }: P
     <div className="hatch-bar" style={barBox(screen)} onPointerDown={move} onPointerLeave={() => setHover(false)} onContextMenu={menu} data-testid={`header-${id}`}>
       {working && <span className="working-dot" role="status" aria-label="An agent is working in this Hatch" />}
       <span className="hatch-title">{hatchLabel(hatch)}</span>
+      <SoundButton hatch={hatch} />
       <button className="round small quiet" aria-label="Fit to view" title="Fit to view" aria-pressed={false} onClick={run(() => actions.toggleFit(id))} data-testid="fit-toggle">
         <FitIcon size={14} />
       </button>
@@ -117,6 +130,7 @@ export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked }: P
     <div className={`hatch-label${selected ? ' selected' : ''}`} style={labelBox(screen)} onPointerDown={move} onPointerEnter={() => selected && setHover(true)} onContextMenu={menu} data-testid={`header-${id}`}>
       {working && <span className="working-dot" role="status" aria-label="An agent is working in this Hatch" />}
       <span className="hatch-title">{hatchLabel(hatch)}</span>
+      <SoundButton hatch={hatch} />
     </div>
   );
 

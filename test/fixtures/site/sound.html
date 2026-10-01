@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Sound</title></head>
+<body>
+  <h1>A page that plays a low tone</h1>
+  <script>
+    // A quiet 40 Hz tone, loud enough for Chromium to count the page as playing sound.
+    const audio = new AudioContext();
+    const tone = audio.createOscillator();
+    const gain = audio.createGain();
+    tone.frequency.value = 40;
+    gain.gain.value = 0.05;
+    tone.connect(gain).connect(audio.destination);
+    tone.start();
+  </script>
+</body>
+</html>
