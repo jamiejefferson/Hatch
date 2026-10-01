@@ -68,3 +68,10 @@ describe('JsonStore', () => {
     expect(kept && readFileSync(join(dir, kept), 'utf8')).toBe('{ broken');
   });
 });
+
+describe('notes in the workspace', () => {
+  it('keeps a canvas notes through a repair and drops one with no words', () => {
+    const raw = { tabs: [{ id: 't1', hatches: [], notes: [{ id: 'n1', text: 'Ask about pricing', x: 5, y: 6, author: 'user', createdAt: '2026-10-01' }, { id: 'n2', text: ' ' }] }], activeTabId: 't1' };
+    expect(repairWorkspace(raw).tabs[0]!.notes).toEqual([{ id: 'n1', text: 'Ask about pricing', x: 5, y: 6, author: 'user', createdAt: '2026-10-01' }]);
+  });
+});

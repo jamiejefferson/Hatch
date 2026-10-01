@@ -1,7 +1,7 @@
 import { BrowserWindow, clipboard, dialog, ipcMain, shell, webContents } from 'electron';
 import { parseAddress } from '@shared/address';
 import type { FeedbackInput } from '@shared/feedback';
-import type { SavedCanvas, SavedLink, Settings, Workspace } from '@shared/types';
+import { THEMES, type SavedCanvas, type SavedLink, type Settings, type Theme, type Workspace } from '@shared/types';
 import { cleanFolderName, putSavedCanvas, repairSavedCanvases } from '@shared/canvases';
 import { newId, repairWorkspace } from '@shared/workspace';
 import type { Anchor, CommentStatus } from '@shared/comments';
@@ -88,6 +88,8 @@ export function registerIpc(): void {
       jevRunSeen: current.jevRunSeen || settings.jevRunSeen === true,
       linksFolder: typeof settings.linksFolder === 'string' ? cleanFolder(settings.linksFolder) : current.linksFolder,
       commentsFolder: typeof settings.commentsFolder === 'string' ? cleanFolder(settings.commentsFolder) : current.commentsFolder,
+      theme: THEMES.includes(settings.theme as Theme) ? (settings.theme as Theme) : current.theme,
+      sidebarAtEdge: typeof settings.sidebarAtEdge === 'boolean' ? settings.sidebarAtEdge : current.sidebarAtEdge,
     })).then(async (saved) => {
       // The links file may have moved, so the interface reads the list again. Comments read fresh on every call.
       setFolders(saved);

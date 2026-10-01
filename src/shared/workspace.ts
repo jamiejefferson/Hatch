@@ -1,7 +1,7 @@
 // Builds, repairs and edits the workspace. Pure functions, so the main process and the renderer share them.
 import { clampZoom } from './geometry';
 import { clampSize, templateForSize } from './templates';
-import type { Hatch, Tab, TemplateId, Workspace } from './types';
+import type { Hatch, Note, Tab, TemplateId, Workspace } from './types';
 
 export const newId = (prefix: string): string => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 
@@ -44,7 +44,24 @@ function repairTab(raw: unknown): Tab | null {
     else fitSeen = true;
   }
   const name = str(source.name, '').trim().slice(0, 60);
-  return { id: str(source.id, newId('tab')), ...(name ? { name } : {}), hatches, selectedHatchId: selected, pan: { x: num(pan.x, 40), y: num(pan.y, 68) }, zoom: clampZoom(num(source.zoom, 0.62)) };
+  const notes = repairNotes(source.notes);
+  return { id: str(source.id, newId('tab')), ...(name ? { name } : {}), hatches, selectedHatchId: selected, pan: { x: num(pan.x, 40), y: num(pan.y, 68) }, zoom: clampZoom(num(source.zoom, 0.62)), ...(notes.length ? { notes } : {}) };
+}
+
+export const MAX_NOTE_LENGTH = 2000;
+
+/** Keeps the notes that hold words. A note left empty is a note the user gave up on. */
+export function repairNotes(raw: unknown): Note[] {
+  if (!Array.isArray(raw)) return [];
+  const out: Note[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const source = item as Record<string, unknown>;
+    const text = str(source.text, '').slice(0, MAX_NOTE_LENGTH);
+    if (!text.trim()) continue;
+    out.push({ id: str(source.id, newId('note')), text, x: num(source.x, 0), y: num(source.y, 0), author: str(source.author, 'user') || 'user', createdAt: str(source.createdAt, '') });
+  }
+  return out;
 }
 
 export function repairHatch(raw: unknown): Hatch | null {

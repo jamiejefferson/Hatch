@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MenuCommand } from '../../preload/api';
 import type { Tab } from '@shared/types';
 import { Canvas } from './canvas/Canvas';
@@ -47,6 +47,12 @@ export function App() {
   const activeTabId = useStore((s) => s.workspace.activeTabId);
   const sidebarOpen = useStore((s) => s.workspace.sidebarOpen);
   const leftOpen = useStore((s) => s.workspace.leftOpen !== false);
+  const theme = useStore((s) => s.settings.theme);
+
+  // The interface follows the chosen theme. 'system' lets the Mac's own choice decide through prefers-color-scheme.
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 
   useEffect(() => {
     void boot();
@@ -99,13 +105,36 @@ function Shell({ tabs, activeTabId, sidebarOpen, leftOpen }: { tabs: Tab[]; acti
             <Canvas key={tab.id} tab={tab} active={tab.id === activeTabId} />
           ))}
         </div>
-        {sidebarOpen && <Sidebar />}
+        {sidebarOpen ? <Sidebar /> : <SidebarAtEdge />}
       </div>
       <NewHatchModal />
       <ContextMenu />
       <Toast />
       <Guide />
       <WhatsNew />
+    </div>
+  );
+}
+
+/** With the sidebar hidden, a handle marks the right edge, and the sidebar slides out over the canvas while the pointer rests there. */
+function SidebarAtEdge() {
+  const on = useStore((s) => s.settings.sidebarAtEdge);
+  const [peek, setPeek] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const later = (next: boolean, ms: number): void => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setPeek(next), ms);
+  };
+  useEffect(() => () => void (timer.current && clearTimeout(timer.current)), []);
+  if (!on) return null;
+  // A short wait keeps a pointer that only passes the edge, such as one on its way to a page's scroll bar, from opening the sidebar.
+  return peek ? (
+    <div className="sidebar-peek" onPointerEnter={() => later(true, 0)} onPointerLeave={() => later(false, 250)} data-testid="sidebar-peek">
+      <Sidebar />
+    </div>
+  ) : (
+    <div className="edge-zone" onPointerEnter={() => later(true, 150)} onPointerLeave={() => timer.current && clearTimeout(timer.current)} data-testid="sidebar-edge">
+      <span className="edge-handle" aria-hidden="true" />
     </div>
   );
 }

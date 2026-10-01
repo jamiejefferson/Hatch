@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { parseAddress } from '@shared/address';
 import { CheckIcon, CloseIcon, ProjectsIcon } from '../icons';
 import { ConnectSteps } from '../shell/Connect';
+import { THEMES } from '@shared/types';
 import { actions, useStore } from '../state/store';
 
 export function SettingsPanel() {
@@ -43,6 +44,18 @@ export function SettingsPanel() {
         <ConnectSteps connection={connection} />
       </section>
     )}
+    <section data-testid="appearance">
+      <h2>Appearance</h2>
+      <div className="segmented" role="radiogroup" aria-label="Theme">
+        {THEMES.map((t) => (
+          <button key={t} role="radio" aria-checked={settings.theme === t} className={settings.theme === t ? 'current' : ''} onClick={() => void actions.updateSettings({ theme: t })} data-testid={`theme-${t}`}>
+            {t === 'system' ? 'Match the Mac' : t === 'light' ? 'Light' : 'Dark'}
+          </button>
+        ))}
+      </div>
+      <Switch label="Show the sidebar at the right edge" checked={settings.sidebarAtEdge} onChange={(sidebarAtEdge) => void actions.updateSettings({ sidebarAtEdge })} />
+      <p className="hint">The theme changes Hatch’s own panels. Pages keep their own look. With the sidebar hidden, a handle marks the right edge, and resting the pointer there slides the sidebar out.</p>
+    </section>
     <section>
       <h2 id="new-hatch-page">Hatch Home</h2>
       <form onSubmit={save} noValidate>

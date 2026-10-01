@@ -1,5 +1,5 @@
 import { cleanFolderName, repairSavedCanvases } from '@shared/canvases';
-import { DEFAULT_SETTINGS, type SavedCanvas, type SavedLink, type Settings, type Workspace } from '@shared/types';
+import { DEFAULT_SETTINGS, THEMES, type SavedCanvas, type SavedLink, type Settings, type Theme, type Workspace } from '@shared/types';
 import { repairWorkspace } from '@shared/workspace';
 import { dataFile } from '../paths';
 import { JsonStore } from './json-store';
@@ -27,6 +27,8 @@ function repairSettings(raw: unknown): Settings {
     jevRunSeen: source.jevRunSeen === true,
     linksFolder: cleanFolder(source.linksFolder),
     commentsFolder: cleanFolder(source.commentsFolder),
+    theme: THEMES.includes(source.theme as Theme) ? (source.theme as Theme) : DEFAULT_SETTINGS.theme,
+    sidebarAtEdge: typeof source.sidebarAtEdge === 'boolean' ? source.sidebarAtEdge : DEFAULT_SETTINGS.sidebarAtEdge,
   };
 }
 

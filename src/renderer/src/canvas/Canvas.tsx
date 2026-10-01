@@ -7,6 +7,7 @@ import { actions, fitHatch, useStore } from '../state/store';
 import { startDrag } from './drag';
 import { HatchOverlay } from './HatchOverlay';
 import { HatchPage } from './HatchPage';
+import { Notes } from './Notes';
 
 /** Stands for the empty canvas in the double-tap state. */
 const EMPTY = 'canvas';
@@ -116,6 +117,7 @@ export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
             <HatchOverlay key={h.id} tabId={tab.id} hatch={h} size={rectOf(h)} screen={toScreen(rectOf(h), view.pan, view.zoom)} zoom={view.zoom} selected={h.id === tab.selectedHatchId} docked={h === fit} />
           ),
         )}
+        {!fit && <Notes tab={tab} pan={view.pan} zoom={view.zoom} origin={() => ref.current?.getBoundingClientRect() ?? null} />}
         {tab.hatches.length === 0 && (
           <div className="canvas-empty">
             <p>This tab has no pages yet.</p>

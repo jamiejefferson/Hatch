@@ -22,6 +22,19 @@ export interface Hatch {
 
 export type HatchView = 'page' | 'agent';
 
+/** A post-it on a canvas. It holds a thought about the canvas as a whole, where a comment pins one to an element of a page. */
+export interface Note {
+  id: string;
+  text: string;
+  /** Top left corner in canvas pixels. */
+  x: number;
+  y: number;
+  /** 'user', or the name of the agent that added it. Only the user changes a note's words. */
+  author: string;
+  /** When the note was made, as an ISO date. The Comments tab lists notes and comments in this order. */
+  createdAt: string;
+}
+
 export interface Tab {
   id: string;
   /** The name the user gave this canvas. Without one, the tab takes its project's name. */
@@ -30,6 +43,8 @@ export interface Tab {
   selectedHatchId: string | null;
   pan: { x: number; y: number };
   zoom: number;
+  /** The canvas's notes. An older workspace lacks them. */
+  notes?: Note[];
 }
 
 export interface Workspace {
@@ -58,6 +73,7 @@ export interface SavedCanvas {
   hatches: Hatch[];
   pan: { x: number; y: number };
   zoom: number;
+  notes?: Note[];
 }
 
 export interface Settings {
@@ -79,9 +95,16 @@ export interface Settings {
   linksFolder: string;
   /** The folder that holds one folder of comment files per site. Empty means Hatch's own data folder. Project comments stay inside their project. */
   commentsFolder: string;
+  /** Hatch's own interface follows the Mac, or stays light or dark. Pages keep their own look. */
+  theme: Theme;
+  /** With the sidebar hidden, a handle sits at the right edge and the sidebar slides out while the pointer rests there. */
+  sidebarAtEdge: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { newHatchPage: '', askBeforeViewSwitch: true, allowEvaluate: false, describeElements: false, showComments: true, guideSeen: false, jevRunSeen: false, linksFolder: '', commentsFolder: '' };
+export type Theme = 'system' | 'light' | 'dark';
+export const THEMES: Theme[] = ['system', 'light', 'dark'];
+
+export const DEFAULT_SETTINGS: Settings = { newHatchPage: '', askBeforeViewSwitch: true, allowEvaluate: false, describeElements: false, showComments: true, guideSeen: false, jevRunSeen: false, linksFolder: '', commentsFolder: '', theme: 'system', sidebarAtEdge: true };
 
 /** One step of a jev_run, as the Activity panel lists it. */
 export interface TraceLine { step: number; action: string; detail: string; confidence: number }

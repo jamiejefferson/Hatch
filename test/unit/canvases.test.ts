@@ -66,3 +66,20 @@ describe('links in folders', () => {
     expect(cleanFolderName('x'.repeat(80))).toHaveLength(60);
   });
 });
+
+describe('notes on a canvas', () => {
+  const note = (id: string, text: string, author = 'user') => ({ id, text, x: 100, y: 200, author, createdAt: '2026-10-01T12:00:00.000Z' });
+
+  it('travel with a saved canvas and open with fresh ids', () => {
+    const saved = savedCanvasFromTab({ ...tab, notes: [note('n1', 'Check the Team price'), note('n2', '   ')] }, 'Research');
+    expect(saved.notes?.map((n) => n.text)).toEqual(['Check the Team price']);
+    const opened = tabFromSavedCanvas(saved);
+    expect(opened.notes?.[0]).toMatchObject({ text: 'Check the Team price', x: 100, y: 200, author: 'user' });
+    expect(opened.notes?.[0]!.id).not.toBe('n1');
+  });
+
+  it('survive a repair, and a note with no words or a broken shape is dropped', () => {
+    const [repaired] = repairSavedCanvases([{ ...savedCanvasFromTab(tab, 'R'), notes: [note('n1', 'Keep me', 'scout'), { id: 'n2', text: '' }, 'junk', { text: 'No place' }] }]);
+    expect(repaired!.notes?.map((n) => [n.text, n.author, n.x])).toEqual([['Keep me', 'scout', 100], ['No place', 'user', 0]]);
+  });
+});

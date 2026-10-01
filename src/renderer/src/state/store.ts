@@ -8,10 +8,10 @@ import { hatchAddress, projectOf, projectUrl, PROXY_PORT } from '@shared/project
 import type { Anchor, CommentStatus, PageComments } from '@shared/comments';
 import type { ConsentAnswer, ConsentRequest, SignIn } from '@shared/signins';
 import type { ConnectionInfo, Outcome } from '../../../preload/api';
-import type { ProjectsState, ActivityEntry, AgentAct, AgentWorkState, DialogState, Hatch, HatchView, InterfaceState, SavedCanvas, SavedLink, Settings, Tab, TemplateId, ViewRequest, Workspace } from '@shared/types';
+import type { ProjectsState, ActivityEntry, AgentAct, AgentWorkState, DialogState, Hatch, HatchView, InterfaceState, Note, SavedCanvas, SavedLink, Settings, Tab, TemplateId, ViewRequest, Workspace } from '@shared/types';
 import { savedCanvasFromTab, tabFromSavedCanvas } from '@shared/canvases';
 import { DEFAULT_SETTINGS } from '@shared/types';
-import { emptyTab, emptyWorkspace, newId } from '@shared/workspace';
+import { emptyTab, emptyWorkspace, MAX_NOTE_LENGTH, newId } from '@shared/workspace';
 
 /** The right sidebar's three tabs, and the two pages its top-strip buttons open. */
 export type SidebarPanel = 'hatch' | 'comments' | 'activity' | 'settings' | 'feedback';
@@ -41,6 +41,13 @@ export interface State {
   leftPanel: LeftPanel;
   /** Which threads the Comments tab lists. */
   commentFilter: 'open' | 'resolved';
+  /** Which kinds the Comments tab lists: comments, notes, or both. */
+  listKinds: { comments: boolean; notes: boolean };
+  /** The next click on the canvas places a note. */
+  placingNote: boolean;
+  /** The note the user selected, and the one open for typing. */
+  selectedNote: string | null;
+  editingNote: string | null;
   newHatchOpen: boolean;
   /** The canvas area in screen pixels, which Fit to view and New Hatch placement need. */
   viewport: { width: number; height: number };
@@ -109,6 +116,10 @@ let state: State = {
   panel: 'hatch',
   leftPanel: 'canvases',
   commentFilter: 'open',
+  listKinds: { comments: true, notes: true },
+  placingNote: false,
+  selectedNote: null,
+  editingNote: null,
   newHatchOpen: false,
   viewport: { width: 960, height: 752 },
   load: {},
@@ -291,6 +302,15 @@ function serve(method: string, params: unknown): unknown {
     }
     case 'closeTab':
       return actions.closeTab((p as { tabId: string }).tabId);
+    case 'addNote': {
+      const { tabId, text, author } = p as { tabId: string; text: string; author: string };
+      return actions.addNote(tabId, text, author);
+    }
+    case 'notes': {
+      const tab = state.workspace.tabs.find((t) => t.id === (p as { tabId: string }).tabId);
+      if (!tab) throw new Error('That canvas has closed.');
+      return tab.notes ?? [];
+    }
     case 'openHatch': {
       const { tabId, url, preset, width, height } = p as { tabId: string; url: string; preset?: Exclude<TemplateId, 'custom'>; width?: number; height?: number };
       const opened = actions.openHatch(url, { tabId, byAgent: true });
@@ -329,6 +349,22 @@ function serve(method: string, params: unknown): unknown {
     default:
       throw new Error(`The interface has no method called ${method}.`);
   }
+}
+
+/** A note's size on screen, which stays the same at every zoom. Revealing a note needs it. */
+export const NOTE_SIZE = { width: 176, height: 120 };
+
+function findNote(noteId: string): { tabId: string; note: Note } | null {
+  for (const t of state.workspace.tabs) {
+    const note = t.notes?.find((n) => n.id === noteId);
+    if (note) return { tabId: t.id, note };
+  }
+  return null;
+}
+
+function editNotes(noteId: string, change: (note: Note) => Note): void {
+  const found = findNote(noteId);
+  if (found) editTab(found.tabId, (t) => ({ ...t, notes: (t.notes ?? []).map((n) => (n.id === noteId ? change(n) : n)) }));
 }
 
 function remember(entry: Closed): void {
@@ -453,11 +489,13 @@ export const actions = {
   /** Zooms and pans so every Hatch in the tab shows at once. */
   showAll(): void {
     editActiveTab((t) => {
-      if (fitHatch(t) || t.hatches.length === 0) return t;
-      const left = Math.min(...t.hatches.map((h) => h.x));
-      const top = Math.min(...t.hatches.map((h) => h.y));
-      const right = Math.max(...t.hatches.map((h) => h.x + h.width));
-      const bottom = Math.max(...t.hatches.map((h) => h.y + h.height));
+      if (fitHatch(t) || t.hatches.length + (t.notes?.length ?? 0) === 0) return t;
+      // A note keeps its size on screen, so its size on the canvas is measured at the current zoom.
+      const boxes = [...t.hatches, ...(t.notes ?? []).map((n) => ({ x: n.x, y: n.y - 30 / t.zoom, width: NOTE_SIZE.width / t.zoom, height: (NOTE_SIZE.height + 30) / t.zoom }))];
+      const left = Math.min(...boxes.map((h) => h.x));
+      const top = Math.min(...boxes.map((h) => h.y));
+      const right = Math.max(...boxes.map((h) => h.x + h.width));
+      const bottom = Math.max(...boxes.map((h) => h.y + h.height));
       const margin = 64;
       const zoom = clampZoom(Math.min((state.viewport.width - margin * 2) / (right - left), (state.viewport.height - margin * 2) / (bottom - top), 1));
       return { ...t, zoom, pan: { x: (state.viewport.width - (right - left) * zoom) / 2 - left * zoom, y: (state.viewport.height - (bottom - top) * zoom) / 2 - top * zoom } };
@@ -482,12 +520,19 @@ export const actions = {
   },
   /** Esc leaves Fit to view first. On the canvas it deselects, but only when the key came from Hatch's own interface. */
   escape(fromHatchId?: string): void {
+    if (!fromHatchId && state.placingNote) return set({ placingNote: false });
+    if (!fromHatchId && state.editingNote) return actions.finishNote();
+    if (!fromHatchId && state.selectedNote) return set({ selectedNote: null });
     const tab = activeTab(state);
     const fit = fitHatch(tab);
     if (fit) return fromHatchId && fromHatchId !== fit.id ? undefined : editHatch(fit.id, leaveFit);
     if (!fromHatchId) actions.select(null);
   },
   select(hatchId: string | null): void {
+    if (state.selectedNote) {
+      actions.finishNote();
+      set({ selectedNote: null });
+    }
     editActiveTab((t) => {
       if (t.selectedHatchId === hatchId) return t;
       // Fit to view shows one Hatch, so selecting nothing or another Hatch leaves it.
@@ -742,6 +787,75 @@ export const actions = {
     set({ commentFilter });
   },
   /** Selects a thread's Hatch, brings it into view and opens the thread over its pin. */
+  // notes
+  /** The note button: the next click on the canvas places a note. Notes hide in Fit to view, so the button waits there. */
+  togglePlacingNote(): void {
+    if (fitHatch(activeTab(state))) return;
+    set((s) => ({ placingNote: !s.placingNote }));
+  },
+  /** The user's click in note mode: a new note at that canvas point, open for typing. */
+  placeNote(at: Point): string {
+    const note: Note = { id: newId('note'), text: '', x: Math.round(at.x), y: Math.round(at.y), author: 'user', createdAt: new Date().toISOString() };
+    editActiveTab((t) => ({ ...t, selectedHatchId: null, notes: [...(t.notes ?? []), note] }));
+    set({ placingNote: false, selectedNote: note.id, editingNote: note.id });
+    return note.id;
+  },
+  /** An agent's note. Without a place it sits to the right of the canvas's Hatches, below the agent notes already there. */
+  addNote(tabId: string, text: string, author: string, at?: Point): string {
+    const tab = state.workspace.tabs.find((t) => t.id === tabId);
+    if (!tab) throw new Error('That canvas has closed.');
+    const clean = text.trim().slice(0, MAX_NOTE_LENGTH);
+    if (!clean) throw new Error('A note needs words.');
+    const right = tab.hatches.length ? Math.max(...tab.hatches.map((h) => h.x + h.width)) + 48 : 40;
+    const top = tab.hatches.length ? Math.min(...tab.hatches.map((h) => h.y)) : 40;
+    const below = (tab.notes ?? []).filter((n) => n.author !== 'user' && n.x === right).length;
+    const note: Note = { id: newId('note'), text: clean, x: Math.round(at?.x ?? right), y: Math.round(at?.y ?? top + below * 160), author, createdAt: new Date().toISOString() };
+    editTab(tabId, (t) => ({ ...t, notes: [...(t.notes ?? []), note] }));
+    return note.id;
+  },
+  /** Only the user changes a note's words. */
+  editNote(noteId: string, text: string): void {
+    editNotes(noteId, (n) => ({ ...n, text: text.slice(0, MAX_NOTE_LENGTH) }));
+  },
+  startEditingNote(noteId: string): void {
+    set({ selectedNote: noteId, editingNote: noteId });
+  },
+  /** Ends typing. A note left empty goes away, as an unwritten note is no note. */
+  finishNote(): void {
+    const id = state.editingNote;
+    if (!id) return;
+    set({ editingNote: null });
+    const note = findNote(id)?.note;
+    if (note && !note.text.trim()) actions.deleteNote(id);
+  },
+  moveNote(noteId: string, x: number, y: number): void {
+    editNotes(noteId, (n) => ({ ...n, x: Math.round(x), y: Math.round(y) }));
+  },
+  deleteNote(noteId: string): void {
+    const found = findNote(noteId);
+    if (!found) return;
+    editTab(found.tabId, (t) => ({ ...t, notes: (t.notes ?? []).filter((n) => n.id !== noteId) }));
+    set((s) => ({ selectedNote: s.selectedNote === noteId ? null : s.selectedNote, editingNote: s.editingNote === noteId ? null : s.editingNote }));
+  },
+  selectNote(noteId: string | null): void {
+    if (state.editingNote && state.editingNote !== noteId) actions.finishNote();
+    if (noteId) editActiveTab((t) => (t.selectedHatchId ? { ...t, selectedHatchId: null } : t));
+    set({ selectedNote: noteId });
+  },
+  /** A note picked in the Comments tab: Fit to view lets go, and the canvas brings the note into sight. */
+  showNote(noteId: string): void {
+    const found = findNote(noteId);
+    if (!found) return;
+    actions.activateTab(found.tabId);
+    editTab(found.tabId, (t) => ({ ...t, hatches: t.hatches.map(leaveFit) }));
+    // A note keeps its size on screen, so its size in canvas pixels grows as the canvas zooms out.
+    editTab(found.tabId, (t) => ({ ...t, pan: panToReveal({ x: found.note.x, y: found.note.y - 30 / t.zoom, width: NOTE_SIZE.width / t.zoom, height: (NOTE_SIZE.height + 30) / t.zoom }, t.pan, t.zoom, state.viewport) }));
+    actions.selectNote(noteId);
+  },
+  setListKind(kind: 'comments' | 'notes', on: boolean): void {
+    set((s) => ({ listKinds: { ...s.listKinds, [kind]: on } }));
+  },
+
   showThread(hatchId: string, threadId: string): void {
     actions.reveal(hatchId);
     actions.openThread(hatchId, threadId);

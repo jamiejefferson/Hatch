@@ -2,7 +2,7 @@
 import { clampZoom } from './geometry';
 import { templateForSize } from './templates';
 import type { Hatch, SavedCanvas, Tab } from './types';
-import { newId, repairHatch } from './workspace';
+import { newId, repairHatch, repairNotes } from './workspace';
 
 export const MAX_CANVAS_NAME = 60;
 
@@ -21,19 +21,22 @@ export function repairSavedCanvases(raw: unknown): SavedCanvas[] {
     if (typeof source.id !== 'string' || typeof source.name !== 'string' || !source.name.trim()) continue;
     const hatches = (Array.isArray(source.hatches) ? source.hatches : []).map(repairHatch).filter((h): h is Hatch => h !== null).map(onCanvas);
     const pan = (source.pan ?? {}) as Record<string, unknown>;
-    out.push({ id: source.id, name: source.name.trim().slice(0, MAX_CANVAS_NAME), savedAt: typeof source.savedAt === 'string' ? source.savedAt : '', hatches, pan: { x: num(pan.x, 40), y: num(pan.y, 68) }, zoom: clampZoom(num(source.zoom, 0.62)) });
+    const notes = repairNotes(source.notes);
+    out.push({ id: source.id, name: source.name.trim().slice(0, MAX_CANVAS_NAME), savedAt: typeof source.savedAt === 'string' ? source.savedAt : '', hatches, pan: { x: num(pan.x, 40), y: num(pan.y, 68) }, zoom: clampZoom(num(source.zoom, 0.62)), ...(notes.length ? { notes } : {}) });
   }
   return out;
 }
 
 /** Takes a snapshot of a tab under a name. */
 export function savedCanvasFromTab(tab: Tab, name: string, now = new Date()): SavedCanvas {
-  return { id: newId('canvas'), name: name.trim().slice(0, MAX_CANVAS_NAME), savedAt: now.toISOString(), hatches: tab.hatches.map(onCanvas), pan: { ...tab.pan }, zoom: tab.zoom };
+  const notes = (tab.notes ?? []).filter((n) => n.text.trim());
+  return { id: newId('canvas'), name: name.trim().slice(0, MAX_CANVAS_NAME), savedAt: now.toISOString(), hatches: tab.hatches.map(onCanvas), pan: { ...tab.pan }, zoom: tab.zoom, ...(notes.length ? { notes } : {}) };
 }
 
 /** Builds a new tab from a saved canvas. Every Hatch takes a fresh id, so two openings of one saved canvas never share pages. */
 export function tabFromSavedCanvas(saved: SavedCanvas): Tab {
-  return { id: newId('tab'), name: saved.name, hatches: saved.hatches.map((h) => ({ ...onCanvas(h), id: newId('hatch') })), selectedHatchId: null, pan: { ...saved.pan }, zoom: clampZoom(saved.zoom) };
+  const notes = (saved.notes ?? []).map((n) => ({ ...n, id: newId('note') }));
+  return { id: newId('tab'), name: saved.name, hatches: saved.hatches.map((h) => ({ ...onCanvas(h), id: newId('hatch') })), selectedHatchId: null, pan: { ...saved.pan }, zoom: clampZoom(saved.zoom), ...(notes.length ? { notes } : {}) };
 }
 
 /** Adds a saved canvas to the list. A saved canvas with the same name is replaced, so saving twice keeps one. */

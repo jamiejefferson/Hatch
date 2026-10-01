@@ -1,5 +1,5 @@
 import { pages } from '../canvas/webviews';
-import { BackIcon, CommentIcon, ForwardIcon, GrabIcon, MinusIcon, OutlineIcon, PlusIcon, ReloadIcon, ShowAllIcon, StopIcon } from '../icons';
+import { BackIcon, CommentIcon, ForwardIcon, GrabIcon, MinusIcon, NoteIcon, OutlineIcon, PlusIcon, ReloadIcon, ShowAllIcon, StopIcon } from '../icons';
 import { actions, activeTab, fitHatch, loadStateOf, selectedHatch, useStore } from '../state/store';
 
 /** The tools that act inside the selected Hatch's page, in one column beside the canvas. The zoom sits at its foot. */
@@ -12,6 +12,7 @@ export function Toolbar() {
   const id = hatch?.id;
   const none = !id;
   const agent = hatch?.view === 'agent';
+  const placingNote = useStore((s) => s.placingNote);
 
   return (
     <nav className="toolbar" aria-label="Hatch tools" data-testid="toolbar">
@@ -41,6 +42,10 @@ export function Toolbar() {
         <button className="tool" aria-label={picking === 'comment' ? 'Stop adding a comment' : 'Add a comment'} title={picking === 'comment' ? 'Stop adding a comment' : 'Add a comment'} aria-pressed={picking === 'comment'} disabled={none} onClick={() => id && (picking === 'comment' ? actions.stopPicking() : actions.startPicking(id))} data-testid="add-comment">
           <CommentIcon />
         </button>
+        {/* Notes belong to the canvas, so the button needs no selected Hatch. They hide in Fit to view, and the button waits there. */}
+        <button className="tool" aria-label={placingNote ? 'Stop adding a note' : 'Add a note to the canvas'} title={fit ? 'Notes show on the canvas. Leave Fit to view to add one.' : placingNote ? 'Stop adding a note' : 'Add a note to the canvas'} aria-pressed={placingNote} disabled={!!fit} onClick={actions.togglePlacingNote} data-testid="add-note">
+          <NoteIcon />
+        </button>
         <button className="tool" aria-label={picking === 'grab' ? 'Stop grabbing' : 'Grab an element for Paper'} title={picking === 'grab' ? 'Stop grabbing' : 'Grab an element for Paper'} aria-pressed={picking === 'grab'} disabled={none} onClick={() => id && (picking === 'grab' ? actions.stopPicking() : actions.startGrab(id))} data-testid="grab-element">
           <GrabIcon />
         </button>
@@ -58,7 +63,7 @@ export function Toolbar() {
         <button className="tool" aria-label="Zoom out" title="Zoom out" disabled={!!fit} onClick={() => actions.zoomStep(-1)}>
           <MinusIcon size={14} />
         </button>
-        <button className="tool" aria-label="Show every Hatch" title="Show every Hatch" disabled={!!fit || tab.hatches.length === 0} onClick={actions.showAll} data-testid="show-all">
+        <button className="tool" aria-label="Show every Hatch" title="Show every Hatch" disabled={!!fit || tab.hatches.length + (tab.notes?.length ?? 0) === 0} onClick={actions.showAll} data-testid="show-all">
           <ShowAllIcon size={14} />
         </button>
       </div>
