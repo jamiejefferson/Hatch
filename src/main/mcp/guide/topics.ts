@@ -13,7 +13,9 @@ Hatch is a browser you drive through these tools. The user watches the same live
 Rules that save you time:
 - Navigate by the agent view. Use screenshot only to judge how something looks.
 - When status says Jev is connected, skip the snapshot: pass target in plain words, such as click with target "the button that refuses optional cookies". Hatch acts when it is sure and otherwise lists the closest elements with their references.
-- When you can see the next few moves, send them together with run_steps: fill two fields, press Enter and wait, in one call. Hatch stops at the first step that fails and tells you where the page stands.
+- When you can see the next few moves, send them together with run_steps: open the page, fill two fields, press Enter, wait for the results and read them, in one call. Hatch stops at the first step that fails and tells you where the page stands.
+- A click or key reply waits for the page to answer, including a request it sends to its server, so it already shows the result. Call wait_for only for something slower.
+- evaluate saves a long result to a file and names its path, so read a long text in one call.
 - When status says jev_run is on and the goal is mechanical, such as a search or a known flow, hand it to jev_run in one call. get_guide with topic "jev" says when it suits.
 - When a task needs judgement over a list, such as which messages are junk, keep the loop yourself and put each judgement to jev_decide as a closed question.
 - Pass intent on your calls. The user reads it in the Activity panel.

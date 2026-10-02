@@ -215,8 +215,31 @@ export async function arrival(page: PageSession): Promise<string> {
   return lines ? `Its agent view starts:\n${renderOutline(lines, NEW_PAGE_CHARS)}`.trimEnd() : 'Call snapshot to read it.';
 }
 
-async function afterAction(page: PageSession, before: string, seen: OutlineLine[] | null, brief = false): Promise<string> {
-  await sleep(250);
+/**
+ * Waits for the page to answer an action, so the reply shows the result and the agent needs no snapshot or wait_for after it.
+ * The page's change reports and its script requests are the evidence: a page that shows no change within 700 ms (400 ms inside run_steps) has finished,
+ * and a page that changed has finished once it stays still for 350 ms with no request of its own outstanding. A navigation or a dialog ends the wait at once.
+ */
+export async function pageAnswered(page: PageSession, since: number, capMs: number, stillMs = 700): Promise<void> {
+  let lastChange = 0;
+  const off = page.onChanged(() => {
+    lastChange = Date.now();
+  });
+  try {
+    for (;;) {
+      await sleep(50);
+      const now = Date.now();
+      if (page.dialog || page.loading || now - since >= capMs) return;
+      if (page.fetchingSince(since)) continue;
+      if (lastChange === 0 ? now - since >= stillMs : now - lastChange >= 350) return;
+    }
+  } finally {
+    off();
+  }
+}
+
+async function afterAction(page: PageSession, before: string, seen: OutlineLine[] | null, brief: boolean, since: number): Promise<string> {
+  await pageAnswered(page, since, brief ? 1000 : 1500, brief ? 400 : 700);
   if (page.dialog) return ` The page opened a ${page.dialog.kind} dialog: ${JSON.stringify(page.dialog.message)}. Answer it with handle_dialog.`;
   if (page.loading) await waitForLoad(page, 10_000);
   const now = page.guest.getURL();
@@ -258,13 +281,14 @@ export async function click(page: PageSession, ref: string, options: { double?: 
   const { x, y } = await locate(page, ref, 'click');
   const before = page.guest.getURL();
   const base = { x, y, button: 'left', clickCount: options.double ? 2 : 1 };
+  const since = Date.now();
   const work = (async (): Promise<void> => {
     await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
     await page.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...base });
     await page.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...base });
   })();
   await settle(page, work);
-  return `Clicked ${ref}.${await afterAction(page, before, seen, options.brief)}`;
+  return `Clicked ${ref}.${await afterAction(page, before, seen, !!options.brief, since)}`;
 }
 
 export async function hover(page: PageSession, ref: string): Promise<string> {
@@ -404,8 +428,9 @@ export async function pressKey(page: PageSession, combo: string, ref?: string, k
   const seen = brief ? null : await viewBefore(page, known);
   if (ref) await call(page, await objectFor(page, ref), 'function () { this.focus(); }');
   const before = page.guest.getURL();
+  const since = Date.now();
   await settle(page, key(page, combo));
-  return `Pressed ${combo}.${await afterAction(page, before, seen, brief)}`;
+  return `Pressed ${combo}.${await afterAction(page, before, seen, brief, since)}`;
 }
 
 export async function scroll(page: PageSession, options: { ref?: string; to?: 'top' | 'bottom'; dy?: number }): Promise<string> {

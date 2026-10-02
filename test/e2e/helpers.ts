@@ -21,6 +21,12 @@ export function serveSite(): Promise<{ url: string; close(): Promise<void> }> {
       setTimeout(() => res.writeHead(200, { 'content-type': 'text/html' }).end('<title>Slow page</title><h1>Slow page arrived</h1>'), 3000);
       return;
     }
+    if (path === '/api/results') {
+      // A search service that answers after 800 ms, for the tests that check a reply waits for the page's own request.
+      const q = new URL(req.url ?? '/', 'http://x').searchParams.get('q') ?? '';
+      setTimeout(() => res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify([`First result for ${q}`, `Second result for ${q}`])), 800);
+      return;
+    }
     if (path === '/first-compile') {
       // A dev server's first compile: the answer takes longer than open_hatch waits for a new page to register.
       setTimeout(() => res.writeHead(200, { 'content-type': 'text/html' }).end('<title>Compiled</title><h1>Compiled page arrived</h1>'), 12_000);

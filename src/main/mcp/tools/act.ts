@@ -1,10 +1,22 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { z } from 'zod';
 import { click, ensureNoDialog, fill, handleDialog, hover, pressKey, scroll, selectOption } from '../../cdp/actions';
 import { HatchError } from '../../cdp/session';
+import { hatchHome } from '../../paths';
 import { settingsStore } from '../../store/stores';
 import { onPage } from './page';
 import { elementFor, optionalRef as ref, target, withPick } from './target';
 import { hatch, intent, tool } from './types';
+
+/** Writes a long evaluate result to ~/.hatch/results, so the agent reads it from disk in one go. */
+async function saveResult(text: string, ext: string): Promise<string> {
+  const dir = join(hatchHome(), 'results');
+  await mkdir(dir, { recursive: true });
+  const file = join(dir, `evaluate-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}-${Math.random().toString(36).slice(2, 6)}.${ext}`);
+  await writeFile(file, text);
+  return file;
+}
 
 /** The element as the Activity panel names it: the reference, or the description in quotes. */
 const named = (a: { ref?: string; target?: string }): string => a.ref ?? JSON.stringify(a.target ?? '');
@@ -77,8 +89,13 @@ export const actTools = [
   }),
   tool({
     name: 'evaluate',
-    description: 'Runs JavaScript in the page and returns the result. Off by default: the user turns it on in Hatch\'s settings. Hatch also blocks it after it fills a saved sign-in, until the page navigates.',
-    shape: { expression: z.string().describe('An expression. Its value must serialise to JSON.'), hatch, intent },
+    description: 'Runs JavaScript in the page and returns the result. A result longer than max_chars arrives cut, and Hatch saves the whole of it to a file whose path the reply gives, so read a long text in one call and never in chunks. Off by default: the user turns it on in Hatch\'s settings. Hatch also blocks it after it fills a saved sign-in, until the page navigates.',
+    shape: {
+      expression: z.string().describe('An expression. Its value must serialise to JSON.'),
+      max_chars: z.number().int().min(500).max(200000).default(20000).describe('Where to cut the result in the reply. The file holds all of it.'),
+      hatch,
+      intent,
+    },
     summary: () => 'evaluate',
     run: (a, ctx) =>
       onPage(ctx, a.hatch, async (page) => {
@@ -86,8 +103,11 @@ export const actTools = [
         if (page.tainted) throw new HatchError('Hatch filled a saved sign-in on this page, so it blocks page scripting here until the page navigates.');
         ensureNoDialog(page);
         const value = await page.evaluate<unknown>(a.expression, 15000);
-        const text = value === undefined ? 'undefined' : JSON.stringify(value, null, 2);
-        return text.length > 20000 ? `${text.slice(0, 20000)}\n… cut at 20,000 characters.` : text;
+        // A string returns as itself, so a saved text reads as the page had it.
+        const text = value === undefined ? 'undefined' : typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+        if (text.length <= a.max_chars) return typeof value === 'string' ? JSON.stringify(value) : text;
+        const file = await saveResult(text, typeof value === 'string' ? 'txt' : 'json');
+        return `${text.slice(0, a.max_chars)}\n… cut at ${a.max_chars.toLocaleString('en-GB')} of ${text.length.toLocaleString('en-GB')} characters. The whole result is saved at ${file}.`;
       }),
   }),
 ];

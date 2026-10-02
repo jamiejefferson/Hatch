@@ -60,6 +60,11 @@ export class PageSession {
     this.dialogs.add(listener);
     return () => this.dialogs.delete(listener);
   }
+  /** Whether a request the page made by script since the given time is still waiting for its answer. */
+  fetchingSince(since: number): boolean {
+    for (const e of this.pending.values()) if (e.time >= since && (e.type === 'XHR' || e.type === 'Fetch')) return true;
+    return false;
+  }
   emitChanged(): void {
     this.changed.forEach((l) => l());
   }

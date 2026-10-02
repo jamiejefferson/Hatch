@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Search</title></head>
+<body>
+  <!-- A search that asks a server and draws its answer later, as most web apps do. -->
+  <h1>Search</h1>
+  <label>Query <input id="q" type="text"></label>
+  <button id="go">Search</button>
+  <p id="status"></p>
+  <ul id="results"></ul>
+  <div style="height: 3000px"></div>
+  <p>End of the page</p>
+  <script>
+    document.getElementById('go').addEventListener('click', async () => {
+      const status = document.getElementById('status');
+      status.textContent = 'Searching';
+      const list = await (await fetch('/api/results?q=' + encodeURIComponent(document.getElementById('q').value))).json();
+      status.textContent = '';
+      document.getElementById('results').innerHTML = list.map((r) => '<li><a href="#">' + r + '</a></li>').join('');
+    });
+  </script>
+</body>
+</html>
