@@ -98,6 +98,21 @@ test('the start-up sequence shows the logo, the strapline and the version, then 
   }
 });
 
+test('the start-up sequence draws the letters in the light ink on the dark theme', async () => {
+  const home = freshHome();
+  writeFileSync(join(home, 'settings.json'), JSON.stringify({ theme: 'dark' }));
+  const { app, win } = await launch(home, 0, { HATCH_INTRO: '1' });
+  try {
+    const letters = win.locator('.intro-letters');
+    await expect(letters).toBeVisible();
+    await expect.poll(() => letters.evaluate((el) => el.ownerDocument.defaultView!.getComputedStyle(el).backgroundColor)).toBe('rgb(236, 236, 236)');
+    await win.waitForTimeout(900);
+    await capture(app, 'test-results/screens/18-intro-dark.png');
+  } finally {
+    await app.close();
+  }
+});
+
 test('a pop-up is blocked on the canvas with a way into Fit to view, and opens there', async () => {
   const site = await serveSite();
   const { app, win } = await launch(freshHome(), 0);

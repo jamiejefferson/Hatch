@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronIcon, CloseIcon, DuplicateIcon, HatchIcon, PlusIcon, SaveIcon, ShowAllIcon } from '../icons';
+import { ChevronIcon, CloseIcon, DuplicateIcon, HatchIcon, PinIcon, PlusIcon, ShowAllIcon } from '../icons';
 import { LinksPanel } from '../panels/LinksPanel';
 import { ProjectsPanel } from '../panels/ProjectsPanel';
 import { actions, activeTab, hatchLabel, tabLabel, useStore, type LeftPanel } from '../state/store';
@@ -49,7 +49,7 @@ function Fold({ title, open, onToggle, action, children, testId }: { title: stri
 
 function CanvasesTab() {
   const tab = useStore(activeTab);
-  const [open, setOpen] = useState({ canvases: true, hatches: true, closed: true, saved: true });
+  const [open, setOpen] = useState({ canvases: true, hatches: true, closed: true });
   const closed = useStore((s) => s.closed.length > 0);
   const flip = (key: keyof typeof open) => () => setOpen({ ...open, [key]: !open[key] });
   return (
@@ -84,21 +84,24 @@ function CanvasesTab() {
           <ClosedList />
         </Fold>
       )}
-      <Fold title="Saved canvases" open={open.saved} onToggle={flip('saved')} testId="saved-canvases">
-        <SavedCanvases tab={tab} />
-      </Fold>
     </>
   );
 }
 
 const hatchCount = (n: number): string => `${n} ${n === 1 ? 'Hatch' : 'Hatches'}`;
 
-/** Every open canvas. A click shows it, a double-click renames it and a right-click offers its link. */
+/**
+ * Every open canvas, then the pinned canvases that are closed. A click shows a canvas or opens a pinned one, a double-click renames it and a right-click offers its link.
+ * The pin keeps a canvas in this list after it closes; a pinned canvas carries its pin in view, and any other shows the pin under the pointer.
+ */
 function CanvasList({ current }: { current: string }) {
   const tabs = useStore((s) => s.workspace.tabs);
   const labels = useStore((s) => s.workspace.tabs.map((t) => tabLabel(s, t)).join('\n')).split('\n');
   const working = useStore((s) => s.work.tabs);
   const [renaming, setRenaming] = useState<string | null>(null);
+  const saved = useStore((s) => s.savedCanvases);
+  const pinned = new Set(saved.map((c) => c.id));
+  const away = saved.filter((c) => !tabs.some((t) => t.savedId === c.id));
 
   return (
     <ul className="row-list" data-testid="canvas-list">
@@ -135,13 +138,36 @@ function CanvasList({ current }: { current: string }) {
             <span className="row-count" title={hatchCount(t.hatches.length)}>
               {t.hatches.length}
             </span>
+            <PinButton pinned={!!t.savedId && pinned.has(t.savedId)} label={label} onClick={() => void actions.togglePin(t.id)} />
             <button className="row-close" aria-label={`Close ${label}`} title="Close this canvas" onClick={() => actions.closeTab(t.id)}>
               <CloseIcon size={12} />
             </button>
           </li>
         );
       })}
+      {away.map((c) => (
+        <li key={c.id} className="away" data-testid="pinned-away">
+          <span className="row-icon" aria-hidden="true">
+            <ShowAllIcon size={14} />
+          </span>
+          <button className="row-main" title={`Open ${c.name}. It closed, and its pin kept it here.`} onClick={() => actions.openSavedCanvas(c.id)}>
+            {c.name}
+          </button>
+          <span className="row-count" title={hatchCount(c.hatches.length)}>
+            {c.hatches.length}
+          </span>
+          <PinButton pinned label={c.name} onClick={() => void actions.unpinCanvas(c.id)} />
+        </li>
+      ))}
     </ul>
+  );
+}
+
+function PinButton({ pinned, label, onClick }: { pinned: boolean; label: string; onClick(): void }) {
+  return (
+    <button className={`row-pin${pinned ? ' pinned' : ''}`} aria-pressed={pinned} aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`} title={pinned ? 'Unpin this canvas. Hatch forgets it once it closes.' : 'Pin this canvas. Hatch keeps it in this list after it closes.'} onClick={onClick} data-testid="pin-canvas">
+      <PinIcon size={12} />
+    </button>
   );
 }
 
@@ -198,64 +224,6 @@ function ClosedList() {
         );
       })}
     </ul>
-  );
-}
-
-/** A field that saves this canvas under a name, and the saved canvases, which open as new canvases. */
-function SavedCanvases({ tab }: { tab: Tab }) {
-  const label = useStore((s) => tabLabel(s, tab));
-  const saved = useStore((s) => s.savedCanvases);
-  const [name, setName] = useState(label);
-  const [error, setError] = useState<string | null>(null);
-  const [typedFor, setTypedFor] = useState(tab.id);
-
-  // The field offers the canvas's own name until the user types one, and starts again on another canvas.
-  if (typedFor !== tab.id) {
-    setTypedFor(tab.id);
-    setName(label);
-  }
-
-  const save = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault();
-    setError(await actions.saveCanvas(tab.id, name));
-  };
-
-  return (
-    <div className="fold-body">
-      {saved.length > 0 && (
-        <ul className="row-list" data-testid="saved-canvas-list">
-          {saved.map((c) => (
-            <li key={c.id}>
-              <span className="row-icon" aria-hidden="true">
-                <SaveIcon size={14} />
-              </span>
-              <button className="row-main" onClick={() => actions.openSavedCanvas(c.id)} title={`Open ${c.name} as a new canvas`}>
-                {c.name}
-              </button>
-              <span className="row-count" title={hatchCount(c.hatches.length)}>
-                {c.hatches.length}
-              </span>
-              <button className="row-close" aria-label={`Remove the saved canvas ${c.name}`} title="Remove this saved canvas" onClick={() => void actions.removeSavedCanvas(c.id)}>
-                <CloseIcon size={12} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <form className="add-row" onSubmit={(e) => void save(e)} noValidate>
-        <div className={`field${error ? ' invalid' : ''}`}>
-          <input aria-label="Name for the saved canvas" aria-invalid={error !== null} placeholder="Name this canvas to save it" value={name} onChange={(e) => setName(e.target.value)} onFocus={(e) => e.target.select()} data-testid="canvas-name" />
-        </div>
-        <button type="submit" className="round small primary" aria-label="Save this canvas" title="Save this canvas" disabled={!name.trim() || tab.hatches.length === 0} data-testid="save-canvas">
-          <SaveIcon size={14} />
-        </button>
-      </form>
-      {error && (
-        <p className="field-error" role="alert">
-          {error}
-        </p>
-      )}
-    </div>
   );
 }
 

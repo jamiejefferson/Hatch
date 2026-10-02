@@ -26,10 +26,10 @@ export function Intro() {
   if (phase === 'gone') return null;
   return (
     <div className={`intro${phase === 'leaving' ? ' leaving' : ''}`} role="img" aria-label={`Hatch ${version}. Open the Web.`} onPointerDown={() => setPhase('gone')} data-testid="intro">
-      {/* The lockup from the wordmark file, with the colour ident in place of the black one. The letters start 101 units into its 294-unit width. */}
+      {/* The lockup from the wordmark file, with the colour ident in place of the black one. The letters start 101 units into its 294-unit width, and the file masks the ink colour so they follow the theme. */}
       <div className="intro-lockup">
         <img className="intro-ident" src={ident} alt="" width="72" height="72" />
-        <span className="intro-letters" style={{ backgroundImage: `url("${wordmark}")` }} />
+        <span className="intro-letters" style={{ WebkitMaskImage: `url("${wordmark}")`, maskImage: `url("${wordmark}")` }} />
       </div>
       <p className="intro-line">Open the Web</p>
       <p className="intro-version mono">{version && `Version ${version}`}</p>

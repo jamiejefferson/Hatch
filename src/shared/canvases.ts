@@ -1,4 +1,4 @@
-// Saved canvases: a snapshot of a tab the user can open again later. Pure functions, so the main process, the renderer and the tests share them.
+// Pinned canvases: a copy of a tab that follows it while it is open and stays when it closes, so the user can open it again later. Pure functions, so the main process, the renderer and the tests share them.
 import { clampZoom } from './geometry';
 import { templateForSize } from './templates';
 import type { Hatch, SavedCanvas, Tab } from './types';
@@ -27,24 +27,23 @@ export function repairSavedCanvases(raw: unknown): SavedCanvas[] {
   return out;
 }
 
-/** Takes a snapshot of a tab under a name. */
-export function savedCanvasFromTab(tab: Tab, name: string, now = new Date()): SavedCanvas {
+/** Takes a copy of a tab under a name. Pass the id of the copy it replaces, so a pinned canvas keeps one copy. */
+export function savedCanvasFromTab(tab: Tab, name: string, now = new Date(), id = newId('canvas')): SavedCanvas {
   const notes = (tab.notes ?? []).filter((n) => n.text.trim());
-  return { id: newId('canvas'), name: name.trim().slice(0, MAX_CANVAS_NAME), savedAt: now.toISOString(), hatches: tab.hatches.map(onCanvas), pan: { ...tab.pan }, zoom: tab.zoom, ...(notes.length ? { notes } : {}) };
+  return { id, name: name.trim().slice(0, MAX_CANVAS_NAME), savedAt: now.toISOString(), hatches: tab.hatches.map(onCanvas), pan: { ...tab.pan }, zoom: tab.zoom, ...(notes.length ? { notes } : {}) };
 }
 
 /** Builds a new tab from a saved canvas. Every Hatch takes a fresh id, so two openings of one saved canvas never share pages. */
 export function tabFromSavedCanvas(saved: SavedCanvas): Tab {
   const notes = (saved.notes ?? []).map((n) => ({ ...n, id: newId('note') }));
-  return { id: newId('tab'), name: saved.name, hatches: saved.hatches.map((h) => ({ ...onCanvas(h), id: newId('hatch') })), selectedHatchId: null, pan: { ...saved.pan }, zoom: clampZoom(saved.zoom), ...(notes.length ? { notes } : {}) };
+  return { id: newId('tab'), savedId: saved.id, name: saved.name, hatches: saved.hatches.map((h) => ({ ...onCanvas(h), id: newId('hatch') })), selectedHatchId: null, pan: { ...saved.pan }, zoom: clampZoom(saved.zoom), ...(notes.length ? { notes } : {}) };
 }
 
-/** Adds a saved canvas to the list. A saved canvas with the same name is replaced, so saving twice keeps one. */
+/** Adds a pinned canvas to the list, or replaces the copy with the same id. Two canvases may share a name. */
 export function putSavedCanvas(list: SavedCanvas[], saved: SavedCanvas): SavedCanvas[] {
-  const same = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
-  const index = list.findIndex((c) => same(c.name, saved.name));
+  const index = list.findIndex((c) => c.id === saved.id);
   if (index < 0) return [...list, saved];
-  return list.map((c, i) => (i === index ? { ...saved, id: c.id } : c));
+  return list.map((c, i) => (i === index ? saved : c));
 }
 
 // ---- links in folders ----

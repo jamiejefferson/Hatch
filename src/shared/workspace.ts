@@ -45,7 +45,7 @@ function repairTab(raw: unknown): Tab | null {
   }
   const name = str(source.name, '').trim().slice(0, 60);
   const notes = repairNotes(source.notes);
-  return { id: str(source.id, newId('tab')), ...(name ? { name } : {}), hatches, selectedHatchId: selected, pan: { x: num(pan.x, 40), y: num(pan.y, 68) }, zoom: clampZoom(num(source.zoom, 0.62)), ...(notes.length ? { notes } : {}) };
+  return { id: str(source.id, newId('tab')), ...(name ? { name } : {}), hatches, selectedHatchId: selected, pan: { x: num(pan.x, 40), y: num(pan.y, 68) }, zoom: clampZoom(num(source.zoom, 0.62)), ...(notes.length ? { notes } : {}), ...(typeof source.savedId === 'string' ? { savedId: source.savedId } : {}) };
 }
 
 export const MAX_NOTE_LENGTH = 2000;

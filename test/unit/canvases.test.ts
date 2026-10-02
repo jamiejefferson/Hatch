@@ -27,15 +27,20 @@ describe('saved canvases', () => {
     expect(a.selectedHatchId).toBeNull();
   });
 
-  it('replaces a saved canvas with the same name and keeps its id', () => {
+  it('replaces a pinned canvas by its id, so it keeps one copy, and two canvases may share a name', () => {
     const first = savedCanvasFromTab(tab, 'Research');
     const list = putSavedCanvas([], first);
-    const again = savedCanvasFromTab({ ...tab, hatches: [hatch('three')] }, 'research');
+    const again = savedCanvasFromTab({ ...tab, hatches: [hatch('three')] }, 'Research renamed', new Date(), first.id);
     const next = putSavedCanvas(list, again);
     expect(next).toHaveLength(1);
-    expect(next[0]!.id).toBe(first.id);
+    expect(next[0]!.name).toBe('Research renamed');
     expect(next[0]!.hatches.map((h) => h.id)).toEqual(['three']);
-    expect(putSavedCanvas(next, savedCanvasFromTab(tab, 'Other'))).toHaveLength(2);
+    expect(putSavedCanvas(next, savedCanvasFromTab(tab, 'Research renamed'))).toHaveLength(2);
+  });
+
+  it('opens a pinned canvas linked to its copy, so the copy follows it again', () => {
+    const saved = savedCanvasFromTab(tab, 'Research');
+    expect(tabFromSavedCanvas(saved).savedId).toBe(saved.id);
   });
 
   it('reads canvases.json and leaves broken entries out', () => {

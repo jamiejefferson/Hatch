@@ -45,6 +45,8 @@ export interface Tab {
   zoom: number;
   /** The canvas's notes. An older workspace lacks them. */
   notes?: Note[];
+  /** The pinned copy of this canvas in canvases.json, which follows the canvas while it is open and stays when it closes. */
+  savedId?: string;
 }
 
 export interface Workspace {

@@ -1,58 +1,71 @@
-// The Hatch panel lists every canvas, saves the current one under a name, and opens a saved canvas as a new tab.
+// A pin on a canvas row keeps the canvas: its copy follows it while it is open, it stays in the Canvases list after it closes,
+// a click opens it again, and unpinning forgets it. There is no separate saved canvases section (JJ, 1 Oct 2026).
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { freshHome, inPages, launch, openHatch, serveSite, showCanvasPanel } from './helpers';
 
-type Saved = { name: string; hatches: { url: string; width: number }[] };
+type Saved = { id: string; name: string; hatches: { url: string; width: number }[] };
 
-test('a canvas is saved by name, closed, and opened again with its Hatches', async () => {
+test('a pinned canvas follows its changes, stays listed after it closes, opens again, and unpins', async () => {
   const site = await serveSite();
   const home = freshHome();
   const { app, win } = await launch(home, 0);
-  const saved = (): Saved[] => JSON.parse(readFileSync(join(home, 'canvases.json'), 'utf8')) as Saved[];
+  const saved = (): Saved[] => {
+    try {
+      return JSON.parse(readFileSync(join(home, 'canvases.json'), 'utf8')) as Saved[];
+    } catch {
+      return [];
+    }
+  };
   try {
     await openHatch(win, `${site.url}/index.html`);
+    await showCanvasPanel(win);
+    await expect(win.getByTestId('saved-canvases')).toHaveCount(0);
+
+    // The pin shows under the pointer, and a press pins the canvas under its own name.
+    const canvases = win.getByTestId('canvas-list');
+    const row = canvases.locator('li').first();
+    await row.hover();
+    await row.getByTestId('pin-canvas').click();
+    await expect(row.getByTestId('pin-canvas')).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => saved().map((c) => c.name)).toEqual(['Canvas']);
+
+    // The copy follows the canvas: a second page and a new name both reach it.
     await openHatch(win, `${site.url}/docs.html`);
     await win.getByTestId('template-tablet').click();
-    await showCanvasPanel(win);
+    await row.getByRole('tab').dblclick();
+    await row.getByRole('textbox', { name: 'Canvas name' }).fill('Research');
+    await row.getByRole('textbox', { name: 'Canvas name' }).press('Enter');
+    await expect.poll(() => saved().map((c) => [c.name, c.hatches.length, c.hatches[1]?.width])).toEqual([['Research', 2, 768]]);
 
-    // Every open canvas is listed, and the current one carries its Hatch count.
-    const canvases = win.getByTestId('canvas-list');
-    await expect(canvases.locator('li')).toHaveCount(1);
-    await expect(canvases.locator('.row-count')).toHaveText('2');
-
-    // The field offers the canvas's own name. The user names it and saves.
-    await expect(win.getByTestId('canvas-name')).toHaveValue('Canvas');
-    await win.getByTestId('canvas-name').fill('Research');
-    await win.getByTestId('save-canvas').click();
-    await expect(win.getByText('Hatch saved this canvas as Research.')).toBeVisible();
-    await expect(win.getByTestId('saved-canvas-list')).toContainText('Research');
-    await expect.poll(() => saved().map((c) => c.name)).toEqual(['Research']);
-    expect(saved()[0]!.hatches.map((h) => h.url)).toEqual([`${site.url}/index.html`, `${site.url}/docs.html`]);
-    expect(saved()[0]!.hatches[1]!.width).toBe(768);
-
-    // Saving again under the same name keeps one saved canvas.
-    await win.getByTestId('save-canvas').click();
-    await expect.poll(() => saved().length).toBe(1);
-
-    // The canvas closes, and the saved one opens as a new tab with both pages.
-    // A row's close button shows under the pointer.
-    await canvases.locator('li').first().hover();
-    await canvases.getByRole('button', { name: 'Close Canvas' }).click();
+    // Closed, the canvas stays in the list, quieter, and a click opens it with both pages.
+    await row.hover();
+    await canvases.getByRole('button', { name: 'Close Research' }).click();
     await expect.poll(async () => (await inPages<string>(app, 'document.title')).length).toBe(0);
-    await win.getByTestId('saved-canvas-list').getByRole('button', { name: /^Research/ }).click();
+    const away = win.getByTestId('pinned-away');
+    await expect(away).toHaveCount(1);
+    await expect(away).toContainText('Research');
+    await away.locator('.row-main').click();
     await expect(win.getByRole('tab', { name: 'Research' })).toHaveAttribute('aria-selected', 'true');
     await expect.poll(async () => (await inPages<string>(app, 'document.title')).length).toBe(2);
-    await expect(canvases.locator('li')).toHaveCount(2);
+    await expect(away).toHaveCount(0);
+
+    // The reopened canvas is still pinned to the same copy, and unpinning forgets the copy while the canvas stays open.
+    const reopened = canvases.locator('li.current');
+    await expect(reopened.getByTestId('pin-canvas')).toHaveAttribute('aria-pressed', 'true');
+    await reopened.getByTestId('pin-canvas').click();
+    await expect.poll(() => saved()).toEqual([]);
     await expect(canvases.locator('li.current')).toContainText('Research');
 
-    // A row in the list switches the canvas, and the saved canvas can be removed.
-    await canvases.getByRole('tab', { name: 'Canvas', exact: true }).click();
-    await expect(canvases.locator('li.current .row-count')).toHaveText('0');
-    await win.getByTestId('saved-canvas-list').locator('li').first().hover();
-    await win.getByRole('button', { name: 'Remove the saved canvas Research' }).click();
-    await expect(win.getByTestId('saved-canvas-list')).toHaveCount(0);
+    // A pinned canvas that has closed unpins from its row, and leaves the list.
+    await reopened.hover();
+    await reopened.getByTestId('pin-canvas').click();
+    await expect.poll(() => saved().length).toBe(1);
+    await reopened.hover();
+    await canvases.getByRole('button', { name: 'Close Research' }).click();
+    await away.getByTestId('pin-canvas').click();
+    await expect(away).toHaveCount(0);
     await expect.poll(() => saved()).toEqual([]);
   } finally {
     await app.close();

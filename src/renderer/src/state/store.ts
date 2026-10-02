@@ -203,7 +203,23 @@ function scheduleSave(): void {
 export function flushSave(): void {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = null;
-  if (state.ready) void window.hatch.saveWorkspace(state.workspace);
+  if (!state.ready) return;
+  void window.hatch.saveWorkspace(state.workspace);
+  syncPinned();
+}
+
+/** What each pinned canvas last sent to canvases.json, without its date, so an unchanged canvas sends nothing. */
+const pinnedSent = new Map<string, string>();
+/** A pinned canvas follows its tab: each save of the workspace updates the copy of every pinned tab that changed. */
+function syncPinned(): void {
+  for (const tab of state.workspace.tabs) {
+    if (!tab.savedId || !state.savedCanvases.some((c) => c.id === tab.savedId)) continue;
+    const copy = savedCanvasFromTab(tab, tabLabel(state, tab), new Date(), tab.savedId);
+    const key = JSON.stringify({ ...copy, savedAt: '' });
+    if (pinnedSent.get(tab.savedId) === key) continue;
+    pinnedSent.set(tab.savedId, key);
+    void window.hatch.saveCanvas(copy).then((savedCanvases) => set({ savedCanvases }));
+  }
 }
 
 let markBooted: () => void = () => {};
@@ -608,7 +624,10 @@ export const actions = {
       return;
     }
     const ids = new Map(entry.tab.hatches.map((h) => [h.id, newId('hatch')]));
-    const tab: Tab = { ...entry.tab, id: newId('tab'), hatches: entry.tab.hatches.map((h) => ({ ...h, id: ids.get(h.id)! })), selectedHatchId: entry.tab.selectedHatchId ? (ids.get(entry.tab.selectedHatchId) ?? null) : null };
+    // A pinned canvas the user has opened again from its pin keeps the pin there, and this copy comes back unpinned.
+    const { savedId, ...closedTab } = entry.tab;
+    const pinnedElsewhere = savedId !== undefined && state.workspace.tabs.some((t) => t.savedId === savedId);
+    const tab: Tab = { ...closedTab, ...(savedId && !pinnedElsewhere ? { savedId } : {}), id: newId('tab'), hatches: entry.tab.hatches.map((h) => ({ ...h, id: ids.get(h.id)! })), selectedHatchId: entry.tab.selectedHatchId ? (ids.get(entry.tab.selectedHatchId) ?? null) : null };
     set((s) => {
       // The empty canvas that stood in for the closed one gives way to it, while the user has left it empty.
       const tabs = s.workspace.tabs.filter((t) => t.id !== entry.blank || t.hatches.length > 0 || t.name);
@@ -929,25 +948,33 @@ export const actions = {
     return { ok: true, text: `Hatch added ${added} ${added === 1 ? 'link' : 'links'} from ${browser} under the folder “${browser}”.${already}` };
   },
 
-  // saved canvases
-  /** Saves a tab's Hatches under a name. A saved canvas with that name is replaced. */
-  async saveCanvas(tabId: string, name: string): Promise<string | null> {
+  // pinned canvases
+  /**
+   * Pins a canvas: Hatch keeps a copy that follows the canvas while it is open and stays in the Canvases list after it closes.
+   * A second press unpins it and forgets the copy.
+   */
+  async togglePin(tabId: string): Promise<void> {
     const tab = state.workspace.tabs.find((t) => t.id === tabId);
-    if (!tab) return 'That canvas has closed.';
-    if (!name.trim()) return 'Give the canvas a name before you save it.';
-    if (tab.hatches.length === 0) return 'This canvas has no Hatches to save.';
-    set({ savedCanvases: await window.hatch.saveCanvas(savedCanvasFromTab(tab, name)) });
-    actions.toast(`Hatch saved this canvas as ${name.trim()}.`);
-    return null;
+    if (!tab) return;
+    if (tab.savedId && state.savedCanvases.some((c) => c.id === tab.savedId)) return actions.unpinCanvas(tab.savedId);
+    const copy = savedCanvasFromTab(tab, tabLabel(state, tab));
+    editTab(tabId, (t) => ({ ...t, savedId: copy.id }));
+    pinnedSent.set(copy.id, JSON.stringify({ ...copy, savedAt: '' }));
+    set({ savedCanvases: await window.hatch.saveCanvas(copy) });
   },
-  /** Opens a saved canvas as a new tab, with every Hatch where it was. */
+  /** Opens a pinned canvas that has closed, with every Hatch where it was. A pinned canvas that is open already comes to the front. */
   openSavedCanvas(id: string): void {
+    const open = state.workspace.tabs.find((t) => t.savedId === id);
+    if (open) return actions.activateTab(open.id);
     const saved = state.savedCanvases.find((c) => c.id === id);
     if (!saved) return;
     const tab = tabFromSavedCanvas(saved);
     set((s) => ({ workspace: { ...s.workspace, tabs: [...s.workspace.tabs, tab], activeTabId: tab.id }, panel: 'hatch' }));
   },
-  async removeSavedCanvas(id: string): Promise<void> {
+  /** Unpins a canvas, open or closed. An open canvas stays open, and only the copy goes. */
+  async unpinCanvas(id: string): Promise<void> {
+    set((s) => ({ workspace: { ...s.workspace, tabs: s.workspace.tabs.map(({ savedId, ...t }) => (savedId === id ? t : { ...t, ...(savedId ? { savedId } : {}) })) } }));
+    pinnedSent.delete(id);
     set({ savedCanvases: await window.hatch.removeSavedCanvas(id) });
   },
   setNewHatchPage: (page: string): Promise<void> => actions.updateSettings({ newHatchPage: page }),
