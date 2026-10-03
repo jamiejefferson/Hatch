@@ -19,6 +19,8 @@ export interface Agent {
   running: number;
   finished: boolean;
   intent: string;
+  /** The Hatch the intent was given for. Null while the call that gave it is still running, because that call may move the agent to a new Hatch. */
+  intentHatch: string | null;
   /** The step a long tool has reached, such as a jev_run step. It clears when the call ends. */
   doing: string;
 }
@@ -43,7 +45,7 @@ export function identify(request: Request | undefined): string {
 export function agentFor(id: string): Agent {
   let agent = agents.get(id);
   if (!agent) {
-    agent = { id, tabId: null, hatchId: null, lastCall: 0, running: 0, finished: false, intent: '', doing: '' };
+    agent = { id, tabId: null, hatchId: null, lastCall: 0, running: 0, finished: false, intent: '', intentHatch: null, doing: '' };
     agents.set(id, agent);
   }
   return agent;
@@ -135,7 +137,9 @@ export function workState(): AgentWorkState {
     const working = !a.finished && (a.running > 0 || now - a.lastCall < WORKING_IDLE_MS);
     if (!working || !a.tabId) continue;
     state.tabs[a.tabId] = { agent: a.id, intent: a.intent };
-    if (a.hatchId) state.hatches[a.hatchId] = { agent: a.id, intent: a.intent, doing: a.doing };
+    // An intent belongs to the Hatch it was given for, so an agent that moves on without a new one shows none rather than an old task.
+    const intent = a.intentHatch === null || a.intentHatch === a.hatchId ? a.intent : '';
+    if (a.hatchId) state.hatches[a.hatchId] = { agent: a.id, intent, doing: a.doing };
   }
   return state;
 }
@@ -158,13 +162,18 @@ export function publishWork(): void {
 export function callStarted(agent: Agent, intent: string | undefined): void {
   agent.running += 1;
   agent.lastCall = Date.now();
-  if (intent) agent.intent = intent;
+  if (intent) {
+    agent.intent = intent;
+    agent.intentHatch = null;
+  } else if (agent.intentHatch !== null && agent.intentHatch !== agent.hatchId) agent.intent = '';
   publishWork();
 }
 
-export function callEnded(agent: Agent): void {
+/** `gaveIntent` says the call carried an intent, which then belongs to the Hatch the call ended on. */
+export function callEnded(agent: Agent, gaveIntent = false): void {
   agent.running = Math.max(0, agent.running - 1);
   agent.lastCall = Date.now();
+  if (gaveIntent && agent.intentHatch === null) agent.intentHatch = agent.hatchId;
   if (agent.running === 0) agent.doing = '';
   publishWork();
 }

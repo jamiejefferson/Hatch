@@ -44,7 +44,7 @@ async function runTool(tool: Tool, args: Record<string, unknown>, agent: Agent, 
     end(entry, { ...where, error: message });
     return { content: [{ type: 'text' as const, text: message }], isError: true };
   } finally {
-    callEnded(agent);
+    callEnded(agent, !!intent);
   }
 }
 

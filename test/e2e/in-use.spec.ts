@@ -50,6 +50,16 @@ test('a Hatch an agent uses wears an outline and a chip, and each action marks i
     await expect(win.locator('.agent-view')).toBeVisible();
     await call('fill', { ref: email, text: 'sam@studio.example' });
     await expect(win.locator('.agent-line.acted')).toContainText('textbox "Email"');
+    // Calls with no intent on the same Hatch keep the task on show.
+    await expect(chip).toContainText('I am signing in to check the account page.');
+
+    // An agent that moves to another Hatch without a new intent leaves the old task behind.
+    await call('open_hatch', { to: `${site.url}/index.html` });
+    await expect(chip).toHaveCount(1);
+    await expect(chip).toContainText('fox is using this Hatch');
+    await expect(chip).not.toContainText('I am signing in');
+    await call('snapshot');
+    await expect(chip).not.toContainText('I am signing in');
 
     // finish_working clears the outline and the chip.
     await call('finish_working');
