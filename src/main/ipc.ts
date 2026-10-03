@@ -11,6 +11,7 @@ import { handleDialog, snapshot } from './cdp/actions';
 import * as comments from './comments/store';
 import { connectionInfo } from './connection';
 import { answerConsent } from './credentials/fill';
+import { installSkill, skillState } from './skill';
 import { defaultBrowserState, makeDefaultBrowser } from './default-browser';
 import { captureForFeedback, feedbackDetails, sendFeedback } from './feedback/send';
 import { importSignIn, listBrowserProfiles } from './credentials/import-cookies';
@@ -175,6 +176,8 @@ export function registerIpc(): void {
   ipcMain.handle('connection:examples', () => shell.openPath(connectionInfo().examples));
   ipcMain.handle('data:open-folder', () => shell.openPath(hatchHome()));
 
+  ipcMain.handle('skill:state', () => skillState());
+  ipcMain.handle('skill:install', safely(async () => installSkill()));
   ipcMain.handle('browser:state', () => defaultBrowserState());
   ipcMain.handle('window:is-full-screen', (e) => BrowserWindow.fromWebContents(e.sender)?.isFullScreen() ?? false);
   ipcMain.handle('browser:make-default', () => makeDefaultBrowser());

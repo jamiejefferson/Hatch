@@ -1,5 +1,6 @@
 // Hatch needs no setup before an agent uses it. Settings holds the details the user hands to the agent.
-import { readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
@@ -32,6 +33,38 @@ test('a fresh Hatch opens on its canvas, and Settings holds the details an agent
     expect(status.isError).toBeFalsy();
   } finally {
     await app.close();
+  }
+});
+
+test('Settings copies the /hatch skill into Claude Code and Codex, and updates an older copy', async () => {
+  const home = freshHome();
+  const skillsHome = mkdtempSync(join(tmpdir(), 'hatch-skills-'));
+  const claude = join(skillsHome, '.claude', 'skills', 'hatch', 'SKILL.md');
+  const codex = join(skillsHome, '.agents', 'skills', 'hatch', 'SKILL.md');
+  const wanted = readFileSync('plugins/hatch/skills/hatch/SKILL.md', 'utf8');
+  const { app, win } = await launch(home, 0, { HATCH_SKILLS_HOME: skillsHome });
+  try {
+    await win.getByTestId('panel-settings').click();
+    await expect(win.getByTestId('install-skill')).toHaveText('Add the /hatch skill to Claude Code and Codex');
+    await win.getByTestId('install-skill').click();
+    await expect(win.getByTestId('skill-installed')).toBeVisible();
+    expect(readFileSync(claude, 'utf8')).toBe(wanted);
+    expect(readFileSync(codex, 'utf8')).toBe(wanted);
+  } finally {
+    await app.close();
+  }
+
+  // A copy that differs from the one this Hatch carries asks for an update, and the update replaces it.
+  writeFileSync(codex, 'an older skill');
+  const again = await launch(home, 0, { HATCH_SKILLS_HOME: skillsHome });
+  try {
+    await again.win.getByTestId('panel-settings').click();
+    await expect(again.win.getByTestId('install-skill')).toHaveText('Update the /hatch skill');
+    await again.win.getByTestId('install-skill').click();
+    await expect(again.win.getByTestId('skill-installed')).toBeVisible();
+    expect(existsSync(codex) && readFileSync(codex, 'utf8')).toBe(wanted);
+  } finally {
+    await again.app.close();
   }
 });
 

@@ -127,6 +127,10 @@ export interface HatchApi {
   connection(): Promise<ConnectionInfo>;
   openSetupExamples(): Promise<string>;
   openDataFolder(): Promise<string>;
+  /** Whether the /hatch skill sits in the Claude Code and Codex skill folders, matching this version of Hatch. */
+  skillState(): Promise<'installed' | 'missing' | 'outdated'>;
+  /** Copies the /hatch skill into ~/.claude/skills and ~/.agents/skills, replacing an older copy. */
+  installSkill(): Promise<Outcome<'installed' | 'missing' | 'outdated'>>;
   /** Whether Hatch is the Mac's default browser. 'unavailable' in a checkout, where macOS knows no Hatch app. */
   defaultBrowser(): Promise<'default' | 'other' | 'unavailable'>;
   /** Whether Hatch's window is in macOS full screen. */

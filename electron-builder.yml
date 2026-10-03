@@ -11,6 +11,9 @@ extraResources:
     to: hatch-mcp
   - from: connect/README.md
     to: connect/README.md
+  # The /hatch skill Settings copies into Claude Code and Codex.
+  - from: plugins/hatch/skills/hatch/SKILL.md
+    to: skills/hatch/SKILL.md
 protocols:
   - name: Hatch project address
     schemes: [hatch]

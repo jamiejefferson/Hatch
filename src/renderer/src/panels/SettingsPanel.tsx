@@ -44,6 +44,7 @@ export function SettingsPanel() {
         <ConnectSteps connection={connection} />
       </section>
     )}
+    <SkillSection />
     <section data-testid="appearance">
       <h2>Appearance</h2>
       <div className="segmented" role="radiogroup" aria-label="Theme">
@@ -238,5 +239,35 @@ function Switch({ label, checked, onChange }: { label: string; checked: boolean;
       <span>{label}</span>
       <span className="switch" aria-hidden="true" />
     </button>
+  );
+}
+
+/** Copies the /hatch skill into Claude Code and Codex. The plugin carries it too; this serves a user who connected by the Settings line. */
+function SkillSection() {
+  const [state, setState] = useState<'installed' | 'missing' | 'outdated' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => void window.hatch.skillState().then(setState).catch(() => setState(null)), []);
+  const install = async (): Promise<void> => {
+    const result = await window.hatch.installSkill();
+    if (result.ok) {
+      setState(result.value);
+      setError(null);
+    } else setError(result.error);
+  };
+  return (
+    <section data-testid="skill">
+      <h2>The /hatch skill</h2>
+      {state === 'installed' ? (
+        <p className="status-line" data-testid="skill-installed">
+          <span className="dot on" /> Claude Code and Codex have the /hatch skill.
+        </p>
+      ) : (
+        <button className="button left" disabled={state === null} onClick={() => void install()} data-testid="install-skill">
+          {state === 'outdated' ? 'Update the /hatch skill' : 'Add the /hatch skill to Claude Code and Codex'}
+        </button>
+      )}
+      {error && <p className="field-error">{error}</p>}
+      <p className="hint">Type /hatch with a link, a project or a file, and the agent opens it in Hatch, starting the project's server if it needs one. The Hatch plugin already includes the skill.</p>
+    </section>
   );
 }

@@ -21,4 +21,6 @@ The plugin carries `mcp.codex.json` and `mcp.cursor.json`, with the same command
 
 ## What the agent gets
 
+The plugin installs the `hatch` skill from `skills/hatch/` in Claude Code, Codex CLI and Cursor. The user types `/hatch` with a link, a project name, a file or nothing, and the agent opens it in one step, starting a dev server if the project needs one. The skill names tools without the app's prefix, so one copy serves every app.
+
 Hatch briefs the agent itself: the server's instructions say how to work, and the first reply repeats them for apps that hide instructions from the model. `get_guide` with the topic `tools` lists every tool with its arguments, and https://hatch-guide.vercel.app/agents holds the same on the web.

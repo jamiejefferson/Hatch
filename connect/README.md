@@ -6,7 +6,7 @@ Hatch needs no setup of its own. In Settings, "Copy the details for your agent" 
 
 ## The two connections
 
-**By plugin**, for Claude Code, Codex CLI and Cursor: `plugins/hatch` in the repository holds a plugin that registers the command below. See "Claude Code".
+**By plugin**, for Claude Code, Codex CLI and Cursor: `plugins/hatch` in the repository holds a plugin that registers the command below. See "Claude Code". The plugin also installs the `/hatch` skill, which opens a link, a project or a file in one step. A user who connects without the plugin adds the same skill to Claude Code and Codex from Settings.
 
 **By address**, for agents that take a URL:
 

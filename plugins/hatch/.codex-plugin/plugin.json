@@ -1,6 +1,6 @@
 {
   "name": "hatch",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Drive Hatch, the browser on this Mac whose live pages the user watches, from any project.",
   "author": { "name": "Jamie Jefferson", "email": "jj@eqtr.com", "url": "https://hatch-guide.vercel.app" },
   "homepage": "https://hatch-guide.vercel.app/agents",
@@ -8,6 +8,7 @@
   "license": "MIT",
   "keywords": ["hatch", "browser", "agent", "canvas", "mcp"],
   "mcpServers": "./mcp.codex.json",
+  "skills": "./skills/",
   "interface": {
     "displayName": "Hatch",
     "shortDescription": "Drive the browser the user watches.",
