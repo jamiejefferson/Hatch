@@ -1,3 +1,4 @@
+import { setUpSigninIdentity } from './signin-identity';
 import { join } from 'node:path';
 import { app, BrowserWindow, type Rectangle } from 'electron';
 import { setUpPagesSession } from './hatches/registry';
@@ -66,6 +67,7 @@ if (!app.requestSingleInstanceLock()) {
   void app.whenReady().then(() => {
     if (app.isPackaged) app.setAsDefaultProtocolClient('hatch');
     setUpPagesSession();
+    setUpSigninIdentity();
     seedFirstRun(app.getVersion());
     registerIpc();
     registerRpcReplies();

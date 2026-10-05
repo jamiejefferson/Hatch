@@ -16,7 +16,7 @@ export default defineConfig({
     resolve: { alias: shared },
     build: {
       rollupOptions: {
-        input: { host: resolve('src/preload/host.ts'), guest: resolve('src/guest-preload/index.ts') },
+        input: { host: resolve('src/preload/host.ts'), guest: resolve('src/guest-preload/index.ts'), identity: resolve('src/guest-preload/identity.ts') },
         // Sandboxed preloads load as CommonJS only.
         output: { format: 'cjs', entryFileNames: '[name].cjs' },
       },

@@ -3,6 +3,7 @@
 import { join } from 'node:path';
 import { BrowserWindow, ipcMain, session, type WebContents } from 'electron';
 import { PageSession } from '../cdp/session';
+import { firefoxPage } from '../signin-identity';
 import { PAGES_PARTITION } from '../paths';
 import { addPageMenu, watchDownloads } from './page-menu';
 
@@ -58,6 +59,16 @@ export function bindHatch(hatchId: string, guest: WebContents): void {
   // The Hatch's title row shows a speaker while the page plays sound.
   guest.on('audio-state-changed', (event) => guest.hostWebContents?.send('page:audible', { hatchId, audible: event.audible }));
   guest.on('devtools-closed', () => void page.attach().catch(() => {}));
+  // Google checks for a debugger on its sign-in pages, so Hatch lets go before one loads and takes the page back after it.
+  guest.on('did-start-navigation', (details) => {
+    if (details.isMainFrame && firefoxPage(details.url)) page.stepAside();
+  });
+  guest.on('did-redirect-navigation', (details) => {
+    if (details.isMainFrame && firefoxPage(details.url)) page.stepAside();
+  });
+  guest.on('did-navigate', (_event, url) => {
+    if (!firefoxPage(url)) void page.attach().catch(() => {});
+  });
   observers.forEach((o) => o(page));
   void page.attach().catch(() => {});
   waiters.get(hatchId)?.forEach((w) => w(page));

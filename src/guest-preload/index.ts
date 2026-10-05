@@ -7,15 +7,19 @@ import { serialiseForPaper, cssBlockOf } from './grab';
 // Hatch answers every alert, confirm and prompt itself. Electron throws on prompt(), and it settles alert and confirm
 // on its own when the window sits in the background, which is where Hatch usually sits while an agent works.
 // Each stand-in blocks the page, as the real dialog does, until the user or an agent answers in Hatch.
-contextBridge.exposeInMainWorld('__hatchDialog', (kind: unknown, message: unknown, fallback: unknown): { accept: boolean; text: string } =>
-  ipcRenderer.sendSync('guest:dialog', String(kind), String(message ?? ''), String(fallback ?? '')),
-);
-void webFrame.executeJavaScript(`(() => {
-  const ask = window.__hatchDialog;
-  window.alert = (m) => { ask('alert', m === undefined ? '' : m, ''); };
-  window.confirm = (m) => ask('confirm', m === undefined ? '' : m, '').accept;
-  window.prompt = (m, d) => { const r = ask('prompt', m === undefined ? '' : m, d === undefined ? '' : d); return r.accept ? r.text : null; };
-})();`);
+// Google's sign-in page refuses a browser whose dialogs are not its own, so it keeps the native ones (see identity.ts).
+const signInPage = ipcRenderer.sendSync('guest:firefox', location.href) === true;
+if (!signInPage) {
+  contextBridge.exposeInMainWorld('__hatchDialog', (kind: unknown, message: unknown, fallback: unknown): { accept: boolean; text: string } =>
+    ipcRenderer.sendSync('guest:dialog', String(kind), String(message ?? ''), String(fallback ?? '')),
+  );
+  void webFrame.executeJavaScript(`(() => {
+    const ask = window.__hatchDialog;
+    window.alert = (m) => { ask('alert', m === undefined ? '' : m, ''); };
+    window.confirm = (m) => ask('confirm', m === undefined ? '' : m, '').accept;
+    window.prompt = (m, d) => { const r = ask('prompt', m === undefined ? '' : m, d === undefined ? '' : d); return r.accept ? r.text : null; };
+  })();`);
+}
 
 // Tells Hatch the page changed, so the agent view on screen stays current. One message per burst of changes.
 let timer: ReturnType<typeof setTimeout> | null = null;

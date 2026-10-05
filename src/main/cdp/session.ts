@@ -1,5 +1,6 @@
 // One CDP session per live page. Every call carries a hang guard, so a frozen page returns an error instead of stalling an agent.
 import type { WebContents } from 'electron';
+import { firefoxPage } from '../signin-identity';
 import { RefTable } from './refs';
 
 export interface ConsoleEntry { time: number; level: string; text: string; url?: string; line?: number }
@@ -21,6 +22,9 @@ const push = <T>(list: T[], item: T): void => {
 };
 
 export class HatchError extends Error {}
+
+/** What an agent hears when it reaches for a Google sign-in page. */
+export const SIGNIN_REFUSAL = 'This Hatch shows Google\'s sign-in page, which the user completes themselves: Google refuses a sign-in from a browser an agent drives. Ask the user to sign in, then carry on once the page has moved on.';
 
 type Listener = () => void;
 
@@ -75,6 +79,8 @@ export class PageSession {
 
   async attach(): Promise<void> {
     if (this.attached || this.guest.isDestroyed()) return;
+    // Google refuses a sign-in from a page with a debugger attached, so Hatch leaves its sign-in pages alone.
+    if (firefoxPage(this.guest.getURL())) throw new HatchError(SIGNIN_REFUSAL);
     try {
       this.guest.debugger.attach('1.3');
     } catch {
@@ -90,6 +96,15 @@ export class PageSession {
       // The Hatch window usually sits behind the app the user talks to the agent in.
       this.send('Emulation.setFocusEmulationEnabled', { enabled: true }),
     ]);
+  }
+
+  /** Lets go of the page before a Google sign-in page loads. Hatch attaches again once the page moves on. */
+  stepAside(): void {
+    if (!this.attached || this.guest.isDestroyed()) return;
+    this.attached = false;
+    try {
+      this.guest.debugger.detach();
+    } catch {}
   }
 
   async send<T = Record<string, unknown>>(method: string, params?: Record<string, unknown>, timeoutMs = 8000): Promise<T> {
