@@ -617,8 +617,13 @@ h2 .count { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0
 .text-button.danger { color: var(--danger); }
 
 /* A canvas that belongs to a working folder. */
-.row-project { display: grid; place-items: center; flex-shrink: 0; color: var(--ink-2); }
-.working-folders { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
-.working-folders .project-list { align-self: stretch; }
-.working-folders .project-main svg, .attach-modal .choice-list svg { flex-shrink: 0; color: var(--ink-2); }
+.row-folder, .row-more { display: grid; place-items: center; width: 20px; height: 20px; flex-shrink: 0; border-radius: var(--pill); color: var(--ink-2); }
+.row-folder:hover, .row-more:hover { color: var(--ink); background: var(--fill); }
+.row-more { display: none; }
+.row-list li:hover .row-more, .row-more:focus-visible { display: grid; }
+.canvas-folder { display: flex; flex-direction: column; gap: 8px; }
+.folder-line { display: flex; align-items: center; gap: 10px; margin: 0; }
+.folder-line svg { flex-shrink: 0; color: var(--ink-2); }
+.folder-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.attach-modal .choice-list svg { flex-shrink: 0; color: var(--ink-2); }
 .attach-modal { width: 480px; }

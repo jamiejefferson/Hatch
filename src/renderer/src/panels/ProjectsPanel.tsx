@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ProjectState } from '@shared/types';
-import { folderName } from '@shared/project-canvas';
-import { BackIcon, BinIcon, CloseIcon, FolderIcon, OpenIcon, PlayIcon, PlusIcon, ReloadIcon, StopIcon } from '../icons';
-import { actions, tabLabel, useStore } from '../state/store';
+import { BackIcon, BinIcon, OpenIcon, PlayIcon, PlusIcon, ReloadIcon, StopIcon } from '../icons';
+import { actions, useStore } from '../state/store';
 
 const home = (path: string): string => path.replace(/^\/Users\/[^/]+/, '~');
 
@@ -49,7 +48,6 @@ export function ProjectsPanel() {
           <PlusIcon size={14} />
         </button>
       </header>
-      <WorkingFolders />
       {projects.length === 0 && found.length === 0 && <p className="hint">Add a project folder and Hatch gives it a stable address, starts its dev server and keeps it on one port. A folder of plain HTML works too.</p>}
       {running.length > 0 && (
         <section>
@@ -236,46 +234,3 @@ function Field({ label, value, onCommit, readOnly, narrow, testid }: { label: st
   );
 }
 
-/**
- * The folders where project work takes place, each with the canvas an agent working there uses. Any folder counts, with or
- * without a dev server, so this list stands apart from the registered projects below it.
- */
-function WorkingFolders() {
-  // Plain strings, because a selector that builds an object each time never settles.
-  const rows = useStore((s) => s.workspace.tabs.filter((t) => t.folder).map((t) => [t.id, t.folder!, tabLabel(s, t)].join('\u0000')).join('\n'))
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => line.split('\u0000') as [string, string, string]);
-  const current = useStore((s) => s.workspace.activeTabId);
-  const currentFolder = useStore((s) => s.workspace.tabs.find((t) => t.id === s.workspace.activeTabId)?.folder ?? '');
-
-  return (
-    <section className="working-folders" data-testid="working-folders">
-      <h2>Working folders</h2>
-      <p className="hint">An agent working in one of these folders, or in a folder inside it, uses that folder’s canvas and leaves your other canvases alone.</p>
-      {rows.length > 0 && (
-        <ul className="project-list">
-          {rows.map(([id, folder, label]) => (
-            <li key={id} data-testid={`working-folder-${folderName(folder)}`}>
-              <button className="project-main" onClick={() => actions.activateTab(id)} title={`Show the canvas ${label}`}>
-                <FolderIcon size={14} />
-                <span className="project-text">
-                  <span className="name">{folderName(folder)}</span>
-                  <span className="mono url">
-                    {home(folder)} · {id === current ? 'this canvas' : label}
-                  </span>
-                </span>
-              </button>
-              <button className="round small" aria-label={`Detach ${folderName(folder)}`} title={`Detach ${folderName(folder)} from its canvas. The canvas stays open.`} onClick={() => actions.attachCanvas(id, null)} data-testid="detach-folder">
-                <CloseIcon size={14} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <button className="button left" onClick={() => actions.askFolderFor(current)} data-testid="attach-current">
-        {currentFolder ? 'Attach this canvas to another folder' : 'Attach this canvas to a folder'}
-      </button>
-    </section>
-  );
-}

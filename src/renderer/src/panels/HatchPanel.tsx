@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { DEVICE_TEMPLATES } from '@shared/templates';
 import { pages } from '../canvas/webviews';
-import { CheckIcon, CopyIcon, DesktopIcon, LaptopIcon, MobileIcon, SaveLinkIcon, TabletLandscapeIcon, TabletPortraitIcon } from '../icons';
-import { actions, displayAddress, effectiveSize, hatchLabel, resolveAddress, selectedHatch, useStore } from '../state/store';
+import { folderName } from '@shared/project-canvas';
+import { CheckIcon, CopyIcon, DesktopIcon, FolderIcon, LaptopIcon, MobileIcon, SaveLinkIcon, TabletLandscapeIcon, TabletPortraitIcon } from '../icons';
+import { actions, displayAddress, effectiveSize, hatchLabel, resolveAddress, selectedHatch, tabLabel, useStore } from '../state/store';
 import type { Hatch } from '@shared/types';
 
 const DEVICE_ICONS: Record<string, (p: { size?: number }) => React.ReactElement> = { desktop: DesktopIcon, laptop: LaptopIcon, tablet: TabletPortraitIcon, 'tablet-landscape': TabletLandscapeIcon, mobile: MobileIcon };
@@ -13,10 +14,48 @@ export function HatchPanel() {
   return hatch ? (
     <SelectedHatch hatch={hatch} />
   ) : (
-    <section data-testid="no-hatch">
-      <h1 className="panel-title">No Hatch selected</h1>
+    <CanvasSettings />
+  );
+}
+
+/** With no Hatch selected, the sidebar speaks for the canvas: its name and the project folder an agent working there uses it for. */
+function CanvasSettings() {
+  const tabId = useStore((s) => s.workspace.activeTabId);
+  const label = useStore((s) => {
+    const t = s.workspace.tabs.find((x) => x.id === s.workspace.activeTabId);
+    return t ? tabLabel(s, t) : '';
+  });
+  const folder = useStore((s) => s.workspace.tabs.find((x) => x.id === s.workspace.activeTabId)?.folder ?? '');
+  return (
+    <>
+      <header className="panel-head">
+        <h1 className="panel-title grow">{label}</h1>
+      </header>
+      <section className="canvas-folder" data-testid="canvas-settings">
+        <h2>Project folder</h2>
+        {folder ? (
+          <p className="folder-line">
+            <FolderIcon size={14} />
+            <span className="project-text">
+              <span className="name">{folderName(folder)}</span>
+              <span className="mono url">{folder.replace(/^\/Users\/[^/]+/, '~')}</span>
+            </span>
+          </p>
+        ) : null}
+        <p className="hint">{folder ? 'An agent working in this folder, or in a folder inside it, opens its pages on this canvas and leaves your other canvases alone.' : 'Attach this canvas to the folder where a project’s work takes place. An agent working in that folder then opens its pages here and leaves your other canvases alone.'}</p>
+        <div className="folder-actions">
+          <button className="button left" onClick={() => actions.askFolderFor(tabId)} data-testid="attach-current">
+            {folder ? 'Change the folder' : 'Attach to a project folder'}
+          </button>
+          {folder && (
+            <button className="text-button underline left" onClick={() => actions.attachCanvas(tabId, null)} data-testid="detach-folder">
+              Detach the folder
+            </button>
+          )}
+        </div>
+      </section>
       <p className="hint">Select a Hatch on the canvas or in the Hatches list to see its link and size here.</p>
-    </section>
+    </>
   );
 }
 

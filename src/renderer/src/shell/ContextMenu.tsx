@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { CloseIcon, CopyIcon, DuplicateIcon, MutedIcon, SoundIcon, FitIcon, ReleaseIcon, SaveLinkIcon } from '../icons';
+import { folderName } from '@shared/project-canvas';
+import { CloseIcon, CopyIcon, DuplicateIcon, FolderIcon, MutedIcon, SoundIcon, FitIcon, ReleaseIcon, SaveLinkIcon } from '../icons';
 import { actions, hatchLabel, useStore } from '../state/store';
 
 /** The right-click menu for a Hatch, a canvas or a tab. Its first job is the link a user pastes to an agent. */
@@ -7,6 +8,7 @@ export function ContextMenu() {
   const menu = useStore((s) => s.contextMenu);
   const hatch = useStore((s) => (menu?.hatchId ? (s.workspace.tabs.flatMap((t) => t.hatches).find((h) => h.id === menu.hatchId) ?? null) : null));
   const saved = useStore((s) => (hatch ? s.links.some((l) => l.url === hatch.url) : false));
+  const folder = useStore((s) => (menu ? (s.workspace.tabs.find((t) => t.id === menu.tabId)?.folder ?? '') : ''));
   const ref = useRef<HTMLDivElement>(null);
   const [spot, setSpot] = useState({ left: 0, top: 0 });
 
@@ -53,6 +55,14 @@ export function ContextMenu() {
         <button role="menuitem" onClick={run(() => void actions.copyLink(menu.tabId, 'canvas'))} data-testid="copy-canvas-link">
           <CopyIcon /> Copy link to this canvas
         </button>
+        <button role="menuitem" onClick={run(() => actions.askFolderFor(menu.tabId))} data-testid="menu-attach-folder">
+          <FolderIcon /> {folder ? 'Attach this canvas to another folder…' : 'Attach this canvas to a project folder…'}
+        </button>
+        {folder && (
+          <button role="menuitem" onClick={run(() => actions.attachCanvas(menu.tabId, null))} data-testid="menu-detach-folder">
+            <CloseIcon /> Detach this canvas from {folderName(folder)}
+          </button>
+        )}
         {hatch && (
           <button role="menuitem" onClick={run(() => void window.hatch.copyText(hatch.url).then(() => actions.toast("Hatch copied this page's URL.")))} data-testid="menu-copy-url">
             <CopyIcon /> Copy this page's URL

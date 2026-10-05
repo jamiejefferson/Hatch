@@ -9,9 +9,9 @@ test('the left column, the toolbar and the sidebar tabs each do one job', async 
   const home = freshHome();
   const { app, win } = await launch(home);
   try {
-    // With no Hatch selected, the toolbar's page tools wait and the Hatch tab says why.
+    // With no Hatch selected, the toolbar's page tools wait and the Hatch tab speaks for the canvas.
     await expect(win.getByTestId('tool-reload')).toBeDisabled();
-    await expect(win.getByTestId('no-hatch')).toBeVisible();
+    await expect(win.getByTestId('canvas-settings')).toBeVisible();
 
     await openHatch(win, `${site.url}/index.html`);
     await expect(win.getByTestId('hatch-list').locator('li')).toHaveCount(1);

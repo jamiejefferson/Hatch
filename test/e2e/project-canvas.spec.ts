@@ -24,7 +24,7 @@ async function connect(url: string, query: string): Promise<(name: string, args?
 
 const canvasRow = (win: Page, label: string) => win.getByTestId('canvas-list').locator('li').filter({ has: win.getByRole('tab', { name: label, exact: true }) });
 
-test('a new canvas attaches to a working folder, an agent in that folder works there, and the Projects panel detaches it', async () => {
+test('a new canvas attaches to a working folder, an agent in that folder works there, and the sidebar and the canvas menu change it', async () => {
   const work = mkdtempSync(join(tmpdir(), 'hatch-folders-'));
   // The work takes place in a plain folder that is no website.
   const brief = join(work, 'client-brief');
@@ -87,15 +87,17 @@ test('a new canvas attaches to a working folder, an agent in that folder works t
     await expect.poll(() => tabs(home).some((t) => t.folder === loose && t.hatches.length === 1)).toBe(true);
     expect(tabs(home).find((t) => t.id === userCanvas.id)!.hatches).toHaveLength(0);
 
-    // The Projects panel lists the working folders and detaches one, and the note goes with it.
-    await win.getByTestId('left-library').click();
-    await expect(win.getByTestId('working-folder-client-brief')).toBeVisible();
-    await capture(app, 'test-results/screens/working-folders.png');
-    await win.getByTestId('working-folder-client-brief').getByTestId('detach-folder').click();
+    // With no Hatch selected, the sidebar shows the canvas's folder and detaches it, and the note goes with it.
+    await canvasRow(win, 'client-brief').getByRole('tab').click();
+    await win.getByTestId('panel-hatch').click();
+    await expect(win.getByTestId('canvas-settings')).toContainText('client-brief');
+    await capture(app, 'test-results/screens/canvas-folder.png');
+    await win.getByTestId('detach-folder').click();
     await expect.poll(() => tabs(home).some((t) => t.folder === brief)).toBe(false);
     await expect.poll(() => existsSync(note)).toBe(false);
 
-    // The panel attaches the canvas the user is looking at, through the same question.
+    // The sidebar attaches the canvas the user is looking at, through the same question.
+    await canvasRow(win, 'Canvas 3').getByRole('tab').click();
     await win.getByTestId('attach-current').click();
     await win.getByTestId('attach-to-client-brief').click();
     await expect.poll(() => tabs(home).find((t) => t.folder === brief)?.id).toBe(userCanvas.id);
@@ -108,6 +110,19 @@ test('a new canvas attaches to a working folder, an agent in that folder works t
     const byName = await visitor('use_project', { project: 'brochure' });
     expect(byName.text).toContain(`the working folder ${site}`);
     await expect.poll(() => tabs(home).some((t) => t.folder === site)).toBe(true);
+
+    // A canvas that is already open attaches from the menu on its row, and detaches from its right-click menu.
+    const first = tabs(home)[0]!;
+    expect(first.folder).toBeUndefined();
+    const firstRow = win.getByTestId('canvas-list').locator('li').first();
+    await firstRow.hover();
+    await firstRow.getByTestId('canvas-more').click();
+    await win.getByTestId('menu-attach-folder').click();
+    await win.getByTestId('attach-to-docs').click();
+    await expect.poll(() => tabs(home).find((t) => t.id === first.id)?.folder).toBe(join(brief, 'docs'));
+    await win.getByTestId('canvas-list').locator('li').first().click({ button: 'right' });
+    await win.getByTestId('menu-detach-folder').click();
+    await expect.poll(() => tabs(home).find((t) => t.id === first.id)?.folder).toBeUndefined();
   } finally {
     await app.close();
   }

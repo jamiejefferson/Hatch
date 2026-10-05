@@ -30,7 +30,7 @@ export function AttachCanvasModal() {
     <dialog ref={dialog} className="modal attach-modal" aria-labelledby="attach-title" onClose={actions.closeAttachPrompt} onPointerDown={(e) => e.target === e.currentTarget && actions.closeAttachPrompt()} data-testid="attach-modal">
       <div className="modal-body">
         <h1 id="attach-title">Which project folder is this canvas for?</h1>
-        <p className="hint">An agent working in that folder, or in a folder inside it, opens its pages here and leaves your other canvases alone. You can change this later in Projects.</p>
+        <p className="hint">An agent working in that folder, or in a folder inside it, opens its pages here and leaves your other canvases alone. You can change this later from the canvas’s menu or the sidebar.</p>
         {folders.length > 0 && (
           <ul className="choice-list">
             {folders.map((f) => (

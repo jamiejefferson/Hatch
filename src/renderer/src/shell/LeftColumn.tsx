@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronIcon, CloseIcon, DuplicateIcon, HatchIcon, PinIcon, PlusIcon, FolderIcon, ShowAllIcon } from '../icons';
+import { ChevronIcon, CloseIcon, DuplicateIcon, HatchIcon, PinIcon, PlusIcon, FolderIcon, MoreIcon, ShowAllIcon } from '../icons';
 import { LinksPanel } from '../panels/LinksPanel';
 import { ProjectsPanel } from '../panels/ProjectsPanel';
 import { actions, activeTab, hatchLabel, tabLabel, useStore, type LeftPanel } from '../state/store';
@@ -135,14 +135,26 @@ function CanvasList({ current }: { current: string }) {
               </button>
             )}
             {t.folder && (
-              <span className="row-project" role="img" aria-label={`Attached to the folder ${t.folder}`} title={`Attached to the folder ${t.folder}. An agent working in that folder uses this canvas.`} data-testid="canvas-folder">
+              <button className="row-folder" aria-label={`${label} is attached to the folder ${t.folder}. Change it`} title={`Attached to ${t.folder}. An agent working in that folder uses this canvas. Press to change the folder.`} onClick={() => actions.askFolderFor(t.id)} data-testid="canvas-folder">
                 <FolderIcon size={12} />
-              </span>
+              </button>
             )}
             {working[t.id] && <span className="working-dot" role="img" aria-label="An agent is working in this canvas" />}
             <span className="row-count" title={hatchCount(t.hatches.length)}>
               {t.hatches.length}
             </span>
+            <button
+              className="row-more"
+              aria-label={`More for ${label}`}
+              title="More for this canvas: its link and its project folder"
+              onClick={(e) => {
+                const box = e.currentTarget.getBoundingClientRect();
+                actions.openContextMenu({ clientX: box.left, clientY: box.bottom + 4, preventDefault: () => e.preventDefault(), stopPropagation: () => e.stopPropagation() }, t.id, null);
+              }}
+              data-testid="canvas-more"
+            >
+              <MoreIcon size={12} />
+            </button>
             <PinButton pinned={!!t.savedId && pinned.has(t.savedId)} label={label} onClick={() => void actions.togglePin(t.id)} />
             <button className="row-close" aria-label={`Close ${label}`} title="Close this canvas" onClick={() => actions.closeTab(t.id)}>
               <CloseIcon size={12} />
