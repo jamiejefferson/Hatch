@@ -42,6 +42,7 @@ test('a copied Hatch link takes an agent to that exact Hatch, in a tab it did no
 
     // The user moves to a second tab, which is the one a new agent would otherwise claim.
     await win.getByTestId('new-canvas').click();
+    await win.getByTestId('attach-skip').click();
     await openHatch(win, `${site.url}/docs.html`);
 
     const agent = new Client({ name: 'pointed', version: '1.0.0' });

@@ -23,7 +23,7 @@ test('a pinned canvas follows its changes, stays listed after it closes, opens a
     await showCanvasPanel(win);
     await expect(win.getByTestId('saved-canvases')).toHaveCount(0);
 
-    // The pin shows under the pointer, and a press pins the canvas under its own name.
+    // Every canvas shows whether it is saved, and a press on the pin saves it under its own name.
     const canvases = win.getByTestId('canvas-list');
     const row = canvases.locator('li').first();
     await row.hover();
@@ -46,7 +46,14 @@ test('a pinned canvas follows its changes, stays listed after it closes, opens a
     const away = win.getByTestId('pinned-away');
     await expect(away).toHaveCount(1);
     await expect(away).toContainText('Research');
+    // A saved canvas shows once: Recently closed leaves it out, and reopening it twice makes no second copy.
+    await expect(win.getByTestId('recently-closed')).toHaveCount(0);
     await away.locator('.row-main').click();
+    await app.evaluate(({ Menu }) => {
+      const file = Menu.getApplicationMenu()!.items.find((i) => i.label === 'File')!;
+      file.submenu!.items.find((i) => i.label === 'Reopen Closed Hatch or Canvas')!.click();
+    });
+    await expect(canvases.getByRole('tab', { name: 'Research' })).toHaveCount(1);
     await expect(win.getByRole('tab', { name: 'Research' })).toHaveAttribute('aria-selected', 'true');
     await expect.poll(async () => (await inPages<string>(app, 'document.title')).length).toBe(2);
     await expect(away).toHaveCount(0);

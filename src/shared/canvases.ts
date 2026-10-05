@@ -22,7 +22,7 @@ export function repairSavedCanvases(raw: unknown): SavedCanvas[] {
     const hatches = (Array.isArray(source.hatches) ? source.hatches : []).map(repairHatch).filter((h): h is Hatch => h !== null).map(onCanvas);
     const pan = (source.pan ?? {}) as Record<string, unknown>;
     const notes = repairNotes(source.notes);
-    out.push({ id: source.id, name: source.name.trim().slice(0, MAX_CANVAS_NAME), savedAt: typeof source.savedAt === 'string' ? source.savedAt : '', hatches, pan: { x: num(pan.x, 40), y: num(pan.y, 68) }, zoom: clampZoom(num(source.zoom, 0.62)), ...(notes.length ? { notes } : {}), ...(typeof source.project === 'string' && source.project ? { project: source.project } : {}) });
+    out.push({ id: source.id, name: source.name.trim().slice(0, MAX_CANVAS_NAME), savedAt: typeof source.savedAt === 'string' ? source.savedAt : '', hatches, pan: { x: num(pan.x, 40), y: num(pan.y, 68) }, zoom: clampZoom(num(source.zoom, 0.62)), ...(notes.length ? { notes } : {}), ...(typeof source.folder === 'string' && source.folder.startsWith('/') ? { folder: source.folder } : {}) });
   }
   return out;
 }
@@ -30,13 +30,13 @@ export function repairSavedCanvases(raw: unknown): SavedCanvas[] {
 /** Takes a copy of a tab under a name. Pass the id of the copy it replaces, so a pinned canvas keeps one copy. */
 export function savedCanvasFromTab(tab: Tab, name: string, now = new Date(), id = newId('canvas')): SavedCanvas {
   const notes = (tab.notes ?? []).filter((n) => n.text.trim());
-  return { id, name: name.trim().slice(0, MAX_CANVAS_NAME), savedAt: now.toISOString(), hatches: tab.hatches.map(onCanvas), pan: { ...tab.pan }, zoom: tab.zoom, ...(notes.length ? { notes } : {}), ...(tab.project ? { project: tab.project } : {}) };
+  return { id, name: name.trim().slice(0, MAX_CANVAS_NAME), savedAt: now.toISOString(), hatches: tab.hatches.map(onCanvas), pan: { ...tab.pan }, zoom: tab.zoom, ...(notes.length ? { notes } : {}), ...(tab.folder ? { folder: tab.folder } : {}) };
 }
 
 /** Builds a new tab from a saved canvas. Every Hatch takes a fresh id, so two openings of one saved canvas never share pages. */
 export function tabFromSavedCanvas(saved: SavedCanvas): Tab {
   const notes = (saved.notes ?? []).map((n) => ({ ...n, id: newId('note') }));
-  return { id: newId('tab'), savedId: saved.id, name: saved.name, hatches: saved.hatches.map((h) => ({ ...onCanvas(h), id: newId('hatch') })), selectedHatchId: null, pan: { ...saved.pan }, zoom: clampZoom(saved.zoom), ...(notes.length ? { notes } : {}), ...(saved.project ? { project: saved.project } : {}) };
+  return { id: newId('tab'), savedId: saved.id, name: saved.name, hatches: saved.hatches.map((h) => ({ ...onCanvas(h), id: newId('hatch') })), selectedHatchId: null, pan: { ...saved.pan }, zoom: clampZoom(saved.zoom), ...(notes.length ? { notes } : {}), ...(saved.folder ? { folder: saved.folder } : {}) };
 }
 
 /** Adds a pinned canvas to the list, or replaces the copy with the same id. Two canvases may share a name. */

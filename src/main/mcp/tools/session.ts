@@ -31,7 +31,7 @@ export const sessionTools = [
       ctx.at(tabId, hatchId);
       const tab = state.tabs.find((t) => t.id === tabId)!;
       const others = state.tabs.length - 1;
-      const lines = [`Hatch ${app.getVersion()}. You are agent "${ctx.agent.id}". You hold the canvas ${JSON.stringify(tab.label)} (${tabId})${tab.project ? `, which belongs to the project ${tab.project}` : ''}${others === 0 ? ', the only one open' : `; ${others === 1 ? 'one other canvas is' : `${others} other canvases are`} open, and list_canvases names them`}. Any agent may open, close and work in any canvas.`];
+      const lines = [`Hatch ${app.getVersion()}. You are agent "${ctx.agent.id}". You hold the canvas ${JSON.stringify(tab.label)} (${tabId})${tab.folder ? `, which belongs to the working folder ${tab.folder}` : ''}${others === 0 ? ', the only one open' : `; ${others === 1 ? 'one other canvas is' : `${others} other canvases are`} open, and list_canvases names them`}. Any agent may open, close and work in any canvas.`];
       if (tab.hatches.length === 0) lines.push('This canvas has no Hatch yet. Call navigate with an address to open a page.');
       for (const h of tab.hatches) {
         const page = pageFor(h.id);

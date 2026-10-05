@@ -59,6 +59,7 @@ test('the speaker on a playing Hatch mutes it, and a closed Hatch and a closed c
 
     // A closed canvas comes back from its row with its Hatch.
     await win.getByTestId('new-canvas').click();
+    await win.getByTestId('attach-skip').click();
     await expect(win.getByTestId('canvas-list').locator('li')).toHaveCount(2);
     await win.getByTestId('canvas-list').locator('li').first().hover();
     await win.getByTestId('canvas-list').locator('li').first().getByRole('button', { name: /^Close/ }).click();

@@ -595,9 +595,8 @@ h2 .count { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0
 .hatch-page { background: #ffffff; }
 
 /* A pin on a canvas row. A pinned canvas shows its pin, filled; any other canvas shows an empty pin under the pointer. */
-.row-pin { display: none; place-items: center; width: 20px; height: 20px; flex-shrink: 0; border-radius: var(--pill); color: var(--ink-2); }
+.row-pin { display: grid; place-items: center; width: 20px; height: 20px; flex-shrink: 0; border-radius: var(--pill); color: var(--ink-3); }
 .row-pin:hover { color: var(--ink); background: var(--fill); }
-.row-list li:hover .row-pin, .row-pin:focus-visible, .row-pin.pinned { display: grid; }
 .row-pin.pinned { color: var(--ink); }
 .row-pin.pinned path { fill: currentColor; }
 /* A pinned canvas that has closed waits in the list, quieter than the open ones. */
@@ -617,9 +616,9 @@ h2 .count { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0
 .modal-actions .tool-space { flex: 1; }
 .text-button.danger { color: var(--danger); }
 
-/* A canvas that belongs to a project. */
+/* A canvas that belongs to a working folder. */
 .row-project { display: grid; place-items: center; flex-shrink: 0; color: var(--ink-2); }
-.project-canvas { display: flex; flex-direction: column; gap: 8px; }
-.project-canvas h2 { margin: 0; font-size: 12px; font-weight: 600; color: var(--ink-2); }
-.project-canvas-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.working-folders { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.working-folders .project-list { align-self: stretch; }
+.working-folders .project-main svg, .attach-modal .choice-list svg { flex-shrink: 0; color: var(--ink-2); }
 .attach-modal { width: 480px; }

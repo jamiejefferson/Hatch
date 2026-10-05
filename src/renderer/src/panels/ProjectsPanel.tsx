@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ProjectState } from '@shared/types';
-import { BackIcon, BinIcon, OpenIcon, PlayIcon, PlusIcon, ReloadIcon, ShowAllIcon, StopIcon } from '../icons';
+import { folderName } from '@shared/project-canvas';
+import { BackIcon, BinIcon, CloseIcon, FolderIcon, OpenIcon, PlayIcon, PlusIcon, ReloadIcon, StopIcon } from '../icons';
 import { actions, tabLabel, useStore } from '../state/store';
 
 const home = (path: string): string => path.replace(/^\/Users\/[^/]+/, '~');
@@ -9,8 +10,6 @@ const STATUS: Record<ProjectState['status'], string> = { running: 'Running', sta
 
 export function ProjectsPanel() {
   const { projects, found } = useStore((s) => s.projects);
-  // Each project's canvas by name, so a row can show it.
-  const canvases: Record<string, string> = Object.fromEntries(useStore((s) => s.workspace.tabs.filter((t) => t.project).map((t) => `${t.project}\u0000${tabLabel(s, t)}`).join('\n')).split('\n').filter(Boolean).map((line) => line.split('\u0000') as [string, string]));
   const openName = useStore((s) => s.openProject);
   const [error, setError] = useState<string | null>(null);
   const open = projects.find((p) => p.name === openName);
@@ -23,7 +22,6 @@ export function ProjectsPanel() {
 
   const row = (p: ProjectState) => {
     const live = p.status === 'running';
-    const canvas = canvases[p.name];
     const action = p.kind !== 'server' || live ? 'Open' : p.status === 'starting' ? 'Open' : 'Start';
     return (
       <li key={p.name}>
@@ -35,9 +33,6 @@ export function ProjectsPanel() {
               hatch:{p.name} · {p.status === 'starting' ? 'starting' : p.status === 'failed' ? 'failed to start' : p.framework}
             </span>
           </span>
-        </button>
-        <button className={`round small${canvas ? '' : ' quiet'}`} aria-label={canvas ? `Show ${p.name}'s canvas` : `Give ${p.name} a canvas`} title={canvas ? `Show its canvas, ${canvas}. Agents working in ${p.name}'s folder use it.` : `Give ${p.name} a canvas of its own. Agents working in its folder then use it.`} onClick={() => actions.showProjectCanvas(p.name)} data-testid={`project-canvas-${p.name}`}>
-          <ShowAllIcon size={14} />
         </button>
         <button className="round small" aria-label={action} title={action === 'Start' ? `Start ${p.name} and open it in a Hatch` : `Open ${p.name} in a Hatch`} onClick={() => run(actions.openProjectInHatch(p.name))}>
           {action === 'Start' ? <PlayIcon size={14} /> : <OpenIcon size={14} />}
@@ -54,6 +49,7 @@ export function ProjectsPanel() {
           <PlusIcon size={14} />
         </button>
       </header>
+      <WorkingFolders />
       {projects.length === 0 && found.length === 0 && <p className="hint">Add a project folder and Hatch gives it a stable address, starts its dev server and keeps it on one port. A folder of plain HTML works too.</p>}
       {running.length > 0 && (
         <section>
@@ -109,15 +105,6 @@ export function ProjectsPanel() {
 
 function ProjectDetail({ project }: { project: ProjectState }) {
   const log = useStore((s) => s.projectLogs[project.name]) ?? [];
-  // Plain strings, because a selector that builds an object each time never settles.
-  const canvasId = useStore((s) => s.workspace.tabs.find((x) => x.project === project.name)?.id ?? '');
-  const canvasLabel = useStore((s) => {
-    const t = s.workspace.tabs.find((x) => x.project === project.name);
-    return t ? tabLabel(s, t) : '';
-  });
-  const currentId = useStore((s) => s.workspace.activeTabId);
-  const canvas = canvasId ? { id: canvasId, label: canvasLabel } : null;
-  const current = { id: currentId };
   const [error, setError] = useState<string | null>(null);
   const logBox = useRef<HTMLPreElement>(null);
   const server = project.kind === 'server';
@@ -130,10 +117,7 @@ function ProjectDetail({ project }: { project: ProjectState }) {
   const save = (change: Parameters<typeof window.hatch.updateProject>[1]): void =>
     void window.hatch.updateProject(project.name, change).then((r) => {
       report(r);
-      if (r.ok && r.value.name !== project.name) {
-        actions.renameProjectOnCanvases(project.name, r.value.name);
-        actions.showProject(r.value.name);
-      }
+      if (r.ok && r.value.name !== project.name) actions.showProject(r.value.name);
     });
 
   return (
@@ -163,34 +147,6 @@ function ProjectDetail({ project }: { project: ProjectState }) {
           {error}
         </p>
       )}
-
-      <section className="project-canvas" data-testid="project-canvas">
-        <h2>Canvas</h2>
-        {canvas ? (
-          <p className="status-line">
-            <span className="dot on" /> {canvas.id === current.id ? 'This canvas belongs to the project.' : `The canvas ${canvas.label} belongs to the project.`}
-          </p>
-        ) : (
-          <p className="hint">No canvas belongs to this project. An agent working in its folder opens one of its own.</p>
-        )}
-        <div className="project-canvas-actions">
-          {canvas?.id !== current.id && (
-            <button className="button left" onClick={() => actions.attachCanvas(current.id, project.name)} data-testid="attach-current">
-              {canvas ? 'Attach the current canvas instead' : 'Attach the current canvas'}
-            </button>
-          )}
-          {canvas && canvas.id !== current.id && (
-            <button className="text-button underline left" onClick={() => actions.activateTab(canvas.id)}>
-              Show {canvas.label}
-            </button>
-          )}
-          {canvas && (
-            <button className="text-button underline left" onClick={() => actions.attachCanvas(canvas.id, null)} data-testid="detach-canvas">
-              Detach the canvas
-            </button>
-          )}
-        </div>
-      </section>
 
       {server && (
         <section className="log-section">
@@ -240,9 +196,7 @@ function ProjectDetail({ project }: { project: ProjectState }) {
           onClick={() =>
             void window.hatch.removeProject(project.name).then((r) => {
               report(r);
-              if (!r.ok) return;
-              actions.renameProjectOnCanvases(project.name, null);
-              actions.showProject(null);
+              if (r.ok) actions.showProject(null);
             })
           }
         >
@@ -279,5 +233,49 @@ function Field({ label, value, onCommit, readOnly, narrow, testid }: { label: st
         />
       </span>
     </label>
+  );
+}
+
+/**
+ * The folders where project work takes place, each with the canvas an agent working there uses. Any folder counts, with or
+ * without a dev server, so this list stands apart from the registered projects below it.
+ */
+function WorkingFolders() {
+  // Plain strings, because a selector that builds an object each time never settles.
+  const rows = useStore((s) => s.workspace.tabs.filter((t) => t.folder).map((t) => [t.id, t.folder!, tabLabel(s, t)].join('\u0000')).join('\n'))
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => line.split('\u0000') as [string, string, string]);
+  const current = useStore((s) => s.workspace.activeTabId);
+  const currentFolder = useStore((s) => s.workspace.tabs.find((t) => t.id === s.workspace.activeTabId)?.folder ?? '');
+
+  return (
+    <section className="working-folders" data-testid="working-folders">
+      <h2>Working folders</h2>
+      <p className="hint">An agent working in one of these folders, or in a folder inside it, uses that folder’s canvas and leaves your other canvases alone.</p>
+      {rows.length > 0 && (
+        <ul className="project-list">
+          {rows.map(([id, folder, label]) => (
+            <li key={id} data-testid={`working-folder-${folderName(folder)}`}>
+              <button className="project-main" onClick={() => actions.activateTab(id)} title={`Show the canvas ${label}`}>
+                <FolderIcon size={14} />
+                <span className="project-text">
+                  <span className="name">{folderName(folder)}</span>
+                  <span className="mono url">
+                    {home(folder)} · {id === current ? 'this canvas' : label}
+                  </span>
+                </span>
+              </button>
+              <button className="round small" aria-label={`Detach ${folderName(folder)}`} title={`Detach ${folderName(folder)} from its canvas. The canvas stays open.`} onClick={() => actions.attachCanvas(id, null)} data-testid="detach-folder">
+                <CloseIcon size={14} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button className="button left" onClick={() => actions.askFolderFor(current)} data-testid="attach-current">
+        {currentFolder ? 'Attach this canvas to another folder' : 'Attach this canvas to a folder'}
+      </button>
+    </section>
   );
 }

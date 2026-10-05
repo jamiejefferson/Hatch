@@ -4,6 +4,7 @@ import { projectsState } from '../../servers/manager';
 import { HatchError } from '../../cdp/session';
 import { callInterface } from '../../renderer-rpc';
 import { idFromLink } from '@shared/hatch-link';
+import { projectRoot } from '@shared/project-canvas';
 import type { InterfaceState } from '@shared/types';
 import { intent, tool } from './types';
 
@@ -16,7 +17,7 @@ const canvasArg = z.string().describe('Canvas id from list_canvases, or a copied
 function describe(state: InterfaceState, held: string | null): string {
   return state.tabs
     .map((t) => {
-      const head = `${t.id}${t.id === held ? ' (yours)' : ''}${t.id === state.activeTabId ? ' (the user is looking at it)' : ''}  ${JSON.stringify(t.label)}${t.project ? `  project ${t.project}` : ''}  ${t.hatches.length === 1 ? '1 Hatch' : `${t.hatches.length} Hatches`}`;
+      const head = `${t.id}${t.id === held ? ' (yours)' : ''}${t.id === state.activeTabId ? ' (the user is looking at it)' : ''}  ${JSON.stringify(t.label)}${t.folder ? `  folder ${t.folder}` : ''}  ${t.hatches.length === 1 ? '1 Hatch' : `${t.hatches.length} Hatches`}`;
       const pages = t.hatches.map((h) => `  ${h.id}  ${JSON.stringify(h.title || '(no title yet)')}  ${h.url}`);
       return [head, ...pages].join('\n');
     })
@@ -26,37 +27,34 @@ function describe(state: InterfaceState, held: string | null): string {
 export const canvasTools = [
   tool({
     name: 'use_project',
-    description: "Moves you to the canvas of the project you work on, so you leave the user's other canvases alone. Pass the folder you work in, or the project's name. A project with no canvas gets a new one, and a folder that belongs to no registered project gets a fresh canvas of its own. Hatch does this by itself for an agent whose Hatch command starts in the project's folder.",
+    description: "Moves you to the canvas of the folder you work in, so you leave the user's other canvases alone. A project is the folder where its work takes place, any folder, with or without a dev server. Pass that folder, or a registered project's name. The canvas attached to the folder, or to a folder above it, is the one; a folder with no canvas gets a new one attached to it. Hatch does this by itself for an agent whose Hatch command starts in the folder.",
     shape: {
-      folder: z.string().optional().describe('Absolute path of the folder you work in. Hatch finds the registered project that holds it.'),
-      project: z.string().optional().describe('A project name from list_projects, in place of folder.'),
+      folder: z.string().optional().describe('Absolute path of the folder you work in.'),
+      project: z.string().optional().describe("A registered project's name from list_projects, in place of folder. Its folder is used."),
       intent,
     },
     summary: (a) => `use_project ${a.project ?? a.folder?.split('/').pop() ?? ''}`.trim(),
     async run(a, ctx) {
-      let found: { tabId: string; project: string | null; opened: boolean };
+      let folder = (a.folder ?? '').replace(/\/+$/, '');
       if (a.project) {
         const name = a.project.replace(/^hatch:/, '').toLowerCase();
         const { projects } = await projectsState(false);
-        if (!projects.some((p) => p.name === name)) throw new HatchError(`No project is named ${name}. list_projects names them, and register_project adds a folder.`);
-        const state = await callInterface<InterfaceState>('state');
-        const held = state.tabs.find((t) => t.project === name);
-        found = held ? { tabId: held.id, project: name, opened: false } : { tabId: await callInterface<string>('newTab', { project: name }), project: name, opened: true };
-      } else {
-        const folder = (a.folder ?? ctx.agent.folder ?? '').replace(/\/+$/, '');
-        if (!folder.startsWith('/')) throw new HatchError('Pass folder, the absolute path you work in, or project, a name from list_projects.');
-        ctx.agent.folder = folder;
-        found = await canvasForFolder(folder);
+        const project = projects.find((p) => p.name === name);
+        if (!project) throw new HatchError(`No project is named ${name}. Pass folder, the absolute path you work in, or a name from list_projects.`);
+        folder = projectRoot(project);
       }
+      folder ||= ctx.agent.folder ?? '';
+      if (!folder.startsWith('/')) throw new HatchError('Pass folder, the absolute path you work in, or project, a name from list_projects.');
+      ctx.agent.folder = folder;
+      const found = await canvasForFolder(folder);
       ctx.agent.tabId = found.tabId;
       ctx.agent.hatchId = null;
       ctx.agent.finished = false;
       const state = await callInterface<InterfaceState>('state');
       const tab = state.tabs.find((t) => t.id === found.tabId)!;
       ctx.at(tab.id, null);
-      const where = found.project ? `the canvas of the project ${found.project}` : 'a canvas of its own, because the folder belongs to no registered project';
       const pages = tab.hatches.length ? `\nIts Hatches:\n${tab.hatches.map((h) => `  ${h.id}  ${JSON.stringify(h.title || '(no title yet)')}  ${h.url}`).join('\n')}` : '\nIt has no Hatch yet. Call navigate with an address.';
-      return `You now work on ${JSON.stringify(tab.label)} (${tab.id}), ${where}.${found.opened ? ' Hatch opened it just now, behind the canvas the user is looking at.' : ''}${pages}`;
+      return `You now work on ${JSON.stringify(tab.label)} (${tab.id}), the canvas of the working folder ${found.folder}.${found.opened ? ' Hatch opened it just now, behind the canvas the user is looking at.' : ''}${pages}`;
     },
   }),
   tool({

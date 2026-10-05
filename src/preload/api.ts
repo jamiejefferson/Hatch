@@ -92,6 +92,8 @@ export interface HatchApi {
   bindHatch(hatchId: string, webContentsId: number): void;
   /** Opens the macOS folder chooser. Resolves null when the user cancels. */
   pickFolder(title: string): Promise<string | null>;
+  /** Folders a canvas may attach to: those agents worked in lately, then registered projects' folders. */
+  workFolders(): Promise<string[]>;
   /** Tells the main process which Hatches sit in Fit to view, where pop-ups open. */
   setFitHatches(ids: string[]): void;
   projects(): Promise<ProjectsState>;

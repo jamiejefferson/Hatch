@@ -1,41 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import { canvasNote, oneCanvasPerProject, projectForFolder } from '@shared/project-canvas';
+import { canvasForFolderIn, canvasNote, folderName, oneCanvasPerFolder } from '@shared/project-canvas';
 import type { Tab } from '@shared/types';
 
-const projects = [
-  { name: 'site', folder: '/Users/u/work/site', kind: 'server' as const },
-  { name: 'docs', folder: '/Users/u/work/site/docs', kind: 'folder' as const },
-  { name: 'deck', folder: '/Users/u/decks/pitch/index.html', kind: 'file' as const },
-];
+const tab = (id: string, folder?: string): Tab => ({ id, hatches: [], selectedHatchId: null, pan: { x: 0, y: 0 }, zoom: 1, ...(folder ? { folder } : {}) });
 
-describe('projectForFolder', () => {
-  it('finds the project a folder is, or sits inside, and prefers the deepest', () => {
-    expect(projectForFolder('/Users/u/work/site', projects)?.name).toBe('site');
-    expect(projectForFolder('/Users/u/work/site/src/app/', projects)?.name).toBe('site');
-    expect(projectForFolder('/Users/u/work/site/docs/guide', projects)?.name).toBe('docs');
-    expect(projectForFolder('/Users/u/decks/pitch', projects)?.name).toBe('deck');
+describe('canvasForFolderIn', () => {
+  const tabs = [tab('site', '/Users/u/work/site'), tab('docs', '/Users/u/work/site/docs'), tab('mine'), tab('notes', '/Users/u/Notes/Client A')];
+
+  it('finds the canvas of the folder an agent works in, or of a folder above it, and prefers the deepest', () => {
+    expect(canvasForFolderIn('/Users/u/work/site', tabs)?.id).toBe('site');
+    expect(canvasForFolderIn('/Users/u/work/site/src/app/', tabs)?.id).toBe('site');
+    expect(canvasForFolderIn('/Users/u/work/site/docs/guide', tabs)?.id).toBe('docs');
+    expect(canvasForFolderIn('/Users/u/Notes/Client A/briefs', tabs)?.id).toBe('notes');
   });
 
-  it('gives no project for a folder outside every project, a near-miss name or the home folder', () => {
-    expect(projectForFolder('/Users/u/work/site-old', projects)).toBeNull();
-    expect(projectForFolder('/Users/u', [{ name: 'home', folder: '/Users/u', kind: 'folder' as const }], '/Users/u')).toBeNull();
-    expect(projectForFolder('', projects)).toBeNull();
+  it('finds no canvas for a folder outside every attached folder, a near-miss name or the home folder', () => {
+    expect(canvasForFolderIn('/Users/u/work/site-old', tabs)).toBeNull();
+    expect(canvasForFolderIn('/Users/u', [tab('home', '/Users/u')], '/Users/u')).toBeNull();
+    expect(canvasForFolderIn('', tabs)).toBeNull();
   });
 });
 
-describe('oneCanvasPerProject', () => {
-  const tab = (id: string, project?: string): Tab => ({ id, hatches: [], selectedHatchId: null, pan: { x: 0, y: 0 }, zoom: 1, ...(project ? { project } : {}) });
-
-  it('lets the first canvas keep a project, or the one named to keep it', () => {
-    expect(oneCanvasPerProject([tab('a', 'site'), tab('b', 'site'), tab('c', 'docs')]).map((t) => t.project)).toEqual(['site', undefined, 'docs']);
-    expect(oneCanvasPerProject([tab('a', 'site'), tab('b', 'site')], 'b').map((t) => t.project)).toEqual([undefined, 'site']);
+describe('oneCanvasPerFolder', () => {
+  it('lets the first canvas keep a folder, or the one named to keep it', () => {
+    expect(oneCanvasPerFolder([tab('a', '/w/site'), tab('b', '/w/site'), tab('c', '/w/docs')]).map((t) => t.folder)).toEqual(['/w/site', undefined, '/w/docs']);
+    expect(oneCanvasPerFolder([tab('a', '/w/site'), tab('b', '/w/site')], 'b').map((t) => t.folder)).toEqual([undefined, '/w/site']);
   });
 });
 
 describe('canvasNote', () => {
-  it('names the canvas and tells an agent how to reach it', () => {
-    const note = JSON.parse(canvasNote({ id: 'tab_1', label: 'Site' }, 'site'));
-    expect(note).toMatchObject({ canvas: 'tab_1', name: 'Site', project: 'site' });
+  it('names the canvas and the folder, and tells an agent how to reach it', () => {
+    const note = JSON.parse(canvasNote({ id: 'tab_1', label: 'Site' }, '/w/site'));
+    expect(note).toMatchObject({ canvas: 'tab_1', name: 'Site', folder: '/w/site' });
     expect(note.forAgents).toContain('use_project');
+    expect(folderName('/w/Client A/')).toBe('Client A');
   });
 });

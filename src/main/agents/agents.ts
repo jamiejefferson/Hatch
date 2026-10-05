@@ -2,9 +2,9 @@
 // The MCP SDK gives no session id in either protocol version, so Hatch issues identity itself:
 // the stdio shim sends an X-Hatch-Agent header, and an agent that connects over HTTP uses a URL ending ?agent=<name>.
 import { homedir } from 'node:os';
-import { basename } from 'node:path';
 import type { AgentWorkState, InterfaceState } from '@shared/types';
-import { projectForFolder } from '@shared/project-canvas';
+import { canvasForFolderIn, cleanPath, holds as folderHolds, projectRoot } from '@shared/project-canvas';
+import { basename } from 'node:path';
 import { idFromLink } from '@shared/hatch-link';
 import { HatchError } from '../cdp/session';
 import { callInterface, push } from '../renderer-rpc';
@@ -97,7 +97,7 @@ export async function tabFor(agent: Agent, canvas?: string): Promise<{ tabId: st
   }
   const mine = agent.tabId && state.tabs.some((t) => t.id === agent.tabId) ? agent.tabId : null;
   if (!mine && agent.folder) {
-    // An agent that works in a project's folder works on the project's canvas, or on a new one made for the project.
+    // An agent that works in a folder works on that folder's canvas, or on a new one made for the folder.
     agent.tabId = (await canvasForFolder(agent.folder, state)).tabId;
     state = await callInterface<InterfaceState>('state');
     agent.hatchId = null;
@@ -113,27 +113,18 @@ export async function tabFor(agent: Agent, canvas?: string): Promise<{ tabId: st
   return { tabId: agent.tabId!, state };
 }
 
-/** Canvases opened for a folder that belongs to no registered project, so a later session in the same folder finds its own again. */
-const folderCanvases = new Map<string, string>();
-
 /**
- * The canvas for an agent's folder: the canvas of the project the folder belongs to, opened for the project when it has none,
- * or a fresh canvas named after a folder that belongs to no project. The user's other canvases stay untouched either way.
+ * The canvas for an agent's folder: the canvas attached to the folder or to a folder above it, or a new canvas attached to
+ * the folder. A folder inside a registered project attaches the project's whole folder. The user's other canvases stay untouched.
  */
-export async function canvasForFolder(folder: string, state?: InterfaceState): Promise<{ tabId: string; project: string | null; opened: boolean }> {
+export async function canvasForFolder(folder: string, state?: InterfaceState): Promise<{ tabId: string; folder: string; opened: boolean }> {
   const current = state ?? (await callInterface<InterfaceState>('state'));
+  const held = canvasForFolderIn(folder, current.tabs, homedir());
+  if (held) return { tabId: held.id, folder: held.folder!, opened: false };
   const { projects } = await projectsState(false);
-  const project = projectForFolder(folder, projects, homedir());
-  if (project) {
-    const held = current.tabs.find((t) => t.project === project.name);
-    if (held) return { tabId: held.id, project: project.name, opened: false };
-    return { tabId: await callInterface<string>('newTab', { project: project.name }), project: project.name, opened: true };
-  }
-  const known = folderCanvases.get(folder);
-  if (known && current.tabs.some((t) => t.id === known)) return { tabId: known, project: null, opened: false };
-  const tabId = await callInterface<string>('newTab', { name: basename(folder) });
-  folderCanvases.set(folder, tabId);
-  return { tabId, project: null, opened: true };
+  const root = projects.map((p) => cleanPath(projectRoot(p))).filter((r) => r !== homedir() && folderHolds(r, folder)).sort((a, b) => b.length - a.length)[0];
+  const target = root ?? cleanPath(folder);
+  return { tabId: await callInterface<string>('newTab', { folder: target }), folder: target, opened: true };
 }
 
 /**

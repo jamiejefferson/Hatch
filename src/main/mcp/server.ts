@@ -9,6 +9,7 @@ import { agentFor, callEnded, callStarted, folderOf, identify, type Agent } from
 import { HatchError } from '../cdp/session';
 import { canAsk } from '../jev/client';
 import { BRIEFING_HEAD, briefing } from './guide/brief';
+import { noteWorkFolder } from '../project-canvas';
 import { TOOLS } from './tools';
 import type { Tool, ToolContext } from './tools/types';
 
@@ -64,7 +65,10 @@ function buildServer(agentId: string, folder: string | null): McpServer {
           void ctx.mcpReq.notify({ method: 'notifications/progress', params: { progressToken: token, progress: step, message } }).catch(() => {});
         };
         const agent = agentFor(agentId);
-        if (folder) agent.folder = folder;
+        if (folder) {
+          agent.folder = folder;
+          void noteWorkFolder(folder);
+        }
         return runTool(tool, args as Record<string, unknown>, agent, progress);
       },
     );

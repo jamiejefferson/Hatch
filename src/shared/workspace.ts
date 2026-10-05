@@ -1,5 +1,5 @@
 // Builds, repairs and edits the workspace. Pure functions, so the main process and the renderer share them.
-import { oneCanvasPerProject } from './project-canvas';
+import { cleanPath, oneCanvasPerFolder } from './project-canvas';
 import { clampZoom } from './geometry';
 import { clampSize, templateForSize } from './templates';
 import type { Hatch, Note, Tab, TemplateId, Workspace } from './types';
@@ -25,7 +25,7 @@ const str = (v: unknown, fallback: string): string => (typeof v === 'string' ? v
 export function repairWorkspace(raw: unknown): Workspace {
   if (!raw || typeof raw !== 'object') return emptyWorkspace();
   const source = raw as Record<string, unknown>;
-  const tabs = oneCanvasPerProject((Array.isArray(source.tabs) ? source.tabs : []).map(repairTab).filter((t): t is Tab => t !== null));
+  const tabs = oneCanvasPerFolder((Array.isArray(source.tabs) ? source.tabs : []).map(repairTab).filter((t): t is Tab => t !== null));
   if (tabs.length === 0) return emptyWorkspace();
   const activeTabId = tabs.some((t) => t.id === source.activeTabId) ? (source.activeTabId as string) : tabs[0]!.id;
   return { version: 1, tabs, activeTabId, sidebarOpen: source.sidebarOpen !== false, leftOpen: source.leftOpen !== false };
@@ -46,7 +46,7 @@ function repairTab(raw: unknown): Tab | null {
   }
   const name = str(source.name, '').trim().slice(0, 60);
   const notes = repairNotes(source.notes);
-  return { id: str(source.id, newId('tab')), ...(name ? { name } : {}), hatches, selectedHatchId: selected, pan: { x: num(pan.x, 40), y: num(pan.y, 68) }, zoom: clampZoom(num(source.zoom, 0.62)), ...(notes.length ? { notes } : {}), ...(typeof source.savedId === 'string' ? { savedId: source.savedId } : {}), ...(typeof source.project === 'string' && source.project ? { project: source.project } : {}) };
+  return { id: str(source.id, newId('tab')), ...(name ? { name } : {}), hatches, selectedHatchId: selected, pan: { x: num(pan.x, 40), y: num(pan.y, 68) }, zoom: clampZoom(num(source.zoom, 0.62)), ...(notes.length ? { notes } : {}), ...(typeof source.savedId === 'string' ? { savedId: source.savedId } : {}), ...(typeof source.folder === 'string' && source.folder.startsWith('/') ? { folder: cleanPath(source.folder) } : {}) };
 }
 
 export const MAX_NOTE_LENGTH = 2000;

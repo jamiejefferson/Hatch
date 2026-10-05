@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronIcon, CloseIcon, DuplicateIcon, HatchIcon, PinIcon, PlusIcon, ProjectsIcon, ShowAllIcon } from '../icons';
+import { ChevronIcon, CloseIcon, DuplicateIcon, HatchIcon, PinIcon, PlusIcon, FolderIcon, ShowAllIcon } from '../icons';
 import { LinksPanel } from '../panels/LinksPanel';
 import { ProjectsPanel } from '../panels/ProjectsPanel';
 import { actions, activeTab, hatchLabel, tabLabel, useStore, type LeftPanel } from '../state/store';
@@ -50,7 +50,7 @@ function Fold({ title, open, onToggle, action, children, testId }: { title: stri
 function CanvasesTab() {
   const tab = useStore(activeTab);
   const [open, setOpen] = useState({ canvases: true, hatches: true, closed: true });
-  const closed = useStore((s) => s.closed.length > 0);
+  const closed = useStore((s) => s.closed.some((c) => c.kind !== 'canvas' || !c.tab.savedId || !s.savedCanvases.some((p) => p.id === c.tab.savedId)));
   const flip = (key: keyof typeof open) => () => setOpen({ ...open, [key]: !open[key] });
   return (
     <>
@@ -134,9 +134,9 @@ function CanvasList({ current }: { current: string }) {
                 {label}
               </button>
             )}
-            {t.project && (
-              <span className="row-project" role="img" aria-label={`Attached to the project ${t.project}`} title={`Attached to the project ${t.project}. An agent working in its folder uses this canvas.`} data-testid="canvas-project">
-                <ProjectsIcon size={12} />
+            {t.folder && (
+              <span className="row-project" role="img" aria-label={`Attached to the folder ${t.folder}`} title={`Attached to the folder ${t.folder}. An agent working in that folder uses this canvas.`} data-testid="canvas-folder">
+                <FolderIcon size={12} />
               </span>
             )}
             {working[t.id] && <span className="working-dot" role="img" aria-label="An agent is working in this canvas" />}
@@ -170,7 +170,7 @@ function CanvasList({ current }: { current: string }) {
 
 function PinButton({ pinned, label, onClick }: { pinned: boolean; label: string; onClick(): void }) {
   return (
-    <button className={`row-pin${pinned ? ' pinned' : ''}`} aria-pressed={pinned} aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`} title={pinned ? 'Unpin this canvas. Hatch forgets it once it closes.' : 'Pin this canvas. Hatch keeps it in this list after it closes.'} onClick={onClick} data-testid="pin-canvas">
+    <button className={`row-pin${pinned ? ' pinned' : ''}`} aria-pressed={pinned} aria-label={pinned ? `${label} is saved. Stop saving it` : `${label} is not saved. Save it`} title={pinned ? 'Saved. Hatch keeps this canvas in the list after it closes. Press to stop saving it.' : 'Not saved. Press to save this canvas, so Hatch keeps it in the list after it closes.'} onClick={onClick} data-testid="pin-canvas">
       <PinIcon size={12} />
     </button>
   );
@@ -206,10 +206,13 @@ function HatchList({ tab }: { tab: Tab }) {
 
 /** What the user closed this session, the latest first. A click brings it back where it was, as Cmd+Shift+T does for the latest. */
 function ClosedList() {
+  // A pinned canvas stays in the Canvases list once it closes, so it shows there alone.
   const closed = useStore((s) => s.closed);
+  const pinned = useStore((s) => s.savedCanvases);
+  const shown = closed.filter((c) => c.kind !== 'canvas' || !c.tab.savedId || !pinned.some((p) => p.id === c.tab.savedId));
   return (
     <ul className="row-list" data-testid="closed-list">
-      {[...closed].reverse().map((c, i) => {
+      {[...shown].reverse().map((c, i) => {
         const label = c.kind === 'hatch' ? hatchLabel(c.hatch) : c.name;
         const shortcut = i === 0 ? ' (Cmd+Shift+T)' : '';
         return (

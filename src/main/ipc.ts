@@ -12,7 +12,7 @@ import * as comments from './comments/store';
 import { connectionInfo } from './connection';
 import { answerConsent } from './credentials/fill';
 import { repairActionButtons } from '@shared/action-buttons';
-import { syncProjectCanvases } from './project-canvas';
+import { syncFolderCanvases, workFolders } from './project-canvas';
 import { installSkill, skillState } from './skill';
 import { defaultBrowserState, makeDefaultBrowser } from './default-browser';
 import { captureForFeedback, feedbackDetails, sendFeedback } from './feedback/send';
@@ -35,7 +35,7 @@ export function registerIpc(): void {
   ipcMain.handle('workspace:save', async (_e, workspace: Workspace) => {
     const repaired = repairWorkspace(workspace);
     await workspaceStore.write(repaired);
-    void syncProjectCanvases(repaired);
+    void syncFolderCanvases(repaired);
   });
 
   ipcMain.handle('links:list', () => linksStore.read());
@@ -113,6 +113,8 @@ export function registerIpc(): void {
     const picked = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
     return picked.canceled ? null : (picked.filePaths[0] ?? null);
   });
+
+  ipcMain.handle('work-folders:list', () => workFolders());
 
   ipcMain.handle('clipboard:copy', (_e, text: string) => clipboard.writeText(String(text)));
   ipcMain.handle('clipboard:paper', (_e, html: string) => copyForPaper(String(html)));

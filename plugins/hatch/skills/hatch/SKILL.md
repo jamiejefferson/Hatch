@@ -13,9 +13,9 @@ The Hatch tools come from the MCP server named `hatch`. Their full names carry a
 
 If no Hatch tools are available, tell the user the Hatch connection is missing and point them to Settings in Hatch. Never claim a page opened without a successful tool reply.
 
-## Work on the project's canvas
+## Work on your folder's canvas
 
-A canvas may belong to a project, and the user keeps their other canvases for their own work. When your Hatch command starts in a project's folder, Hatch puts you on that project's canvas by itself. If you work on a project and `status` shows a canvas that is not the project's, call `use_project` with your working folder before you open pages. The folder's `.hatch/canvas.json` names the canvas. When unsure, call `use_project`: it opens a fresh canvas rather than take over one the user is using.
+A canvas may belong to a working folder, the folder where a project's work takes place, whether or not it holds a website. The user keeps their other canvases for their own work. When your Hatch command starts in that folder or inside it, Hatch puts you on its canvas by itself. If `status` shows a canvas that is not your folder's, call `use_project` with your working folder before you open pages. The folder's `.hatch/canvas.json` names the canvas. When unsure, call `use_project`: it opens a fresh canvas rather than take over one the user is using.
 
 ## Resolve the argument
 

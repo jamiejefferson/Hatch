@@ -27,6 +27,7 @@ const api: HatchApi = {
   copyForPaper: (html) => ipcRenderer.invoke('clipboard:paper', html),
   bindHatch: (hatchId, webContentsId) => ipcRenderer.send('hatch:bind', hatchId, webContentsId),
   pickFolder: (title) => ipcRenderer.invoke('folder:pick', title),
+  workFolders: () => ipcRenderer.invoke('work-folders:list'),
   setFitHatches: (ids) => ipcRenderer.send('hatch:fit', ids),
   projects: () => ipcRenderer.invoke('projects:state'),
   pickProject: () => ipcRenderer.invoke('projects:pick'),

@@ -10,7 +10,7 @@ import type { ConsentAnswer, ConsentRequest, SignIn } from '@shared/signins';
 import type { ConnectionInfo, Outcome } from '../../../preload/api';
 import type { ActionButton, ProjectsState, ActivityEntry, AgentAct, AgentWorkState, DialogState, Hatch, HatchView, InterfaceState, Note, SavedCanvas, SavedLink, Settings, Tab, TemplateId, ViewRequest, Workspace } from '@shared/types';
 import { savedCanvasFromTab, tabFromSavedCanvas } from '@shared/canvases';
-import { oneCanvasPerProject } from '@shared/project-canvas';
+import { folderName, oneCanvasPerFolder } from '@shared/project-canvas';
 import { DEFAULT_SETTINGS } from '@shared/types';
 import { emptyTab, emptyWorkspace, MAX_NOTE_LENGTH, newId } from '@shared/workspace';
 
@@ -94,7 +94,7 @@ export interface State {
   newHatchAt: Point | null;
   /** The right-click menu: where it opened, and the tab and Hatch it speaks for. */
   contextMenu: { x: number; y: number; tabId: string; hatchId: string | null } | null;
-  /** The canvas the user just made, while Hatch asks which project it belongs to. */
+  /** The canvas whose working folder Hatch asks for: a canvas the user just made, or one the user chose to attach. */
   attachPrompt: string | null;
   /** The action button editor: null when shut, `id` null while adding a new button. */
   actionEditor: { id: string | null } | null;
@@ -316,7 +316,7 @@ function serve(method: string, params: unknown): unknown {
         tabs: workspace.tabs.map((t) => ({
           id: t.id,
           label: tabLabel(state, t),
-          ...(t.project ? { project: t.project } : {}),
+          ...(t.folder ? { folder: t.folder } : {}),
           selectedHatchId: t.selectedHatchId,
           hatches: t.hatches.map((h) => ({ id: h.id, url: h.url, title: h.title, template: h.template, view: h.view, ...effectiveSize(h) })),
         })),
@@ -324,10 +324,10 @@ function serve(method: string, params: unknown): unknown {
       return answer;
     }
     case 'newTab': {
-      const { name, project } = (p as { name?: string; project?: string }) ?? {};
+      const { name, folder } = (p as { name?: string; folder?: string }) ?? {};
       const tabId = actions.newTab(false);
       if (name) actions.renameTab(tabId, name);
-      if (project) actions.attachCanvas(tabId, project);
+      if (folder) actions.attachCanvas(tabId, folder);
       return tabId;
     }
     case 'closeTab':
@@ -424,10 +424,10 @@ export const selectedHatch = (s: State): Hatch | null => {
 export const fitHatch = (tab: Tab): Hatch | null => tab.hatches.find((h) => h.template === 'fit') ?? null;
 export const loadStateOf = (s: State, hatchId: string): LoadState => s.load[hatchId] ?? IDLE;
 export const hatchLabel = (hatch: Hatch): string => hatch.title || labelForUrl(hatch.url);
-/** A tab is a canvas, so it carries the user's name for it or its project's name, and never the title of one page. */
+/** A tab is a canvas, so it carries the user's name for it, its folder's or its project's name, and never the title of one page. */
 export function tabLabel(s: State, tab: Tab): string {
   if (tab.name) return tab.name;
-  if (tab.project) return tab.project;
+  if (tab.folder) return folderName(tab.folder);
   for (const h of tab.hatches) {
     const project = projectOf(h.url, s.projects.projects, s.projects.proxyPort);
     if (project) return project.name;
@@ -469,54 +469,39 @@ export const actions = {
     set((s) => ({ workspace: { ...s.workspace, tabs: [...s.workspace.tabs, tab], activeTabId: activate ? tab.id : s.workspace.activeTabId } }));
     return tab.id;
   },
-  /** A canvas the user makes asks which project it belongs to, when Hatch knows any projects. The question may be skipped. */
+  /** A canvas the user makes asks which working folder it belongs to. The question may be skipped. */
   newCanvasFromUser(): string {
     const tabId = actions.newTab();
-    if (state.projects.projects.length > 0) set({ attachPrompt: tabId });
+    set({ attachPrompt: tabId });
     return tabId;
+  },
+  /** Asks which working folder a canvas belongs to. */
+  askFolderFor(tabId: string): void {
+    set({ attachPrompt: tabId });
   },
   closeAttachPrompt(): void {
     set({ attachPrompt: null });
   },
-  /** Gives a canvas to a project, or takes it away with null. The project's previous canvas lets go, as one canvas belongs to a project. */
-  attachCanvas(tabId: string, project: string | null): void {
+  /** Gives a canvas to a working folder, or takes it away with null. The folder's previous canvas lets go, as one canvas belongs to a folder. */
+  attachCanvas(tabId: string, folder: string | null): void {
+    const clean = folder?.replace(/\/+$/, '') || null;
     set((s) => ({
       attachPrompt: s.attachPrompt === tabId ? null : s.attachPrompt,
       workspace: {
         ...s.workspace,
         tabs: s.workspace.tabs.map((t) => {
           if (t.id === tabId) {
-            const { project: _old, ...rest } = t;
-            return project ? { ...rest, project } : rest;
+            const { folder: _old, ...rest } = t;
+            return clean ? { ...rest, folder: clean } : rest;
           }
-          if (project && t.project === project) {
-            const { project: _taken, ...rest } = t;
+          if (clean && t.folder === clean) {
+            const { folder: _taken, ...rest } = t;
             return rest;
           }
           return t;
         }),
       },
     }));
-  },
-  /** Follows a project's new name onto its canvas, or lets the canvas go with null when the project is removed. */
-  renameProjectOnCanvases(from: string, to: string | null): void {
-    set((s) => ({
-      workspace: {
-        ...s.workspace,
-        tabs: s.workspace.tabs.map((t) => {
-          if (t.project !== from) return t;
-          const { project: _old, ...rest } = t;
-          return to ? { ...rest, project: to } : rest;
-        }),
-      },
-    }));
-  },
-  /** Shows the project's canvas, or opens a new canvas for the project when it has none. */
-  showProjectCanvas(project: string): void {
-    const held = state.workspace.tabs.find((t) => t.project === project);
-    if (held) return actions.activateTab(held.id);
-    const tabId = actions.newTab();
-    actions.attachCanvas(tabId, project);
   },
   activateTab(tabId: string): void {
     set((s) => ({ workspace: { ...s.workspace, activeTabId: tabId } }));
@@ -682,18 +667,19 @@ export const actions = {
       set((s) => ({ workspace: { ...s.workspace, activeTabId: tabId }, panel: s.panel === 'comments' ? s.panel : 'hatch' }));
       return;
     }
-    const ids = new Map(entry.tab.hatches.map((h) => [h.id, newId('hatch')]));
-    // A pinned canvas the user has opened again from its pin keeps the pin there, and this copy comes back unpinned.
+    // A pinned canvas lives on in the Canvases list, so reopening it opens it from its pin, or shows it when the pin opened it already.
+    // A second copy would list the same canvas twice.
     const { savedId, ...closedTab } = entry.tab;
-    const pinnedElsewhere = savedId !== undefined && state.workspace.tabs.some((t) => t.savedId === savedId);
-    const tab: Tab = { ...closedTab, ...(savedId && !pinnedElsewhere ? { savedId } : {}), id: newId('tab'), hatches: entry.tab.hatches.map((h) => ({ ...h, id: ids.get(h.id)! })), selectedHatchId: entry.tab.selectedHatchId ? (ids.get(entry.tab.selectedHatchId) ?? null) : null };
+    if (savedId && state.savedCanvases.some((c) => c.id === savedId)) return actions.openSavedCanvas(savedId);
+    const ids = new Map(entry.tab.hatches.map((h) => [h.id, newId('hatch')]));
+    const tab: Tab = { ...closedTab, id: newId('tab'), hatches: entry.tab.hatches.map((h) => ({ ...h, id: ids.get(h.id)! })), selectedHatchId: entry.tab.selectedHatchId ? (ids.get(entry.tab.selectedHatchId) ?? null) : null };
     set((s) => {
       // The empty canvas that stood in for the closed one gives way to it, while the user has left it empty.
       const tabs = s.workspace.tabs.filter((t) => t.id !== entry.blank || t.hatches.length > 0 || t.name);
       const at = Math.min(entry.index, tabs.length);
-      // A reopened canvas gives its project up when another canvas took the project meanwhile.
-      const holder = tabs.find((t) => t.project && t.project === tab.project)?.id;
-      return { workspace: { ...s.workspace, tabs: oneCanvasPerProject([...tabs.slice(0, at), tab, ...tabs.slice(at)], holder), activeTabId: tab.id } };
+      // A reopened canvas gives its folder up when another canvas took the folder meanwhile.
+      const holder = tabs.find((t) => t.folder && t.folder === tab.folder)?.id;
+      return { workspace: { ...s.workspace, tabs: oneCanvasPerFolder([...tabs.slice(0, at), tab, ...tabs.slice(at)], holder), activeTabId: tab.id } };
     });
   },
   /** A muted Hatch keeps its mute through navigations and restarts. */
@@ -1027,12 +1013,14 @@ export const actions = {
   },
   /** Opens a pinned canvas that has closed, with every Hatch where it was. A pinned canvas that is open already comes to the front. */
   openSavedCanvas(id: string): void {
+    // The canvas leaves Recently closed, because it is open again.
+    set((s) => ({ closed: s.closed.filter((c) => c.kind !== 'canvas' || c.tab.savedId !== id) }));
     const open = state.workspace.tabs.find((t) => t.savedId === id);
     if (open) return actions.activateTab(open.id);
     const saved = state.savedCanvases.find((c) => c.id === id);
     if (!saved) return;
     const tab = tabFromSavedCanvas(saved);
-    set((s) => ({ workspace: { ...s.workspace, tabs: oneCanvasPerProject([...s.workspace.tabs, tab]), activeTabId: tab.id }, panel: 'hatch' }));
+    set((s) => ({ workspace: { ...s.workspace, tabs: oneCanvasPerFolder([...s.workspace.tabs, tab]), activeTabId: tab.id }, panel: 'hatch' }));
   },
   /** Unpins a canvas, open or closed. An open canvas stays open, and only the copy goes. */
   async unpinCanvas(id: string): Promise<void> {
