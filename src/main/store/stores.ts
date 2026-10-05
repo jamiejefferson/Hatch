@@ -1,3 +1,4 @@
+import { repairActionButtons } from '@shared/action-buttons';
 import { cleanFolderName, repairSavedCanvases } from '@shared/canvases';
 import { DEFAULT_SETTINGS, THEMES, type SavedCanvas, type SavedLink, type Settings, type Theme, type Workspace } from '@shared/types';
 import { repairWorkspace } from '@shared/workspace';
@@ -29,6 +30,7 @@ function repairSettings(raw: unknown): Settings {
     commentsFolder: cleanFolder(source.commentsFolder),
     theme: THEMES.includes(source.theme as Theme) ? (source.theme as Theme) : DEFAULT_SETTINGS.theme,
     toolbarAtEdge: typeof source.toolbarAtEdge === 'boolean' ? source.toolbarAtEdge : DEFAULT_SETTINGS.toolbarAtEdge,
+    actionButtons: repairActionButtons(source.actionButtons),
   };
 }
 

@@ -8,7 +8,7 @@ import { hatchAddress, projectOf, projectUrl, PROXY_PORT } from '@shared/project
 import type { Anchor, CommentStatus, PageComments } from '@shared/comments';
 import type { ConsentAnswer, ConsentRequest, SignIn } from '@shared/signins';
 import type { ConnectionInfo, Outcome } from '../../../preload/api';
-import type { ProjectsState, ActivityEntry, AgentAct, AgentWorkState, DialogState, Hatch, HatchView, InterfaceState, Note, SavedCanvas, SavedLink, Settings, Tab, TemplateId, ViewRequest, Workspace } from '@shared/types';
+import type { ActionButton, ProjectsState, ActivityEntry, AgentAct, AgentWorkState, DialogState, Hatch, HatchView, InterfaceState, Note, SavedCanvas, SavedLink, Settings, Tab, TemplateId, ViewRequest, Workspace } from '@shared/types';
 import { savedCanvasFromTab, tabFromSavedCanvas } from '@shared/canvases';
 import { DEFAULT_SETTINGS } from '@shared/types';
 import { emptyTab, emptyWorkspace, MAX_NOTE_LENGTH, newId } from '@shared/workspace';
@@ -93,6 +93,8 @@ export interface State {
   newHatchAt: Point | null;
   /** The right-click menu: where it opened, and the tab and Hatch it speaks for. */
   contextMenu: { x: number; y: number; tabId: string; hatchId: string | null } | null;
+  /** The action button editor: null when shut, `id` null while adding a new button. */
+  actionEditor: { id: string | null } | null;
   /** One line of feedback that shows for a moment at the foot of the canvas. */
   toast: string | null;
   /** The guide to the interface is showing. */
@@ -151,6 +153,7 @@ let state: State = {
   popups: {},
   newHatchAt: null,
   contextMenu: null,
+  actionEditor: null,
   toast: null,
   guideOpen: false,
   feedbackShot: null,
@@ -647,7 +650,9 @@ export const actions = {
     const tabId = tabOf(hatchId);
     const source = state.workspace.tabs.find((t) => t.id === tabId)?.hatches.find((h) => h.id === hatchId);
     if (!tabId || !source) return null;
-    const copy: Hatch = { ...leaveFit(source), id: newId('hatch'), title: source.title };
+    // A duplicate belongs to no action button, so the button keeps returning to the Hatch it opened.
+    const { action: _action, ...rest } = leaveFit(source);
+    const copy: Hatch = { ...rest, id: newId('hatch'), title: source.title };
     editTab(tabId, (t) => {
       Object.assign(copy, at ?? placeNewHatch(t.hatches));
       const pan = at ? t.pan : panToReveal(copy, t.pan, t.zoom, state.viewport);
@@ -978,6 +983,46 @@ export const actions = {
     set({ savedCanvases: await window.hatch.removeSavedCanvas(id) });
   },
   setNewHatchPage: (page: string): Promise<void> => actions.updateSettings({ newHatchPage: page }),
+  /**
+   * An action button returns to the Hatch it opened on this canvas, in Fit to view, so the app keeps its place.
+   * With none there, it opens the app in a new Hatch in Fit to view.
+   */
+  launchAction(buttonId: string): void {
+    const button = state.settings.actionButtons.find((b) => b.id === buttonId);
+    if (!button) return;
+    const open = activeTab(state).hatches.find((h) => h.action === button.id);
+    if (open) return actions.applyTemplate(open.id, 'fit');
+    const opened = actions.openHatch(button.url);
+    if ('error' in opened) return actions.toast(opened.error);
+    editHatch(opened.hatchId, (h) => ({ ...h, action: button.id, title: h.title || button.name }));
+    actions.applyTemplate(opened.hatchId, 'fit');
+  },
+  openActionEditor(id: string | null): void {
+    set({ actionEditor: { id } });
+  },
+  closeActionEditor(): void {
+    set({ actionEditor: null });
+  },
+  /** Adds or changes a button. Resolves to an error message when the address does not parse, and to null once saved. */
+  async saveActionButton(input: Omit<ActionButton, 'id'> & { id: string | null }): Promise<string | null> {
+    const name = input.name.trim();
+    if (!name) return 'Give the button a name.';
+    const typed = input.url.trim();
+    const parsed = parseAddressOrName(typed);
+    if (!parsed.ok) return parsed.error;
+    const url = parsed.kind === 'url' ? parsed.url : typed;
+    const buttons = state.settings.actionButtons;
+    const next = input.id && buttons.some((b) => b.id === input.id)
+      ? buttons.map((b) => (b.id === input.id ? { id: b.id, name, url, icon: input.icon } : b))
+      : [...buttons, { id: newId('action'), name, url, icon: input.icon }];
+    await actions.updateSettings({ actionButtons: next });
+    set({ actionEditor: null });
+    return null;
+  },
+  async removeActionButton(id: string): Promise<void> {
+    await actions.updateSettings({ actionButtons: state.settings.actionButtons.filter((b) => b.id !== id) });
+    set({ actionEditor: null });
+  },
 };
 
 /**

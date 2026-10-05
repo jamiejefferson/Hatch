@@ -18,6 +18,8 @@ export interface Hatch {
   view: HatchView;
   /** The user muted this Hatch's sound. Absent means it plays. */
   muted?: boolean;
+  /** The action button that opened this Hatch. A second press of the button returns to it. */
+  action?: string;
 }
 
 export type HatchView = 'page' | 'agent';
@@ -101,12 +103,27 @@ export interface Settings {
   theme: Theme;
   /** While the left column is shut, the toolbar hides behind a handle at the left edge and slides out while the pointer rests there. */
   toolbarAtEdge: boolean;
+  /** The user's action buttons, in toolbar order. */
+  actionButtons: ActionButton[];
+}
+
+/** The icons an action button may wear, in the order the picker shows them. */
+export const ACTION_ICONS = ['web', 'spreadsheet', 'document', 'slides', 'mail', 'calendar', 'chat', 'video', 'folder', 'design', 'code', 'chart', 'tasks', 'ai', 'music', 'photos', 'shop', 'map', 'cloud', 'book', 'star', 'bolt', 'home', 'people', 'bell'] as const;
+export type ActionIcon = (typeof ACTION_ICONS)[number];
+
+/** A button in the toolbar that opens a web app the user reaches for often, such as their spreadsheets, in Fit to view. */
+export interface ActionButton {
+  id: string;
+  name: string;
+  /** What the user typed: a link, a hatch: project address or a site's name. It resolves when the button is pressed. */
+  url: string;
+  icon: ActionIcon;
 }
 
 export type Theme = 'system' | 'light' | 'dark';
 export const THEMES: Theme[] = ['system', 'light', 'dark'];
 
-export const DEFAULT_SETTINGS: Settings = { newHatchPage: '', askBeforeViewSwitch: true, allowEvaluate: false, describeElements: false, showComments: true, guideSeen: false, jevRunSeen: false, linksFolder: '', commentsFolder: '', theme: 'system', toolbarAtEdge: true };
+export const DEFAULT_SETTINGS: Settings = { newHatchPage: '', askBeforeViewSwitch: true, allowEvaluate: false, describeElements: false, showComments: true, guideSeen: false, jevRunSeen: false, linksFolder: '', commentsFolder: '', theme: 'system', toolbarAtEdge: true, actionButtons: [] };
 
 /** One step of a jev_run, as the Activity panel lists it. */
 export interface TraceLine { step: number; action: string; detail: string; confidence: number }

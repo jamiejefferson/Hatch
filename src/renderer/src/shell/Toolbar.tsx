@@ -1,5 +1,5 @@
 import { pages } from '../canvas/webviews';
-import { BackIcon, CommentIcon, ForwardIcon, GrabIcon, MinusIcon, NoteIcon, OutlineIcon, PlusIcon, ReloadIcon, ShowAllIcon, StopIcon } from '../icons';
+import { ACTION_ICON_ART, BackIcon, CommentIcon, ForwardIcon, GrabIcon, MinusIcon, NoteIcon, OutlineIcon, PlusIcon, ReloadIcon, ShowAllIcon, StopIcon } from '../icons';
 import { actions, activeTab, fitHatch, loadStateOf, selectedHatch, useStore } from '../state/store';
 
 /** The tools that act inside the selected Hatch's page, in one column beside the canvas. The zoom sits at its foot. */
@@ -13,6 +13,7 @@ export function Toolbar() {
   const none = !id;
   const agent = hatch?.view === 'agent';
   const placingNote = useStore((s) => s.placingNote);
+  const buttons = useStore((s) => s.settings.actionButtons);
 
   return (
     <nav className="toolbar" aria-label="Hatch tools" data-testid="toolbar">
@@ -48,6 +49,33 @@ export function Toolbar() {
         </button>
         <button className="tool" aria-label={picking === 'grab' ? 'Stop grabbing' : 'Grab an element for Paper'} title={picking === 'grab' ? 'Stop grabbing' : 'Grab an element for Paper'} aria-pressed={picking === 'grab'} disabled={none} onClick={() => id && (picking === 'grab' ? actions.stopPicking() : actions.startGrab(id))} data-testid="grab-element">
           <GrabIcon />
+        </button>
+      </div>
+      {/* The user's own buttons, each opening a web app in Fit to view. A right-click edits one. */}
+      <div className="tool-group action-tools" role="group" aria-label="Action buttons" data-testid="action-buttons">
+        {buttons.map((b) => {
+          const { Icon } = ACTION_ICON_ART[b.icon];
+          const showing = fit?.action === b.id;
+          return (
+            <button
+              key={b.id}
+              className="tool"
+              aria-label={`Open ${b.name}`}
+              title={`${b.name}. Right-click to edit.`}
+              aria-pressed={showing}
+              onClick={() => actions.launchAction(b.id)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                actions.openActionEditor(b.id);
+              }}
+              data-testid={`action-${b.id}`}
+            >
+              <Icon />
+            </button>
+          );
+        })}
+        <button className="tool quiet-tool" aria-label="Add an action button" title="Add an action button for a web app you use often" onClick={() => actions.openActionEditor(null)} data-testid="add-action">
+          <PlusIcon size={14} />
         </button>
       </div>
       <div className="tool-space" />

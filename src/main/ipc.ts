@@ -11,6 +11,7 @@ import { handleDialog, snapshot } from './cdp/actions';
 import * as comments from './comments/store';
 import { connectionInfo } from './connection';
 import { answerConsent } from './credentials/fill';
+import { repairActionButtons } from '@shared/action-buttons';
 import { installSkill, skillState } from './skill';
 import { defaultBrowserState, makeDefaultBrowser } from './default-browser';
 import { captureForFeedback, feedbackDetails, sendFeedback } from './feedback/send';
@@ -91,6 +92,7 @@ export function registerIpc(): void {
       commentsFolder: typeof settings.commentsFolder === 'string' ? cleanFolder(settings.commentsFolder) : current.commentsFolder,
       theme: THEMES.includes(settings.theme as Theme) ? (settings.theme as Theme) : current.theme,
       toolbarAtEdge: typeof settings.toolbarAtEdge === 'boolean' ? settings.toolbarAtEdge : current.toolbarAtEdge,
+      actionButtons: Array.isArray(settings.actionButtons) ? repairActionButtons(settings.actionButtons) : current.actionButtons,
     })).then(async (saved) => {
       // The links file may have moved, so the interface reads the list again. Comments read fresh on every call.
       setFolders(saved);

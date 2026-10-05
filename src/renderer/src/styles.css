@@ -150,8 +150,13 @@ svg { flex-shrink: 0; display: block; }
 .tool { display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--pill); color: var(--ink); }
 .tool:hover:not(:disabled) { background: var(--fill); }
 .tool:disabled { color: var(--line-strong); }
-.tool[aria-pressed='true'] { background: var(--accent); color: var(--on-accent); }
+.tool[aria-pressed='true'], .tool[aria-pressed='true']:hover:not(:disabled) { background: var(--accent); color: var(--on-accent); }
 .tool.level { width: 40px; height: 24px; font-size: 11px; font-weight: 600; }
+/* The user's action buttons scroll inside their group when the window is too short for them all. */
+.action-tools { flex-shrink: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+.action-tools::-webkit-scrollbar { display: none; }
+.action-tools .tool { flex-shrink: 0; }
+.tool.quiet-tool { color: var(--ink-2); }
 
 /* ---- comments tab ---- */
 .segmented { display: flex; align-self: flex-start; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: var(--pill); }
@@ -598,3 +603,16 @@ h2 .count { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0
 /* A pinned canvas that has closed waits in the list, quieter than the open ones. */
 .row-list li.away .row-main, .row-list li.away .row-icon { color: var(--ink-3); }
 .row-list li.away:hover .row-main { color: var(--ink); }
+
+/* Action button editor. */
+.action-editor { width: 480px; }
+.action-editor label.stacked { display: flex; flex-direction: column; gap: 6px; }
+.action-editor label.stacked > span, .icon-picker legend { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.icon-picker { margin: 0; padding: 0; border: 0; }
+.icon-picker legend { padding: 0; margin-bottom: 6px; }
+.icon-picker [role='radiogroup'] { display: grid; grid-template-columns: repeat(auto-fill, 36px); gap: 4px; }
+.icon-picker .tool { width: 36px; height: 36px; border: 1px solid var(--line); }
+.icon-picker .tool.current { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.modal-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.modal-actions .tool-space { flex: 1; }
+.text-button.danger { color: var(--danger); }

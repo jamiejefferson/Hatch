@@ -3,6 +3,7 @@ import type { MenuCommand } from '../../preload/api';
 import type { Tab } from '@shared/types';
 import { Canvas } from './canvas/Canvas';
 import { NewHatchModal } from './canvas/NewHatchModal';
+import { ActionButtonEditor } from './shell/ActionButtonEditor';
 import { pages } from './canvas/webviews';
 import { LeftColumn } from './shell/LeftColumn';
 import { Sidebar } from './shell/Sidebar';
@@ -110,6 +111,7 @@ function Shell({ tabs, activeTabId, sidebarOpen, leftOpen }: { tabs: Tab[]; acti
         {sidebarOpen && <Sidebar />}
       </div>
       <NewHatchModal />
+      <ActionButtonEditor />
       <ContextMenu />
       <Toast />
       <Guide />

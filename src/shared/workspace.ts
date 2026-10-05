@@ -80,5 +80,6 @@ export function repairHatch(raw: unknown): Hatch | null {
     template,
     view: source.view === 'agent' ? 'agent' : 'page',
     ...(source.muted === true ? { muted: true } : null),
+    ...(typeof source.action === 'string' && source.action ? { action: source.action } : null),
   };
 }

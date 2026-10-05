@@ -69,3 +69,33 @@ export function EyeIcon({ size = 16 }: IconProps) {
     </svg>
   );
 }
+
+// Action buttons. Each key is an ActionIcon from @shared/types.
+const dot = (cx: number, cy: number, r: number) => <circle cx={cx} cy={cy} r={r} />;
+export const ACTION_ICON_ART: Record<import('@shared/types').ActionIcon, { label: string; Icon: (props: IconProps) => React.JSX.Element }> = {
+  web: { label: 'Web', Icon: make('M1.5 8h13M8 1.5c-2 2-2.8 4.2-2.8 6.5s.8 4.5 2.8 6.5M8 1.5c2 2 2.8 4.2 2.8 6.5s-.8 4.5-2.8 6.5', dot(8, 8, 6.5)) },
+  spreadsheet: { label: 'Spreadsheet', Icon: make('M2.5 2.5h11v11h-11zM2.5 6h11M2.5 9.75h11M6.5 2.5v11') },
+  document: { label: 'Document', Icon: make('M3.5 1.5h6l3 3v10h-9zM9.5 1.5v3h3M5.5 8h5M5.5 10.5h5M5.5 5.5h2') },
+  slides: { label: 'Slides', Icon: make('M1.5 2.5h13v8.5h-13zM8 11v3M5.5 14h5M4.5 5.5h7M4.5 8h4.5') },
+  mail: { label: 'Mail', Icon: make('M1.5 3.5h13v9h-13zM1.5 4l6.5 5 6.5-5') },
+  calendar: { label: 'Calendar', Icon: make('M2 3.5h12v10H2zM2 6.5h12M5 2v3M11 2v3') },
+  chat: { label: 'Chat', Icon: make('M8 2.5c3.3 0 5.5 2 5.5 4.5S11.3 11.5 8 11.5c-.8 0-1.5-.1-2.2-.3L3 13l.7-2.6C2.9 9.5 2.5 8.3 2.5 7c0-2.5 2.2-4.5 5.5-4.5z') },
+  video: { label: 'Video', Icon: make('M1.5 4h9v8h-9zM10.5 7l4-2.5v7l-4-2.5') },
+  folder: { label: 'Folder', Icon: make('M2 4.5V12.5h12V5.5H8L6.5 3.5H2z') },
+  design: { label: 'Design', Icon: make('M2.5 13.5l1.5-5 6.5-6.5 3.5 3.5-6.5 6.5zM4 8.5l3.5 3.5M9 3.5l3.5 3.5') },
+  code: { label: 'Code', Icon: make('M5.5 4L1.5 8l4 4M10.5 4l4 4-4 4M9 2.5l-2 11') },
+  chart: { label: 'Chart', Icon: make('M2 2v12h12M5 11V8M8 11V5M11 11V7') },
+  tasks: { label: 'Tasks', Icon: make('M2.5 4l1.5 1.5L6.5 3M2.5 10l1.5 1.5L6.5 9M8.5 4.5h5M8.5 10.5h5') },
+  ai: { label: 'AI', Icon: make('M8 1.5l1.5 4.5 4.5 1.5-4.5 1.5L8 13.5 6.5 9 2 7.5 6.5 6z') },
+  music: { label: 'Music', Icon: make('M6 12V3.5l7-1.5v8.5', <>{dot(4.5, 12, 1.5)}{dot(11.5, 10.5, 1.5)}</>) },
+  photos: { label: 'Photos', Icon: make('M2 3h12v10H2zM2 11l3.5-3.5 3 3 2-2L14 12', dot(10.5, 6, 1)) },
+  shop: { label: 'Shop', Icon: make('M1.5 2.5h2l1.5 8h8l1.5-6H4.2', <>{dot(6, 13.2, 0.8)}{dot(12, 13.2, 0.8)}</>) },
+  map: { label: 'Map', Icon: make('M8 14.5s-4.5-4.2-4.5-7.5a4.5 4.5 0 0 1 9 0c0 3.3-4.5 7.5-4.5 7.5z', dot(8, 7, 1.5)) },
+  cloud: { label: 'Cloud', Icon: make('M4.5 12.5a3 3 0 0 1-.4-6 4 4 0 0 1 7.7-1 3.5 3.5 0 0 1 .2 7z') },
+  book: { label: 'Book', Icon: make('M2 3c2 0 4.5.3 6 1.5 1.5-1.2 4-1.5 6-1.5v9.5c-2 0-4.5.3-6 1.5-1.5-1.2-4-1.5-6-1.5zM8 4.5V14') },
+  star: { label: 'Star', Icon: make('M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z') },
+  bolt: { label: 'Bolt', Icon: make('M9 1.5L3.5 9h4L7 14.5 12.5 7h-4z') },
+  home: { label: 'Home', Icon: make('M2 7.5L8 2.5l6 5M3.5 6.3v7.2h9V6.3M6.5 13.5V10h3v3.5') },
+  people: { label: 'People', Icon: make('M1.5 13.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4M11 9.6c2 0 3.5 1.3 3.5 3.4', <>{dot(6, 5.5, 2.2)}{dot(11.5, 6, 1.7)}</>) },
+  bell: { label: 'Bell', Icon: make('M4 11V7a4 4 0 0 1 8 0v4l1.2 1.5H2.8zM6.5 14h3') },
+};
