@@ -49,6 +49,8 @@ export interface Tab {
   notes?: Note[];
   /** The pinned copy of this canvas in canvases.json, which follows the canvas while it is open and stays when it closes. */
   savedId?: string;
+  /** The registered project this canvas belongs to. An agent working in that project's folder works here. One canvas per project. */
+  project?: string;
 }
 
 export interface Workspace {
@@ -78,6 +80,8 @@ export interface SavedCanvas {
   pan: { x: number; y: number };
   zoom: number;
   notes?: Note[];
+  /** The project the canvas belonged to when it was pinned. */
+  project?: string;
 }
 
 export interface Settings {
@@ -165,7 +169,7 @@ export interface AgentAct {
 /** What the main process reads from the interface before it routes an agent's call. */
 export interface InterfaceState {
   activeTabId: string;
-  tabs: { id: string; /** The canvas as the tab strip names it: the user's name, its project's name, or Canvas N. */ label: string; selectedHatchId: string | null; hatches: Pick<Hatch, 'id' | 'url' | 'title' | 'width' | 'height' | 'template' | 'view'>[] }[];
+  tabs: { id: string; /** The canvas as the tab strip names it: the user's name, its project's name, or Canvas N. */ label: string; /** The project the canvas belongs to, if any. */ project?: string; selectedHatchId: string | null; hatches: Pick<Hatch, 'id' | 'url' | 'title' | 'width' | 'height' | 'template' | 'view'>[] }[];
 }
 
 export interface ViewRequest {

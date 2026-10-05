@@ -13,6 +13,7 @@ interface Message { jsonrpc: '2.0'; id?: number | string | null; method?: string
 
 const home = process.env.HATCH_HOME || join(homedir(), '.hatch');
 // One shim process counts as one agent. HATCH_AGENT gives it a readable name in Hatch's Activity panel.
+// Agent apps start the command in the project the user works in, so the shim sends that folder and Hatch puts the agent on the project's canvas.
 const agent = (process.env.HATCH_AGENT || `stdio-${process.pid.toString(36)}${Date.now().toString(36).slice(-4)}`).toLowerCase();
 const LEGACY = '2025-11-25';
 const CLOSED = 'Hatch is not running. Open the Hatch app, then call this tool again.';
@@ -38,7 +39,7 @@ function forward(message: Message): Promise<boolean> {
   return new Promise((resolve) => {
     const req = request(
       server.url,
-      { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream', 'content-length': Buffer.byteLength(body), 'x-hatch-agent': agent, ...(protocol ? { 'mcp-protocol-version': protocol } : {}) } },
+      { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream', 'content-length': Buffer.byteLength(body), 'x-hatch-agent': agent, 'x-hatch-folder': encodeURIComponent(process.cwd()), ...(protocol ? { 'mcp-protocol-version': protocol } : {}) } },
       (res) => {
         res.setEncoding('utf8');
         const stream = String(res.headers['content-type'] ?? '').includes('text/event-stream');

@@ -6,7 +6,14 @@ import { expect, test } from '@playwright/test';
 import type { Settings, Workspace } from '@shared/types';
 import { capture, freshHome, launch, serveSite } from './helpers';
 
-const read = <T>(home: string, file: string): T => JSON.parse(readFileSync(join(home, file), 'utf8')) as T;
+// Hatch writes its files a moment after a change, so a read before the first write counts as empty and the poll tries again.
+const read = <T>(home: string, file: string): T => {
+  try {
+    return JSON.parse(readFileSync(join(home, file), 'utf8')) as T;
+  } catch {
+    return (file === 'workspace.json' ? { tabs: [{ hatches: [] }] } : { actionButtons: [] }) as T;
+  }
+};
 
 test('the user adds an action button, it opens its app in Fit to view, returns to the same Hatch, and edits and removes', async () => {
   const site = await serveSite();

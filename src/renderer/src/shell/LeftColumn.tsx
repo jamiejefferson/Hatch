@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronIcon, CloseIcon, DuplicateIcon, HatchIcon, PinIcon, PlusIcon, ShowAllIcon } from '../icons';
+import { ChevronIcon, CloseIcon, DuplicateIcon, HatchIcon, PinIcon, PlusIcon, ProjectsIcon, ShowAllIcon } from '../icons';
 import { LinksPanel } from '../panels/LinksPanel';
 import { ProjectsPanel } from '../panels/ProjectsPanel';
 import { actions, activeTab, hatchLabel, tabLabel, useStore, type LeftPanel } from '../state/store';
@@ -60,7 +60,7 @@ function CanvasesTab() {
         onToggle={flip('canvases')}
         testId="canvases"
         action={
-          <button className="round small quiet" aria-label="New canvas" title="New canvas" onClick={() => actions.newTab()} data-testid="new-canvas">
+          <button className="round small quiet" aria-label="New canvas" title="New canvas" onClick={() => actions.newCanvasFromUser()} data-testid="new-canvas">
             <PlusIcon size={14} />
           </button>
         }
@@ -133,6 +133,11 @@ function CanvasList({ current }: { current: string }) {
               <button role="tab" aria-selected={here} className="row-main" title={`${label}. Double-click to rename.`} onClick={() => actions.activateTab(t.id)} onDoubleClick={() => setRenaming(t.id)}>
                 {label}
               </button>
+            )}
+            {t.project && (
+              <span className="row-project" role="img" aria-label={`Attached to the project ${t.project}`} title={`Attached to the project ${t.project}. An agent working in its folder uses this canvas.`} data-testid="canvas-project">
+                <ProjectsIcon size={12} />
+              </span>
             )}
             {working[t.id] && <span className="working-dot" role="img" aria-label="An agent is working in this canvas" />}
             <span className="row-count" title={hatchCount(t.hatches.length)}>

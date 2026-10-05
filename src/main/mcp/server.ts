@@ -5,7 +5,7 @@ import { toNodeHandler } from '@modelcontextprotocol/node';
 import { app } from 'electron';
 import { z } from 'zod';
 import { begin, end } from '../agents/activity';
-import { agentFor, callEnded, callStarted, identify, type Agent } from '../agents/agents';
+import { agentFor, callEnded, callStarted, folderOf, identify, type Agent } from '../agents/agents';
 import { HatchError } from '../cdp/session';
 import { canAsk } from '../jev/client';
 import { BRIEFING_HEAD, briefing } from './guide/brief';
@@ -48,7 +48,7 @@ async function runTool(tool: Tool, args: Record<string, unknown>, agent: Agent, 
   }
 }
 
-function buildServer(agentId: string): McpServer {
+function buildServer(agentId: string, folder: string | null): McpServer {
   const server = new McpServer({ name: 'hatch', title: 'Hatch', version: app.getVersion() }, { instructions: INSTRUCTIONS });
   for (const tool of TOOLS) {
     server.registerTool(
@@ -63,7 +63,9 @@ function buildServer(agentId: string): McpServer {
           step += 1;
           void ctx.mcpReq.notify({ method: 'notifications/progress', params: { progressToken: token, progress: step, message } }).catch(() => {});
         };
-        return runTool(tool, args as Record<string, unknown>, agentFor(agentId), progress);
+        const agent = agentFor(agentId);
+        if (folder) agent.folder = folder;
+        return runTool(tool, args as Record<string, unknown>, agent, progress);
       },
     );
   }
@@ -77,7 +79,7 @@ export interface McpEndpoint {
 
 /** The SDK builds one server per request and keeps no sessions, so a Hatch restart leaves nothing stale for a connected agent. */
 export function createEndpoint(): McpEndpoint {
-  const handler = createMcpHandler((request) => buildServer(identify(request.requestInfo)), { onerror: (e) => console.error('[mcp]', e.message) });
+  const handler = createMcpHandler((request) => buildServer(identify(request.requestInfo), folderOf(request.requestInfo)), { onerror: (e) => console.error('[mcp]', e.message) });
   const node = toNodeHandler(handler);
   return { handle: (req, res) => void node(req, res), close: () => handler.close() };
 }

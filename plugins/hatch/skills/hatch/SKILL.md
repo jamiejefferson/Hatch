@@ -9,9 +9,13 @@ Hatch is the browser on this Mac whose live pages the user watches. This skill r
 
 ## Find the tools
 
-The Hatch tools come from the MCP server named `hatch`. Their full names carry a prefix that depends on the agent app, such as `mcp__plugin_hatch_hatch__navigate` in Claude Code or `mcp__hatch__navigate` in Codex. If the app defers tool definitions, load these in one request before the first call: navigate, list_projects, register_project, start_server, get_server_logs, list_links, run_steps, click, fill, snapshot, screenshot, get_console and finish_working. Load others, such as jev_run, jev_decide, list_comments or set_viewport, when the task needs them.
+The Hatch tools come from the MCP server named `hatch`. Their full names carry a prefix that depends on the agent app, such as `mcp__plugin_hatch_hatch__navigate` in Claude Code or `mcp__hatch__navigate` in Codex. If the app defers tool definitions, load these in one request before the first call: navigate, use_project, list_projects, register_project, start_server, get_server_logs, list_links, run_steps, click, fill, snapshot, screenshot, get_console and finish_working. Load others, such as jev_run, jev_decide, list_comments or set_viewport, when the task needs them.
 
 If no Hatch tools are available, tell the user the Hatch connection is missing and point them to Settings in Hatch. Never claim a page opened without a successful tool reply.
+
+## Work on the project's canvas
+
+A canvas may belong to a project, and the user keeps their other canvases for their own work. When your Hatch command starts in a project's folder, Hatch puts you on that project's canvas by itself. If you work on a project and `status` shows a canvas that is not the project's, call `use_project` with your working folder before you open pages. The folder's `.hatch/canvas.json` names the canvas. When unsure, call `use_project`: it opens a fresh canvas rather than take over one the user is using.
 
 ## Resolve the argument
 

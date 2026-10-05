@@ -12,6 +12,7 @@ import * as comments from './comments/store';
 import { connectionInfo } from './connection';
 import { answerConsent } from './credentials/fill';
 import { repairActionButtons } from '@shared/action-buttons';
+import { syncProjectCanvases } from './project-canvas';
 import { installSkill, skillState } from './skill';
 import { defaultBrowserState, makeDefaultBrowser } from './default-browser';
 import { captureForFeedback, feedbackDetails, sendFeedback } from './feedback/send';
@@ -31,7 +32,11 @@ import { canvasesStore, linksStore, settingsStore, workspaceStore } from './stor
 
 export function registerIpc(): void {
   ipcMain.handle('workspace:load', () => workspaceStore.read());
-  ipcMain.handle('workspace:save', (_e, workspace: Workspace) => workspaceStore.write(repairWorkspace(workspace)));
+  ipcMain.handle('workspace:save', async (_e, workspace: Workspace) => {
+    const repaired = repairWorkspace(workspace);
+    await workspaceStore.write(repaired);
+    void syncProjectCanvases(repaired);
+  });
 
   ipcMain.handle('links:list', () => linksStore.read());
   ipcMain.handle('links:add', (_e, link: { name: string; url: string; folder?: string }) =>

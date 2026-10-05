@@ -616,3 +616,10 @@ h2 .count { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0
 .modal-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .modal-actions .tool-space { flex: 1; }
 .text-button.danger { color: var(--danger); }
+
+/* A canvas that belongs to a project. */
+.row-project { display: grid; place-items: center; flex-shrink: 0; color: var(--ink-2); }
+.project-canvas { display: flex; flex-direction: column; gap: 8px; }
+.project-canvas h2 { margin: 0; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.project-canvas-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.attach-modal { width: 480px; }

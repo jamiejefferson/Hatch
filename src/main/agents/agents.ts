@@ -1,10 +1,14 @@
 // Who is calling, which tab they hold, and which Hatch their calls act on.
 // The MCP SDK gives no session id in either protocol version, so Hatch issues identity itself:
 // the stdio shim sends an X-Hatch-Agent header, and an agent that connects over HTTP uses a URL ending ?agent=<name>.
+import { homedir } from 'node:os';
+import { basename } from 'node:path';
 import type { AgentWorkState, InterfaceState } from '@shared/types';
+import { projectForFolder } from '@shared/project-canvas';
 import { idFromLink } from '@shared/hatch-link';
 import { HatchError } from '../cdp/session';
 import { callInterface, push } from '../renderer-rpc';
+import { projectsState } from '../servers/manager';
 
 /** An agent that stays silent this long gives up its tab to the next agent that needs one. */
 const CLAIM_IDLE_MS = 5 * 60_000;
@@ -23,6 +27,8 @@ export interface Agent {
   intentHatch: string | null;
   /** The step a long tool has reached, such as a jev_run step. It clears when the call ends. */
   doing: string;
+  /** The folder the agent works in, which the stdio shim sends. It puts the agent on its project's canvas. */
+  folder: string | null;
 }
 
 const agents = new Map<string, Agent>();
@@ -31,11 +37,28 @@ const queues = new Map<string, Promise<unknown>>();
 /** The start of the identity Hatch gives an agent that sent no name. */
 export const UNNAMED = 'unnamed-';
 
+const slug = (text: string): string => text.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64);
+
+/** The folder an agent works in: the shim's X-Hatch-Folder header, or ?folder= for an agent that connects by address. The home folder counts as none. */
+export function folderOf(request: Request | undefined): string | null {
+  const header = request?.headers.get('x-hatch-folder');
+  const query = request && URL.canParse(request.url) ? new URL(request.url).searchParams.get('folder') : null;
+  let folder = '';
+  try {
+    folder = decodeURIComponent(header || query || '').replace(/\/+$/, '');
+  } catch {
+    return null;
+  }
+  return folder.startsWith('/') && folder !== homedir() ? folder : null;
+}
+
 export function identify(request: Request | undefined): string {
   const header = request?.headers.get('x-hatch-agent');
   const query = request && URL.canParse(request.url) ? new URL(request.url).searchParams.get('agent') : null;
-  const slug = (text: string): string => text.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64);
-  const named = slug(header || query || '');
+  const folder = folderOf(request);
+  const base = slug(header || query || '');
+  // Every Claude Code session sends the same name, so the folder tells sessions in different projects apart.
+  const named = base && folder ? `${base}.${slug(basename(folder))}`.slice(0, 64) : base;
   if (named) return named;
   // An agent that gives no name still must not share a tab with another app that also gave none, so its app's name stands in.
   const product = slug((request?.headers.get('user-agent') ?? '').split(/[\s/]/)[0] ?? '');
@@ -45,7 +68,7 @@ export function identify(request: Request | undefined): string {
 export function agentFor(id: string): Agent {
   let agent = agents.get(id);
   if (!agent) {
-    agent = { id, tabId: null, hatchId: null, lastCall: 0, running: 0, finished: false, intent: '', intentHatch: null, doing: '' };
+    agent = { id, tabId: null, hatchId: null, lastCall: 0, running: 0, finished: false, intent: '', intentHatch: null, doing: '', folder: null };
     agents.set(id, agent);
   }
   return agent;
@@ -73,7 +96,12 @@ export async function tabFor(agent: Agent, canvas?: string): Promise<{ tabId: st
     return { tabId: id, state };
   }
   const mine = agent.tabId && state.tabs.some((t) => t.id === agent.tabId) ? agent.tabId : null;
-  if (!mine) {
+  if (!mine && agent.folder) {
+    // An agent that works in a project's folder works on the project's canvas, or on a new one made for the project.
+    agent.tabId = (await canvasForFolder(agent.folder, state)).tabId;
+    state = await callInterface<InterfaceState>('state');
+    agent.hatchId = null;
+  } else if (!mine) {
     if (!heldByOther(state.activeTabId)) agent.tabId = state.activeTabId;
     else {
       agent.tabId = await callInterface<string>('newTab');
@@ -83,6 +111,29 @@ export async function tabFor(agent: Agent, canvas?: string): Promise<{ tabId: st
   }
   agent.finished = false;
   return { tabId: agent.tabId!, state };
+}
+
+/** Canvases opened for a folder that belongs to no registered project, so a later session in the same folder finds its own again. */
+const folderCanvases = new Map<string, string>();
+
+/**
+ * The canvas for an agent's folder: the canvas of the project the folder belongs to, opened for the project when it has none,
+ * or a fresh canvas named after a folder that belongs to no project. The user's other canvases stay untouched either way.
+ */
+export async function canvasForFolder(folder: string, state?: InterfaceState): Promise<{ tabId: string; project: string | null; opened: boolean }> {
+  const current = state ?? (await callInterface<InterfaceState>('state'));
+  const { projects } = await projectsState(false);
+  const project = projectForFolder(folder, projects, homedir());
+  if (project) {
+    const held = current.tabs.find((t) => t.project === project.name);
+    if (held) return { tabId: held.id, project: project.name, opened: false };
+    return { tabId: await callInterface<string>('newTab', { project: project.name }), project: project.name, opened: true };
+  }
+  const known = folderCanvases.get(folder);
+  if (known && current.tabs.some((t) => t.id === known)) return { tabId: known, project: null, opened: false };
+  const tabId = await callInterface<string>('newTab', { name: basename(folder) });
+  folderCanvases.set(folder, tabId);
+  return { tabId, project: null, opened: true };
 }
 
 /**

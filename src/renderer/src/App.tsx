@@ -4,6 +4,7 @@ import type { Tab } from '@shared/types';
 import { Canvas } from './canvas/Canvas';
 import { NewHatchModal } from './canvas/NewHatchModal';
 import { ActionButtonEditor } from './shell/ActionButtonEditor';
+import { AttachCanvasModal } from './shell/AttachCanvasModal';
 import { pages } from './canvas/webviews';
 import { LeftColumn } from './shell/LeftColumn';
 import { Sidebar } from './shell/Sidebar';
@@ -21,7 +22,7 @@ function run(command: MenuCommand): void {
   const selected = tab.selectedHatchId;
   switch (command) {
     case 'new-hatch': return actions.requestNewHatch();
-    case 'new-tab': return void actions.newTab();
+    case 'new-tab': return void actions.newCanvasFromUser();
     case 'close-hatch': return selected ? actions.closeHatch(selected) : actions.closeTab(tab.id);
     case 'duplicate-hatch': return void (selected && actions.duplicateHatch(selected));
     case 'close-tab': return actions.closeTab(tab.id);
@@ -112,6 +113,7 @@ function Shell({ tabs, activeTabId, sidebarOpen, leftOpen }: { tabs: Tab[]; acti
       </div>
       <NewHatchModal />
       <ActionButtonEditor />
+      <AttachCanvasModal />
       <ContextMenu />
       <Toast />
       <Guide />

@@ -10,6 +10,7 @@ import type { ConsentAnswer, ConsentRequest, SignIn } from '@shared/signins';
 import type { ConnectionInfo, Outcome } from '../../../preload/api';
 import type { ActionButton, ProjectsState, ActivityEntry, AgentAct, AgentWorkState, DialogState, Hatch, HatchView, InterfaceState, Note, SavedCanvas, SavedLink, Settings, Tab, TemplateId, ViewRequest, Workspace } from '@shared/types';
 import { savedCanvasFromTab, tabFromSavedCanvas } from '@shared/canvases';
+import { oneCanvasPerProject } from '@shared/project-canvas';
 import { DEFAULT_SETTINGS } from '@shared/types';
 import { emptyTab, emptyWorkspace, MAX_NOTE_LENGTH, newId } from '@shared/workspace';
 
@@ -93,6 +94,8 @@ export interface State {
   newHatchAt: Point | null;
   /** The right-click menu: where it opened, and the tab and Hatch it speaks for. */
   contextMenu: { x: number; y: number; tabId: string; hatchId: string | null } | null;
+  /** The canvas the user just made, while Hatch asks which project it belongs to. */
+  attachPrompt: string | null;
   /** The action button editor: null when shut, `id` null while adding a new button. */
   actionEditor: { id: string | null } | null;
   /** One line of feedback that shows for a moment at the foot of the canvas. */
@@ -154,6 +157,7 @@ let state: State = {
   newHatchAt: null,
   contextMenu: null,
   actionEditor: null,
+  attachPrompt: null,
   toast: null,
   guideOpen: false,
   feedbackShot: null,
@@ -312,6 +316,7 @@ function serve(method: string, params: unknown): unknown {
         tabs: workspace.tabs.map((t) => ({
           id: t.id,
           label: tabLabel(state, t),
+          ...(t.project ? { project: t.project } : {}),
           selectedHatchId: t.selectedHatchId,
           hatches: t.hatches.map((h) => ({ id: h.id, url: h.url, title: h.title, template: h.template, view: h.view, ...effectiveSize(h) })),
         })),
@@ -319,9 +324,10 @@ function serve(method: string, params: unknown): unknown {
       return answer;
     }
     case 'newTab': {
-      const { name } = (p as { name?: string }) ?? {};
+      const { name, project } = (p as { name?: string; project?: string }) ?? {};
       const tabId = actions.newTab(false);
       if (name) actions.renameTab(tabId, name);
+      if (project) actions.attachCanvas(tabId, project);
       return tabId;
     }
     case 'closeTab':
@@ -421,6 +427,7 @@ export const hatchLabel = (hatch: Hatch): string => hatch.title || labelForUrl(h
 /** A tab is a canvas, so it carries the user's name for it or its project's name, and never the title of one page. */
 export function tabLabel(s: State, tab: Tab): string {
   if (tab.name) return tab.name;
+  if (tab.project) return tab.project;
   for (const h of tab.hatches) {
     const project = projectOf(h.url, s.projects.projects, s.projects.proxyPort);
     if (project) return project.name;
@@ -461,6 +468,55 @@ export const actions = {
     const tab = emptyTab();
     set((s) => ({ workspace: { ...s.workspace, tabs: [...s.workspace.tabs, tab], activeTabId: activate ? tab.id : s.workspace.activeTabId } }));
     return tab.id;
+  },
+  /** A canvas the user makes asks which project it belongs to, when Hatch knows any projects. The question may be skipped. */
+  newCanvasFromUser(): string {
+    const tabId = actions.newTab();
+    if (state.projects.projects.length > 0) set({ attachPrompt: tabId });
+    return tabId;
+  },
+  closeAttachPrompt(): void {
+    set({ attachPrompt: null });
+  },
+  /** Gives a canvas to a project, or takes it away with null. The project's previous canvas lets go, as one canvas belongs to a project. */
+  attachCanvas(tabId: string, project: string | null): void {
+    set((s) => ({
+      attachPrompt: s.attachPrompt === tabId ? null : s.attachPrompt,
+      workspace: {
+        ...s.workspace,
+        tabs: s.workspace.tabs.map((t) => {
+          if (t.id === tabId) {
+            const { project: _old, ...rest } = t;
+            return project ? { ...rest, project } : rest;
+          }
+          if (project && t.project === project) {
+            const { project: _taken, ...rest } = t;
+            return rest;
+          }
+          return t;
+        }),
+      },
+    }));
+  },
+  /** Follows a project's new name onto its canvas, or lets the canvas go with null when the project is removed. */
+  renameProjectOnCanvases(from: string, to: string | null): void {
+    set((s) => ({
+      workspace: {
+        ...s.workspace,
+        tabs: s.workspace.tabs.map((t) => {
+          if (t.project !== from) return t;
+          const { project: _old, ...rest } = t;
+          return to ? { ...rest, project: to } : rest;
+        }),
+      },
+    }));
+  },
+  /** Shows the project's canvas, or opens a new canvas for the project when it has none. */
+  showProjectCanvas(project: string): void {
+    const held = state.workspace.tabs.find((t) => t.project === project);
+    if (held) return actions.activateTab(held.id);
+    const tabId = actions.newTab();
+    actions.attachCanvas(tabId, project);
   },
   activateTab(tabId: string): void {
     set((s) => ({ workspace: { ...s.workspace, activeTabId: tabId } }));
@@ -635,7 +691,9 @@ export const actions = {
       // The empty canvas that stood in for the closed one gives way to it, while the user has left it empty.
       const tabs = s.workspace.tabs.filter((t) => t.id !== entry.blank || t.hatches.length > 0 || t.name);
       const at = Math.min(entry.index, tabs.length);
-      return { workspace: { ...s.workspace, tabs: [...tabs.slice(0, at), tab, ...tabs.slice(at)], activeTabId: tab.id } };
+      // A reopened canvas gives its project up when another canvas took the project meanwhile.
+      const holder = tabs.find((t) => t.project && t.project === tab.project)?.id;
+      return { workspace: { ...s.workspace, tabs: oneCanvasPerProject([...tabs.slice(0, at), tab, ...tabs.slice(at)], holder), activeTabId: tab.id } };
     });
   },
   /** A muted Hatch keeps its mute through navigations and restarts. */
@@ -974,7 +1032,7 @@ export const actions = {
     const saved = state.savedCanvases.find((c) => c.id === id);
     if (!saved) return;
     const tab = tabFromSavedCanvas(saved);
-    set((s) => ({ workspace: { ...s.workspace, tabs: [...s.workspace.tabs, tab], activeTabId: tab.id }, panel: 'hatch' }));
+    set((s) => ({ workspace: { ...s.workspace, tabs: oneCanvasPerProject([...s.workspace.tabs, tab]), activeTabId: tab.id }, panel: 'hatch' }));
   },
   /** Unpins a canvas, open or closed. An open canvas stays open, and only the copy goes. */
   async unpinCanvas(id: string): Promise<void> {
