@@ -26,7 +26,11 @@ test('a pinned canvas follows its changes, stays listed after it closes, opens a
     // Every canvas shows whether it is saved, and a press on the pin saves it under its own name.
     const canvases = win.getByTestId('canvas-list');
     const row = canvases.locator('li').first();
+    // The pin stays where it is when the pointer reaches the row, so a press meant for it never lands on close.
+    await win.mouse.move(800, 600);
+    const resting = await row.getByTestId('pin-canvas').boundingBox();
     await row.hover();
+    expect(await row.getByTestId('pin-canvas').boundingBox()).toEqual(resting);
     await row.getByTestId('pin-canvas').click();
     await expect(row.getByTestId('pin-canvas')).toHaveAttribute('aria-pressed', 'true');
     await expect.poll(() => saved().map((c) => c.name)).toEqual(['Canvas']);
