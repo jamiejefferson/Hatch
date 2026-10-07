@@ -238,14 +238,15 @@ svg { flex-shrink: 0; display: block; }
 .overlay > * { pointer-events: auto; }
 .drag-cover { position: fixed; inset: 0; z-index: 1000; }
 
-/* The selected Hatch's title row carries Fit to view and close at its right end. Every other Hatch carries its title alone. */
+/* The selected Hatch's title row carries Fit to view and close at its right end. Every other Hatch carries its title alone, and the controls under the pointer. */
 .hatch-bar {
   position: absolute; display: flex; align-items: center; gap: 2px; height: 28px; padding: 0;
   background: var(--ground); cursor: grab;
   /* The row sits in front of the titles of the Hatches beside it. */
   z-index: 4;
 }
-.hatch-bar .hatch-title { flex: 1; font-size: 12px; font-weight: 600; }
+.hatch-bar .hatch-title { flex: 1; font-size: 12px; font-weight: 400; }
+.hatch-bar.selected .hatch-title { font-weight: 600; }
 .hatch-label { position: absolute; display: flex; align-items: center; gap: 6px; height: 24px; color: var(--ink-2); font-size: 12px; cursor: grab; }
 .hatch-label:hover, .hatch-label.selected { color: var(--ink); }
 .hatch-label.selected { font-weight: 600; }

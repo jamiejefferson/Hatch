@@ -113,9 +113,9 @@ export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked }: P
   // A bar wider than its Hatch would sit over the Hatch beside it.
   const compact = zoom < BAR_ZOOM || screen.width < BAR_MIN;
 
-  // The selected Hatch's title row holds the two controls that act on the frame itself. Page tools sit in the toolbar.
-  const header = docked ? null : selected && (!compact || hover) ? (
-    <div className="hatch-bar" style={barBox(screen)} onPointerDown={move} onPointerLeave={() => setHover(false)} onContextMenu={menu} data-testid={`header-${id}`}>
+  // The title row holds the two controls that act on the frame itself: always on the selected Hatch, and under the pointer on any other. Page tools sit in the toolbar.
+  const header = docked ? null : (selected && !compact) || hover ? (
+    <div className={`hatch-bar${selected ? ' selected' : ''}`} style={barBox(screen)} onPointerDown={move} onPointerLeave={() => setHover(false)} onContextMenu={menu} data-testid={`header-${id}`}>
       {working && <span className="working-dot" role="status" aria-label="An agent is working in this Hatch" />}
       <span className="hatch-title">{hatchLabel(hatch)}</span>
       <SoundButton hatch={hatch} />
@@ -127,7 +127,7 @@ export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked }: P
       </button>
     </div>
   ) : (
-    <div className={`hatch-label${selected ? ' selected' : ''}`} style={labelBox(screen)} onPointerDown={move} onPointerEnter={() => selected && setHover(true)} onContextMenu={menu} data-testid={`header-${id}`}>
+    <div className={`hatch-label${selected ? ' selected' : ''}`} style={labelBox(screen)} onPointerDown={move} onPointerEnter={() => setHover(true)} onContextMenu={menu} data-testid={`header-${id}`}>
       {working && <span className="working-dot" role="status" aria-label="An agent is working in this Hatch" />}
       <span className="hatch-title">{hatchLabel(hatch)}</span>
       <SoundButton hatch={hatch} />

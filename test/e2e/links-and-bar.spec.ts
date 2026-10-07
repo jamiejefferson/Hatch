@@ -58,7 +58,7 @@ test('a copied Hatch link takes an agent to that exact Hatch, in a tab it did no
   }
 });
 
-test('the control bar closes its Hatch, and a zoomed-out canvas shows the title until the pointer reaches it', async () => {
+test('the control bar closes its Hatch, shows on any Hatch under the pointer, and a zoomed-out canvas shows the title until the pointer reaches it', async () => {
   const site = await serveSite();
   const { app, win } = await launch(freshHome(), 0);
   try {
@@ -73,6 +73,13 @@ test('the control bar closes its Hatch, and a zoomed-out canvas shows the title 
     await expect(win.getByTestId('zoom-level')).toHaveText('40%');
     await win.getByTestId('hatch-list').locator('.row-main').last().click();
     await expect(win.locator('.hatch-bar')).toHaveCount(0);
+    // The pointer on an unselected Hatch's title shows its controls without selecting it.
+    // Its left end may sit under the left column, so the pointer goes to its right end.
+    const other = win.locator('.hatch-label:not(.selected)');
+    const width = (await other.boundingBox())!.width;
+    await other.hover({ position: { x: width - 6, y: 12 } });
+    await expect(win.locator('.hatch-bar:not(.selected) [data-testid^="bar-close-"]')).toBeVisible();
+    await expect(win.locator('.hatch-bar.selected')).toHaveCount(0);
     await win.locator('.hatch-label.selected').hover();
     await expect(win.locator('.hatch-bar')).toHaveCount(1);
 
