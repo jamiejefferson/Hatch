@@ -834,7 +834,8 @@ export const actions = {
   toast(text: string): void {
     set({ toast: text });
     if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => set({ toast: null }), 2400);
+    // A longer notice stays longer, so the user can read an instruction to the end.
+    toastTimer = setTimeout(() => set({ toast: null }), Math.max(2400, text.length * 50));
   },
 
   closeBanner(): void {

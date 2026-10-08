@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { app, ipcMain, session, type WebContents } from 'electron';
 import { asFirefoxHeaders, FIREFOX_UA, wantsFirefox } from '@shared/signin-identity';
 import { PAGES_PARTITION } from './paths';
+import { push } from './renderer-rpc';
 
 /** `HATCH_FIREFOX_HOSTS` names stand-in hosts for the tests, which cannot reach Google. */
 const extra = (): string[] => (process.env.HATCH_FIREFOX_HOSTS ?? '').split(',').map((h) => h.trim()).filter(Boolean);
@@ -28,6 +29,15 @@ export function setUpSigninIdentity(): void {
   // still report the previous page while the new one's preload runs.
   ipcMain.on('guest:firefox', (event, url: unknown) => {
     event.returnValue = typeof url === 'string' && firefoxPage(url);
+  });
+
+  // A page asked for a passkey and the preload refused it. A site may ask again as it falls back, so one notice per site covers 20 seconds.
+  const told = new Map<string, number>();
+  ipcMain.on('guest:passkey', (_event, host: unknown) => {
+    const site = typeof host === 'string' && host ? host : 'This site';
+    if (Date.now() - (told.get(site) ?? 0) < 20_000) return;
+    told.set(site, Date.now());
+    push('toast', `${site} asked for a passkey, which Hatch cannot use. Choose another way to sign in, or sign in with Chrome and bring the sign-in across in Settings.`);
   });
 }
 
