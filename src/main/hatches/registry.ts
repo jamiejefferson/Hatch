@@ -8,7 +8,8 @@ import { PAGES_PARTITION } from '../paths';
 import { addPageMenu, watchDownloads } from './page-menu';
 
 const ALLOWED_SCHEMES = ['http:', 'https:', 'file:', 'about:'];
-const GRANTED_PERMISSIONS = new Set(['clipboard-sanitized-write']);
+// fullscreen lets a video player fill the screen, as YouTube's button asks.
+const GRANTED_PERMISSIONS = new Set(['clipboard-sanitized-write', 'fullscreen']);
 
 const pages = new Map<string, PageSession>();
 const byGuest = new Map<number, PageSession>();
@@ -53,7 +54,12 @@ export function bindHatch(hatchId: string, guest: WebContents): void {
   });
   // Opening DevTools on a Hatch takes the debugger away. Hatch takes it back when DevTools closes.
   // A focused page keeps its own Esc, so Hatch hears the key here and leaves Fit to view. The page still receives it.
+  // Esc on a video in full screen leaves full screen alone, so the user lands back where they were watching.
+  let pageFullScreen = false;
+  guest.on('enter-html-full-screen', () => (pageFullScreen = true));
+  guest.on('leave-html-full-screen', () => (pageFullScreen = false));
   guest.on('before-input-event', (_event, input) => {
+    if (pageFullScreen) return;
     if (input.type === 'keyDown' && input.key === 'Escape' && !input.meta && !input.control && !input.alt) guest.hostWebContents?.send('page:escape', hatchId);
   });
   // The Hatch's title row shows a speaker while the page plays sound.

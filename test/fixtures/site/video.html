@@ -1,0 +1,4 @@
+<!doctype html>
+<title>Video player</title>
+<div id="player" style="width:320px;height:180px;background:#222;color:#fff">Player</div>
+<button id="full" onclick="document.getElementById('player').requestFullscreen().then(() => (document.title = 'Full screen'), (e) => (document.title = 'Refused: ' + e.message))">Full screen</button>
