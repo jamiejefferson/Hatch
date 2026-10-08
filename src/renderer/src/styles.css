@@ -251,6 +251,19 @@ svg { flex-shrink: 0; display: block; }
 .hatch-label:hover, .hatch-label.selected { color: var(--ink); }
 .hatch-label.selected { font-weight: 600; }
 .hatch-title { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.hatch-title:hover { text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 3px; }
+.fit-bar .hatch-title { cursor: text; }
+/* A click on a title turns it into the page's link, in the same place and at the same height. */
+.title-address { position: relative; flex: 1; min-width: 0; display: flex; }
+.fit-bar .title-address { width: 360px; flex: none; }
+.title-address input {
+  flex: 1; min-width: 0; height: 24px; padding: 0 10px; font-size: 12px;
+  border: 1px solid var(--ink-2); border-radius: var(--pill); background: var(--surface); color: var(--ink);
+  user-select: text; cursor: text;
+}
+.title-address input:focus-visible { outline: none; box-shadow: 0 0 0 1px var(--ink-2); }
+.title-address input.invalid { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); }
+.title-address-error { position: absolute; top: 28px; left: 0; padding: 4px 10px; border-radius: var(--pill); background: var(--danger); color: white; font-size: 11px; white-space: nowrap; z-index: 5; }
 /* The speaker beside a title: ink while the page plays, quieter once muted. */
 .round.sound { flex-shrink: 0; color: var(--ink); cursor: pointer; }
 .round.sound.muted, .round.sound.muted[aria-pressed='true'] { background: none; border-color: transparent; color: var(--ink-3); }

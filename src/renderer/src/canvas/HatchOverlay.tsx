@@ -8,6 +8,7 @@ import { AgentView } from './AgentView';
 import { CommentLayer } from './Comments';
 import { ConsentNotice, PageDialog, PopupNotice, ViewRequestNotice } from './HatchNotices';
 import { pages } from './webviews';
+import { TitleAddress } from './TitleAddress';
 
 interface Props {
   tabId: string;
@@ -60,6 +61,7 @@ export function SoundButton({ hatch }: { hatch: Hatch }) {
 /** Everything Hatch draws around a page. It sits above the canvas and never scales, so it stays crisp at every zoom. */
 export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked }: Props) {
   const [hover, setHover] = useState(false);
+  const [editing, setEditing] = useState(false);
   const load = useStore((s) => loadStateOf(s, hatch.id));
   const work = useStore((s) => s.work.hatches[hatch.id]);
   const working = work !== undefined;
@@ -95,11 +97,15 @@ export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked }: P
         },
       });
     }
+    // A click on the title, with no drag, turns it into the page's link.
+    const onTitle = (e.target as HTMLElement).closest('.hatch-title') !== null;
     startDrag(e, {
       cursor: 'grabbing',
       onMove: (dx, dy) => actions.moveHatch(id, hatch.x + dx / zoom, hatch.y + dy / zoom),
       onEnd: (moved) => {
-        if (!moved) actions.select(id);
+        if (moved) return;
+        actions.select(id);
+        if (onTitle) setEditing(true);
       },
     });
   };
@@ -114,10 +120,11 @@ export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked }: P
   const compact = zoom < BAR_ZOOM || screen.width < BAR_MIN;
 
   // The title row holds the two controls that act on the frame itself: always on the selected Hatch, and under the pointer on any other. Page tools sit in the toolbar.
-  const header = docked ? null : (selected && !compact) || hover ? (
+  const title = <TitleAddress hatch={hatch} editing={editing} onDone={() => setEditing(false)} />;
+  const header = docked ? null : (selected && !compact) || hover || editing ? (
     <div className={`hatch-bar${selected ? ' selected' : ''}`} style={barBox(screen)} onPointerDown={move} onPointerLeave={() => setHover(false)} onContextMenu={menu} data-testid={`header-${id}`}>
       {working && <span className="working-dot" role="status" aria-label="An agent is working in this Hatch" />}
-      <span className="hatch-title">{hatchLabel(hatch)}</span>
+      {title}
       <SoundButton hatch={hatch} />
       <button className="round small quiet" aria-label="Fit to view" title="Fit to view" aria-pressed={false} onClick={run(() => actions.toggleFit(id))} data-testid="fit-toggle">
         <FitIcon size={14} />
@@ -129,7 +136,7 @@ export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked }: P
   ) : (
     <div className={`hatch-label${selected ? ' selected' : ''}`} style={labelBox(screen)} onPointerDown={move} onPointerEnter={() => setHover(true)} onContextMenu={menu} data-testid={`header-${id}`}>
       {working && <span className="working-dot" role="status" aria-label="An agent is working in this Hatch" />}
-      <span className="hatch-title">{hatchLabel(hatch)}</span>
+      {title}
       <SoundButton hatch={hatch} />
     </div>
   );
