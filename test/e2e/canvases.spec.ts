@@ -63,6 +63,8 @@ test('an agent opens, names, shares, lists and closes canvases, and a canvas out
     expect(shared.text).toContain('Opened Hatch');
     expect((await call(alpha, 'list_hatches')).text.split('\n')).toHaveLength(2);
     expect((await call(beta, 'list_hatches', { canvas: canvasId })).text).toContain('390 × 844');
+    // set_viewport checks the page's own layout size before it reports one, on a canvas behind the user's too.
+    expect((await call(beta, 'set_viewport', { preset: 'tablet' })).text).toMatch(/now shows the page at 768 × 1024\.$/);
 
     // A canvas id that names nothing is refused with a pointer.
     const missing = await call(beta, 'select_canvas', { canvas: 'no-such-canvas' });

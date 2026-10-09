@@ -8,6 +8,22 @@ import { resolveTarget } from './resolve';
 import { addressOf, arrival, waitForLoad } from '../../cdp/actions';
 import { canvas, hatch, intent, shortAddress, timeoutS, tool, type ToolContext } from './types';
 
+/** The page's own layout size, read once it matches `want` or after a second. Null when the page cannot answer. */
+async function pageSize(hatchId: string, want: { width: number; height: number }): Promise<{ width: number; height: number } | null> {
+  const page = await waitForPage(hatchId);
+  if (!page) return null;
+  let seen: { width: number; height: number } | null = null;
+  for (let i = 0; i < 10; i++) {
+    // An isolated world reads the size without touching the page's own script.
+    const [w, h] = (await page.guest.executeJavaScriptInIsolatedWorld(1999, [{ code: '[innerWidth, innerHeight]' }]).catch(() => [])) as number[];
+    if (typeof w !== 'number' || typeof h !== 'number') return seen;
+    seen = { width: w, height: h };
+    if (w === want.width && h === want.height) return seen;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  return seen;
+}
+
 const PRESETS = TEMPLATES.map((t) => t.id);
 const preset = z.enum(PRESETS as [string, ...string[]]).optional().describe(`Device template: ${TEMPLATES.map((t) => (t.size ? `${t.id} (${t.size.width} × ${t.size.height})` : `${t.id} (fills the window)`)).join(', ')}.`);
 const width = z.number().int().min(240).max(4000).optional().describe('Viewport width in CSS pixels. Pass it with height for a custom size.');
@@ -89,6 +105,9 @@ export const hatchTools = [
       if (!hatchId) throw new HatchError('Your tab has no Hatch yet. Call navigate with an address first.');
       return inTabQueue(tabId, async () => {
         const size = await callInterface<{ width: number; height: number }>('sizeHatch', { hatchId, preset: a.preset, width: a.width, height: a.height });
+        const shown = await pageSize(hatchId, size);
+        if (shown && (shown.width !== size.width || shown.height !== size.height))
+          return `Hatch set ${hatchId} to ${size.width} × ${size.height}, but the page still lays out at ${shown.width} × ${shown.height}. Ask the user to close this Hatch and open the page again, which gives it a fresh frame.`;
         return `${hatchId} now shows the page at ${size.width} × ${size.height}.`;
       });
     },
