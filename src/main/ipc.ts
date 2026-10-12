@@ -16,7 +16,8 @@ import { syncFolderCanvases, workFolders } from './project-canvas';
 import { installSkill, skillState } from './skill';
 import { defaultBrowserState, makeDefaultBrowser } from './default-browser';
 import { captureForFeedback, feedbackDetails, sendFeedback } from './feedback/send';
-import { importSignIn, listBrowserProfiles } from './credentials/import-cookies';
+import { importSignIn, listBrowserProfiles, openInBrowser } from './credentials/import-cookies';
+import { signInThroughWhenReady } from './credentials/signin-through';
 import { importBookmarks, listBookmarkProfiles } from './links/import-bookmarks';
 import { addSignIn, listSignIns, removeSignIn, setAllow } from './credentials/store';
 import { bindHatch, onPageBound, pageFor, setFitHatches } from './hatches/registry';
@@ -172,6 +173,8 @@ export function registerIpc(): void {
   ipcMain.handle('signins:browsers', () => listBrowserProfiles());
   ipcMain.handle('links:browsers', () => listBookmarkProfiles());
   ipcMain.handle('links:import', safely((profileId: string) => importBookmarks(String(profileId))));
+  ipcMain.handle('signins:through', (_e, hatchId: string) => signInThroughWhenReady(String(hatchId)));
+  ipcMain.handle('signins:open-in', safely((url: string, profileId: string) => openInBrowser(String(url), String(profileId))));
   ipcMain.handle('signins:import', safely((pageUrl: string, profileId: string) => importSignIn(String(pageUrl), String(profileId))));
   // The key goes in and never comes back out. The interface learns only whether Hatch holds one.
   ipcMain.handle('jev:has-key', () => hasKey());

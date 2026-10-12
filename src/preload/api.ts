@@ -1,5 +1,6 @@
 import type { Anchor, CommentStatus, PageComments } from '@shared/comments';
 import type { BrowserProfile, ImportOutcome } from '@shared/cookie-import';
+import type { SignInThrough } from '@shared/signin-through';
 import type { FeedbackDetails, FeedbackInput } from '@shared/feedback';
 import type { ConsentAnswer, ConsentRequest, SignIn } from '@shared/signins';
 import type { ActivityEntry, AgentAct, AgentWorkState, DialogState, Project, ProjectsState, ProjectState, SavedCanvas, SavedLink, Settings, Workspace } from '@shared/types';
@@ -40,6 +41,8 @@ export interface Pushes {
   'signins:state': SignIn[];
   'connection:state': ConnectionInfo;
   'consent:state': { hatchId: string; request: ConsentRequest | null };
+  /** A page asked for a passkey, and Hatch offers to finish the sign-in in another browser. */
+  'signin:through': SignInThrough;
   /** One line for the foot of the window, such as a download that has landed. */
   toast: string;
 }
@@ -121,6 +124,10 @@ export interface HatchApi {
   browserProfiles(): Promise<BrowserProfile[]>;
   /** Copies the cookies for the page's site from that profile into Hatch's session. macOS asks the user for the browser's Keychain key first. */
   importSignIn(pageUrl: string, profileId: string): Promise<Outcome<ImportOutcome>>;
+  /** The page a Hatch began signing in from, for signing in through another browser. Null when the Hatch shows no web page. */
+  signInThrough(hatchId: string): Promise<SignInThrough | null>;
+  /** Opens a page in that browser profile. */
+  openInBrowser(url: string, profileId: string): Promise<Outcome<{ browser: string }>>;
   /** Browser profiles that hold favourites. */
   bookmarkProfiles(): Promise<BrowserProfile[]>;
   /** Adds a profile's favourites to Links, skipping addresses Links already holds. */

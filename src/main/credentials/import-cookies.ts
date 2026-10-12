@@ -2,7 +2,7 @@
 // so the user signs in to the site in Chrome and Hatch copies that one site's cookies into its own session.
 // Chrome, Arc, Brave and Edge share one format: a SQLite file whose values are AES-128-CBC under a key from the macOS Keychain.
 import { execFile } from 'node:child_process';
-import { copyFile, mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises';
+import { appendFile, copyFile, mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -14,13 +14,13 @@ import { PAGES_PARTITION } from '../paths';
 
 const run = promisify(execFile);
 
-export interface Browser { id: string; name: string; folder: string; keychainService: string; keychainAccount: string }
+export interface Browser { id: string; name: string; folder: string; keychainService: string; keychainAccount: string; bundleId: string }
 
 export const BROWSERS: Browser[] = [
-  { id: 'chrome', name: 'Chrome', folder: 'Google/Chrome', keychainService: 'Chrome Safe Storage', keychainAccount: 'Chrome' },
-  { id: 'arc', name: 'Arc', folder: 'Arc/User Data', keychainService: 'Arc Safe Storage', keychainAccount: 'Arc' },
-  { id: 'brave', name: 'Brave', folder: 'BraveSoftware/Brave-Browser', keychainService: 'Brave Safe Storage', keychainAccount: 'Brave' },
-  { id: 'edge', name: 'Edge', folder: 'Microsoft Edge', keychainService: 'Microsoft Edge Safe Storage', keychainAccount: 'Microsoft Edge' },
+  { id: 'chrome', name: 'Chrome', folder: 'Google/Chrome', keychainService: 'Chrome Safe Storage', keychainAccount: 'Chrome', bundleId: 'com.google.Chrome' },
+  { id: 'arc', name: 'Arc', folder: 'Arc/User Data', keychainService: 'Arc Safe Storage', keychainAccount: 'Arc', bundleId: 'company.thebrowser.Browser' },
+  { id: 'brave', name: 'Brave', folder: 'BraveSoftware/Brave-Browser', keychainService: 'Brave Safe Storage', keychainAccount: 'Brave', bundleId: 'com.brave.Browser' },
+  { id: 'edge', name: 'Edge', folder: 'Microsoft Edge', keychainService: 'Microsoft Edge Safe Storage', keychainAccount: 'Microsoft Edge', bundleId: 'com.microsoft.edgemac' },
 ];
 
 // The tests point these at a folder and a key of their own, so no test touches the user's browser or the Keychain.
@@ -107,4 +107,25 @@ export async function importSignIn(pageUrl: string, profileId: string): Promise<
   } finally {
     await rm(work, { recursive: true, force: true });
   }
+}
+
+/**
+ * Opens a page in a browser profile, where the user signs in with Touch ID, a phone or a security key.
+ * `HATCH_OPEN_LOG` names a file the tests read in place of a real browser opening.
+ */
+export async function openInBrowser(url: string, profileId: string): Promise<{ browser: string }> {
+  if (!URL.canParse(url) || !/^https?:$/.test(new URL(url).protocol)) throw new HatchError('Hatch opens web pages alone in another browser.');
+  const [browserId, profile = 'Default'] = profileId.split(':');
+  const browser = BROWSERS.find((b) => b.id === browserId);
+  if (!browser) throw new HatchError('Hatch does not know that browser.');
+  if (process.env.HATCH_OPEN_LOG) {
+    await appendFile(process.env.HATCH_OPEN_LOG, `${browser.id} ${profile} ${url}\n`);
+    return { browser: browser.name };
+  }
+  // Arc keeps one profile, so it takes the page alone. The others open it in the profile the user chose.
+  const args = browser.id === 'arc' ? ['-b', browser.bundleId, url] : ['-b', browser.bundleId, '-n', '--args', `--profile-directory=${profile}`, url];
+  await run('/usr/bin/open', args).catch(() => {
+    throw new HatchError(`Hatch could not open ${browser.name}. Open ${url} there yourself, sign in, then come back.`);
+  });
+  return { browser: browser.name };
 }

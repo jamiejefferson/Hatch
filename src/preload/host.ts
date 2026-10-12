@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { HatchApi, Pushes } from './api';
 
-const PUSHES: (keyof Pushes)[] = ['command', 'activity:event', 'agents:work', 'agent:act', 'page:changed', 'window:blur', 'window:fullscreen', 'pointer:edge', 'page:escape', 'page:audible', 'popup:blocked', 'dialog:state', 'projects:state', 'projects:log', 'links:state', 'comments:changed', 'signins:state', 'consent:state', 'connection:state', 'toast'];
+const PUSHES: (keyof Pushes)[] = ['command', 'activity:event', 'agents:work', 'agent:act', 'page:changed', 'window:blur', 'window:fullscreen', 'pointer:edge', 'page:escape', 'page:audible', 'popup:blocked', 'dialog:state', 'projects:state', 'projects:log', 'links:state', 'comments:changed', 'signins:state', 'consent:state', 'connection:state', 'signin:through', 'toast'];
 
 const api: HatchApi = {
   intro: process.env.HATCH_INTRO === '1' || !process.env.HATCH_HIDDEN,
@@ -47,6 +47,8 @@ const api: HatchApi = {
   setSignInAllow: (id, allow) => ipcRenderer.invoke('signins:allow', id, allow),
   browserProfiles: () => ipcRenderer.invoke('signins:browsers'),
   importSignIn: (pageUrl, profileId) => ipcRenderer.invoke('signins:import', pageUrl, profileId),
+  signInThrough: (hatchId) => ipcRenderer.invoke('signins:through', hatchId),
+  openInBrowser: (url, profileId) => ipcRenderer.invoke('signins:open-in', url, profileId),
   bookmarkProfiles: () => ipcRenderer.invoke('links:browsers'),
   importBookmarks: (profileId) => ipcRenderer.invoke('links:import', profileId),
   answerConsent: (hatchId, answer) => ipcRenderer.invoke('consent:answer', hatchId, answer),

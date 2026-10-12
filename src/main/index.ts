@@ -1,4 +1,5 @@
 import { setUpSigninIdentity } from './signin-identity';
+import { setUpSignInThrough } from './credentials/signin-through';
 import { join } from 'node:path';
 import { app, BrowserWindow, type Rectangle } from 'electron';
 import { setUpPagesSession } from './hatches/registry';
@@ -68,6 +69,7 @@ if (!app.requestSingleInstanceLock()) {
     if (app.isPackaged) app.setAsDefaultProtocolClient('hatch');
     setUpPagesSession();
     setUpSigninIdentity();
+    setUpSignInThrough();
     seedFirstRun(app.getVersion());
     registerIpc();
     registerRpcReplies();

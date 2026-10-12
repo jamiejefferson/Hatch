@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { folderName } from '@shared/project-canvas';
-import { CloseIcon, CopyIcon, DuplicateIcon, FolderIcon, MutedIcon, SoundIcon, FitIcon, ReleaseIcon, SaveLinkIcon } from '../icons';
+import { CloseIcon, CopyIcon, DuplicateIcon, FolderIcon, MutedIcon, SoundIcon, FitIcon, ReleaseIcon, SaveLinkIcon, SignInsIcon } from '../icons';
 import { actions, hatchLabel, useStore } from '../state/store';
 
 /** The right-click menu for a Hatch, a canvas or a tab. Its first job is the link a user pastes to an agent. */
@@ -71,6 +71,11 @@ export function ContextMenu() {
         {hatch && (
           <button role="menuitem" disabled={saved} onClick={run(() => void actions.saveLink(hatchLabel(hatch), hatch.url).then(() => actions.toast('Hatch saved this link in Links.')))} data-testid="menu-save-link">
             <SaveLinkIcon /> {saved ? 'This link is saved in Links' : 'Save this link'}
+          </button>
+        )}
+        {hatch && /^https?:/.test(hatch.url) && (
+          <button role="menuitem" onClick={run(() => void actions.askSignInThrough(hatch.id))} data-testid="menu-signin-through">
+            <SignInsIcon /> Sign in through another browser…
           </button>
         )}
         {hatch && (

@@ -5,6 +5,7 @@ import { Canvas } from './canvas/Canvas';
 import { NewHatchModal } from './canvas/NewHatchModal';
 import { ActionButtonEditor } from './shell/ActionButtonEditor';
 import { AttachCanvasModal } from './shell/AttachCanvasModal';
+import { SignInThroughModal } from './shell/SignInThroughModal';
 import { pages } from './canvas/webviews';
 import { LeftColumn } from './shell/LeftColumn';
 import { Sidebar } from './shell/Sidebar';
@@ -114,6 +115,7 @@ function Shell({ tabs, activeTabId, sidebarOpen, leftOpen }: { tabs: Tab[]; acti
       <NewHatchModal />
       <ActionButtonEditor />
       <AttachCanvasModal />
+      <SignInThroughModal />
       <ContextMenu />
       <Toast />
       <Guide />

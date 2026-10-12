@@ -7,6 +7,7 @@ import { hatchLink } from '@shared/hatch-link';
 import { hatchAddress, projectOf, projectUrl, PROXY_PORT } from '@shared/project-address';
 import type { Anchor, CommentStatus, PageComments } from '@shared/comments';
 import type { ConsentAnswer, ConsentRequest, SignIn } from '@shared/signins';
+import type { SignInThrough } from '@shared/signin-through';
 import type { ConnectionInfo, Outcome } from '../../../preload/api';
 import type { ActionButton, ProjectsState, ActivityEntry, AgentAct, AgentWorkState, DialogState, Hatch, HatchView, InterfaceState, Note, SavedCanvas, SavedLink, Settings, Tab, TemplateId, ViewRequest, Workspace } from '@shared/types';
 import { savedCanvasFromTab, tabFromSavedCanvas } from '@shared/canvases';
@@ -96,6 +97,8 @@ export interface State {
   contextMenu: { x: number; y: number; tabId: string; hatchId: string | null } | null;
   /** The canvas whose working folder Hatch asks for: a canvas the user just made, or one the user chose to attach. */
   attachPrompt: string | null;
+  /** A sign-in the user may finish in another browser: offered when a page asks for a passkey, or asked for from the menu. */
+  signInThrough: SignInThrough | null;
   /** The action button editor: null when shut, `id` null while adding a new button. */
   actionEditor: { id: string | null } | null;
   /** One line of feedback that shows for a moment at the foot of the canvas. */
@@ -158,6 +161,7 @@ let state: State = {
   contextMenu: null,
   actionEditor: null,
   attachPrompt: null,
+  signInThrough: null,
   toast: null,
   guideOpen: false,
   feedbackShot: null,
@@ -272,6 +276,7 @@ export function listen(): () => void {
       }),
     ),
     window.hatch.on('toast', (text) => actions.toast(text)),
+    window.hatch.on('signin:through', (through) => set({ signInThrough: through })),
     window.hatch.on('popup:blocked', ({ hatchId, url }) => set((s) => ({ popups: { ...s.popups, [hatchId]: { url } } }))),
     window.hatch.on('page:changed', (hatchId) => set((s) => ({ pageVersion: { ...s.pageVersion, [hatchId]: (s.pageVersion[hatchId] ?? 0) + 1 } }))),
     window.hatch.on('dialog:state', ({ hatchId, dialog }) =>
@@ -481,6 +486,15 @@ export const actions = {
   },
   closeAttachPrompt(): void {
     set({ attachPrompt: null });
+  },
+  /** Offers to sign in to a Hatch's site through another browser. */
+  async askSignInThrough(hatchId: string): Promise<void> {
+    const through = await window.hatch.signInThrough(hatchId);
+    if (through) set({ signInThrough: through });
+    else actions.toast('Open a web page in this Hatch first, then sign in through another browser.');
+  },
+  closeSignInThrough(): void {
+    set({ signInThrough: null });
   },
   /** Gives a canvas to a working folder, or takes it away with null. The folder's previous canvas lets go, as one canvas belongs to a folder. */
   attachCanvas(tabId: string, folder: string | null): void {
