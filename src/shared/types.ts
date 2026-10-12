@@ -112,7 +112,7 @@ export interface Settings {
 }
 
 /** The icons an action button may wear, in the order the picker shows them. */
-export const ACTION_ICONS = ['web', 'spreadsheet', 'document', 'slides', 'mail', 'calendar', 'chat', 'video', 'folder', 'design', 'code', 'chart', 'tasks', 'ai', 'music', 'photos', 'shop', 'map', 'cloud', 'book', 'star', 'bolt', 'home', 'people', 'bell'] as const;
+export const ACTION_ICONS = ['web', 'spreadsheet', 'document', 'slides', 'mail', 'calendar', 'chat', 'video', 'folder', 'design', 'code', 'chart', 'tasks', 'ai', 'music', 'photos', 'shop', 'map', 'cloud', 'book', 'star', 'bolt', 'home', 'people', 'bell', 'search', 'link', 'bookmark', 'lock', 'terminal', 'database', 'server', 'bug', 'branch', 'news', 'mic', 'camera', 'phone', 'heart', 'flag', 'clock', 'wallet', 'card', 'briefcase', 'send', 'coffee', 'game', 'gift', 'inbox', 'board', 'pencil', 'tv', 'health', 'school'] as const;
 export type ActionIcon = (typeof ACTION_ICONS)[number];
 
 /** A button in the toolbar that opens a web app the user reaches for often, such as their spreadsheets, in Fit to view. */
