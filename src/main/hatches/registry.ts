@@ -8,8 +8,10 @@ import { PAGES_PARTITION } from '../paths';
 import { addPageMenu, watchDownloads } from './page-menu';
 
 const ALLOWED_SCHEMES = ['http:', 'https:', 'file:', 'about:'];
-// fullscreen lets a video player fill the screen, as YouTube's button asks.
-const GRANTED_PERMISSIONS = new Set(['clipboard-sanitized-write', 'fullscreen']);
+// fullscreen lets a video player fill the screen, as YouTube's button asks. fileSystem lets a page keep the folder or file
+// the user picks in the native dialog of showDirectoryPicker or showOpenFilePicker; Electron asks for it after the pick,
+// and a refusal fails the picker with AbortError.
+const GRANTED_PERMISSIONS = new Set(['clipboard-sanitized-write', 'fullscreen', 'fileSystem']);
 
 const pages = new Map<string, PageSession>();
 const byGuest = new Map<number, PageSession>();
