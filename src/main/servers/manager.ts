@@ -94,7 +94,7 @@ function stateOf(p: Project, live: Map<string, number>): ProjectState {
   else if (mine) status = mine.status;
   else if (livePort) status = 'running';
   else if (failed.has(p.name)) status = 'failed';
-  return { ...p, status, livePort, startedByHatch: !!mine, url: projectUrl(p, getProxyPort()) };
+  return { ...p, status, livePort, startedByHatch: !!mine, url: projectUrl({ ...p, livePort }, getProxyPort()) };
 }
 
 export async function projectsState(refresh = true): Promise<ProjectsState> {

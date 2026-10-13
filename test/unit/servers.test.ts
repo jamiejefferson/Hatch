@@ -67,6 +67,7 @@ describe('project addresses', () => {
   const projects = [
     { name: 'acme', port: 4300, direct: false, kind: 'server' as const, livePort: 4300 },
     { name: 'login', port: 4301, direct: true, kind: 'server' as const, livePort: 4301 },
+    { name: 'fixed', port: 4302, direct: true, kind: 'server' as const, livePort: 3100 },
   ];
   it('names a folder', () => {
     expect(nameFromFolder('/Users/someone/Sites/Acme Site 2')).toBe('acme-site-2');
@@ -75,10 +76,14 @@ describe('project addresses', () => {
   it('builds the link a Hatch loads', () => {
     expect(projectUrl(projects[0]!, 4282, 'pricing')).toBe('http://acme.localhost:4282/pricing');
     expect(projectUrl(projects[1]!, 4282)).toBe('http://localhost:4301/');
+    // A server that sets its own port, such as next dev -p 3100, opens directly on that port.
+    expect(projectUrl(projects[2]!, 4282)).toBe('http://localhost:3100/');
+    expect(projectUrl({ ...projects[2]!, livePort: null }, 4282)).toBe('http://localhost:4302/');
   });
   it('shows a project link in its hatch: form', () => {
     expect(hatchAddress('http://acme.localhost:4282/pricing?x=1', projects, 4282)).toBe('hatch:acme/pricing?x=1');
     expect(hatchAddress('http://localhost:4301/', projects, 4282)).toBe('hatch:login');
+    expect(hatchAddress('http://localhost:3100/docs', projects, 4282)).toBe('hatch:fixed/docs');
     expect(hatchAddress('https://example.com/', projects, 4282)).toBeNull();
   });
 });

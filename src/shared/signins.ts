@@ -20,7 +20,7 @@ export interface ConsentRequest {
 }
 export type ConsentAnswer = 'once' | 'always' | 'refuse';
 
-type Addressed = Pick<ProjectState, 'name' | 'port' | 'direct' | 'kind'>;
+type Addressed = Pick<ProjectState, 'name' | 'port' | 'direct' | 'kind'> & { livePort?: number | null };
 
 /** The site a page belongs to. */
 export function siteOf(url: string, projects: Addressed[], proxyPort: number | null): string | null {
