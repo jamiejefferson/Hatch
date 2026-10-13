@@ -84,7 +84,7 @@ svg { flex-shrink: 0; display: block; }
 .app { display: flex; flex-direction: column; height: 100%; }
 .main { display: flex; flex: 1; min-height: 0; }
 
-/* ---- top strip: the left column's switch, the canvas name, Feedback, Settings and the sidebar's switch ---- */
+/* ---- top strip: the side columns' switch, the canvas name, Feedback and Settings ---- */
 .top-strip {
   display: flex; align-items: center; gap: 8px; flex-shrink: 0;
   height: var(--strip); padding: 0 12px 0 84px;

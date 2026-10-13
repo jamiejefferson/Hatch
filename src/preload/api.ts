@@ -9,7 +9,7 @@ export type Outcome<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export type MenuCommand =
   | 'new-hatch' | 'new-tab' | 'close-hatch' | 'duplicate-hatch' | 'close-tab' | 'reload-hatch' | 'back' | 'forward'
-  | 'zoom-in' | 'zoom-out' | 'zoom-actual' | 'toggle-sidebar' | 'toggle-left' | 'inspect-hatch' | 'deselect' | 'toggle-view' | 'show-guide' | 'send-feedback' | 'reopen-closed';
+  | 'zoom-in' | 'zoom-out' | 'zoom-actual' | 'toggle-panels' | 'inspect-hatch' | 'deselect' | 'toggle-view' | 'show-guide' | 'send-feedback' | 'reopen-closed';
 
 /** Messages the main process pushes to the interface. */
 export interface Pushes {

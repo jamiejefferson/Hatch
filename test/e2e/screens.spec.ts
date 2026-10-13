@@ -37,10 +37,10 @@ test('capture the canvas, Fit to view, the collapsed sidebar and the New Hatch m
     await win.getByTestId('panel-hatch').click();
     await win.getByTestId('hatch-list').getByRole('button').first().click();
 
-    await win.getByTestId('sidebar-toggle').click();
+    await win.getByTestId('panels-toggle').click();
     await win.waitForTimeout(300);
     await capture(app, `${OUT}/3-sidebar-collapsed.png`);
-    await win.getByTestId('sidebar-toggle').click();
+    await win.getByTestId('panels-toggle').click();
 
     await win.getByTestId('save-link').click();
     await win.getByTestId('new-hatch').click();

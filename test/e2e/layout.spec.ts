@@ -46,14 +46,29 @@ test('the left column, the toolbar and the sidebar tabs each do one job', async 
     await win.getByTestId('panel-settings').click();
     await expect(win.getByRole('heading', { name: 'Sign-ins' })).toBeVisible();
 
-    // The left column hides, and the choice lasts with the workspace.
-    await win.getByTestId('left-toggle').click();
+    // One switch hides both side columns, and the choice lasts with the workspace.
+    await expect(win.getByTestId('sidebar-toggle')).toHaveCount(0);
+    await win.getByTestId('panels-toggle').click();
     await expect(win.getByTestId('left-column')).toHaveCount(0);
+    await expect(win.locator('.sidebar')).toHaveCount(0);
     // The workspace saves 400 ms after a change.
     await win.waitForTimeout(700);
-    expect((JSON.parse(readFileSync(join(home, 'workspace.json'), 'utf8')) as { leftOpen?: boolean }).leftOpen).toBe(false);
-    await win.getByTestId('left-toggle').click();
+    const saved = JSON.parse(readFileSync(join(home, 'workspace.json'), 'utf8')) as { leftOpen?: boolean; sidebarOpen?: boolean };
+    expect([saved.leftOpen, saved.sidebarOpen]).toEqual([false, false]);
+    await win.getByTestId('panels-toggle').click();
     await expect(win.getByTestId('left-column')).toBeVisible();
+    await expect(win.locator('.sidebar')).toBeVisible();
+
+    // With only the sidebar open, the switch closes it, and the next press opens both.
+    await win.getByTestId('panels-toggle').click();
+    await win.getByTestId('panel-settings').click();
+    await expect(win.locator('.sidebar')).toBeVisible();
+    await expect(win.getByTestId('left-column')).toHaveCount(0);
+    await win.getByTestId('panels-toggle').click();
+    await expect(win.locator('.sidebar')).toHaveCount(0);
+    await win.getByTestId('panels-toggle').click();
+    await expect(win.getByTestId('left-column')).toBeVisible();
+    await expect(win.locator('.sidebar')).toBeVisible();
   } finally {
     await app.close();
     await site.close();

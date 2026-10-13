@@ -34,8 +34,7 @@ function run(command: MenuCommand): void {
     case 'zoom-in': return actions.zoomStep(1);
     case 'zoom-out': return actions.zoomStep(-1);
     case 'zoom-actual': return actions.zoomTo(1);
-    case 'toggle-sidebar': return actions.toggleSidebar();
-    case 'toggle-left': return actions.toggleLeft();
+    case 'toggle-panels': return actions.togglePanels();
     case 'inspect-hatch': return void (selected && pages.inspect(selected));
     case 'deselect': return actions.escape();
     case 'toggle-view': return void (selected && actions.toggleView(selected));

@@ -1,24 +1,24 @@
-import { CloseIcon, FeedbackIcon, LeftColumnIcon, ReleaseIcon, SettingsIcon, SidebarIcon } from '../icons';
+import { CloseIcon, FeedbackIcon, PanelsIcon, ReleaseIcon, SettingsIcon } from '../icons';
 import { actions, activeTab, fitHatch, tabLabel, useStore } from '../state/store';
 import type { Hatch } from '@shared/types';
 import { useState } from 'react';
 import { SoundButton } from '../canvas/HatchOverlay';
 import { TitleAddress } from '../canvas/TitleAddress';
 
-/** One row: the left column's switch, the canvas the user is on, then Feedback, Settings and the sidebar's switch. */
+/** One row: the switch for both side columns, the canvas the user is on, then Feedback and Settings. */
 export function TopStrip() {
   const tab = useStore(activeTab);
   const label = useStore((s) => tabLabel(s, activeTab(s)));
   const sidebarOpen = useStore((s) => s.workspace.sidebarOpen);
-  const leftOpen = useStore((s) => s.workspace.leftOpen !== false);
+  const panelsOpen = useStore((s) => s.workspace.sidebarOpen || s.workspace.leftOpen !== false);
   const panel = useStore((s) => s.panel);
   const fit = fitHatch(tab);
   const count = tab.hatches.length;
 
   return (
     <header className="top-strip">
-      <button className="round quiet" aria-label={leftOpen ? 'Hide the left column' : 'Show the left column'} title={leftOpen ? 'Hide the left column' : 'Show the left column'} aria-expanded={leftOpen} onClick={actions.toggleLeft} data-testid="left-toggle">
-        <LeftColumnIcon />
+      <button className="round quiet" aria-label={panelsOpen ? 'Hide the side columns' : 'Show the side columns'} title={panelsOpen ? 'Hide the side columns' : 'Show the side columns'} aria-expanded={panelsOpen} onClick={actions.togglePanels} data-testid="panels-toggle">
+        <PanelsIcon />
       </button>
       <div className="strip-title" onContextMenu={(e) => actions.openContextMenu(e, tab.id, fit?.id ?? null)}>
         <strong data-testid="canvas-title">{label}</strong>
@@ -30,9 +30,6 @@ export function TopStrip() {
       </button>
       <button className={`round quiet${sidebarOpen && panel === 'settings' ? ' current' : ''}`} aria-label="Settings" title="Settings" aria-pressed={sidebarOpen && panel === 'settings'} onClick={() => actions.showPanel('settings')} data-testid="panel-settings">
         <SettingsIcon />
-      </button>
-      <button className="round quiet" aria-label={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'} title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'} aria-expanded={sidebarOpen} onClick={actions.toggleSidebar} data-testid="sidebar-toggle">
-        <SidebarIcon />
       </button>
     </header>
   );

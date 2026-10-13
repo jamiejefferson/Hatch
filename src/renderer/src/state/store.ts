@@ -539,11 +539,12 @@ export const actions = {
     const next = name.trim().slice(0, 60);
     editTab(tabId, ({ name: _old, ...rest }) => (next ? { ...rest, name: next } : rest));
   },
-  toggleSidebar(): void {
-    set((s) => ({ workspace: { ...s.workspace, sidebarOpen: !s.workspace.sidebarOpen } }));
-  },
-  toggleLeft(): void {
-    set((s) => ({ workspace: { ...s.workspace, leftOpen: s.workspace.leftOpen === false } }));
+  /** One switch moves both side columns: with either one open it closes both, and with both shut it opens both. */
+  togglePanels(): void {
+    set((s) => {
+      const open = s.workspace.sidebarOpen || s.workspace.leftOpen !== false;
+      return { workspace: { ...s.workspace, sidebarOpen: !open, leftOpen: !open } };
+    });
   },
 
   // canvas
