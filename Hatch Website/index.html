@@ -3,16 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hatch — a guide you try as you read</title>
-  <meta name="description" content="Hatch is a browser for people who build with agents. This guide walks through ten stages, and each one gives you a thing to try.">
+  <title>Hatch — the browser your agent drives</title>
+  <meta name="description" content="Hatch is a Mac browser for people who build with agents. Your agent opens, reads and tests the live site while you watch the same pages and pin comments to them.">
   <meta property="og:title" content="Hatch — a browser for people who build with agents">
-  <meta property="og:description" content="This guide walks through ten stages, and each one gives you a thing to try.">
-  <meta property="og:image" content="https://hatch-guide.vercel.app/assets/social.png">
+  <meta property="og:description" content="Your agent opens, reads and tests the live site while you watch the same pages and pin comments to them.">
+  <meta property="og:image" content="https://hatch.projject.ai/assets/social.png">
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=Libre+Franklin:wght@100..900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
+  <!-- Hatch's page preload defines __hatchDialog before any page script runs, so the guide knows at once whether Hatch is showing it. -->
+  <script>if (typeof window.__hatchDialog === 'function') document.documentElement.classList.add('in-hatch');</script>
 </head>
 <body>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -43,6 +45,7 @@
     <img src="/assets/hatch-on-dark.svg" width="82" height="28" alt="Hatch">
     <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
     <div class="progress-count" id="progress-count">01 / 11</div>
+    <a class="pill header-download visitor-only" href="https://github.com/jamiejefferson/Hatch/releases/latest" data-download>Download Hatch</a>
   </header>
 
   <main id="guide">
@@ -72,10 +75,25 @@
         <div class="numeral" aria-hidden="true">01</div>
       </div>
       <div class="panel-main">
-        <h1 class="headline large" id="h1">Thanks for trying out Hatch.</h1>
-        <p class="subhead">A browser for people who build with agents.</p>
+        <h1 class="headline large hatch-only" id="h1">Thanks for trying out Hatch.</h1>
+        <h1 class="headline large visitor-only">The browser your agent drives while you watch.</h1>
+        <p class="subhead">A Mac browser for people who build with agents.</p>
         <p class="lede">Your agent writes the code and you judge the result. Both of you need the live site in front of you. Hatch puts it there, between the Paper or Figma file and the finished build.</p>
-        <p class="aside">This page runs to eleven stages, and most of them give you a thing to try.</p>
+        <div class="get visitor-only" aria-labelledby="h-get">
+          <h2 class="label accent" id="h-get">Get Hatch</h2>
+          <div class="get-row">
+            <a class="pill big" href="https://github.com/jamiejefferson/Hatch/releases/latest" data-download>Download Hatch for Mac <span aria-hidden="true">↓</span></a>
+            <p class="get-meta" id="get-meta">Hatch needs a Mac with Apple silicon.</p>
+          </div>
+          <p class="get-step">Or paste this line into Terminal. It puts Hatch in Applications, opens it, and macOS asks no questions.</p>
+          <div class="prompt">
+            <p id="install-line">curl -fsSL https://raw.githubusercontent.com/jamiejefferson/hatch/main/install.sh | sh</p>
+            <button type="button" class="pill" id="copy-install">Copy</button>
+          </div>
+          <p class="aside">The download asks one extra step the first time. Hatch has no Apple Developer ID yet, so macOS says it cannot check the app. Choose Done, open System Settings, then Privacy &amp; Security, and choose Open Anyway beside Hatch.</p>
+        </div>
+        <p class="aside hatch-only">This page runs to eleven stages, and most of them give you a thing to try.</p>
+        <p class="aside visitor-only">The eleven stages below tour Hatch. Open this page in Hatch and each stage gives you a thing to try.</p>
         <div class="rows" role="img" aria-label="Design tools draw the site, Hatch holds your prototypes, and code and deploy finish it.">
           <div class="row"><span class="label">Design</span><span class="row-text">Paper and Figma draw the site.</span><span class="row-bar"><i style="left:0;width:30%"></i></span></div>
           <div class="row"><span class="label accent">Hatch</span><span class="row-text strong">Hatch holds your prototypes.</span><span class="row-bar"><i class="accent" style="left:30%;width:40%"></i></span></div>
@@ -259,7 +277,7 @@
       </div>
       <div class="panel-main">
         <h2 class="headline large" id="h7">Hand Hatch to your agent.</h2>
-        <p class="lede">One button in Settings copies the details. Paste them to your agent and it sets itself up. It works in its own tab, so your view stays as you left it. The Activity panel records every call it makes.</p>
+        <p class="lede">One button in Settings copies the details. Paste them to your agent and it sets itself up. It works on its project’s own canvas, so your view stays as you left it. The Activity panel records every call it makes.</p>
         <p class="aside">Hatch works with any agent that speaks MCP, and we test it with Claude Code.</p>
         <div class="controls-block">
           <span class="label">Press these in Hatch</span>
@@ -270,7 +288,7 @@
             <li class="control"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-activity"/></svg></span><b>Activity</b><span>This panel lists every call your agent makes.</span></li>
           </ol>
         </div>
-        <div class="prompt-block">
+        <div class="prompt-block hatch-only">
           <p class="label accent">Try it. Send your agent this.</p>
           <p>Your agent needs the details from Settings first.</p>
           <div class="prompt">
@@ -278,7 +296,7 @@
             <button type="button" class="pill" id="copy-prompt">Copy</button>
           </div>
         </div>
-        <div class="press">
+        <div class="press hatch-only">
           <button type="button" class="big-button" id="agent-button">Your agent presses this</button>
           <p class="answer" id="agent-answer" aria-live="polite">The page answers when it feels the press.</p>
         </div>
@@ -391,10 +409,10 @@
         <div class="numeral" aria-hidden="true">10</div>
       </div>
       <div class="panel-main">
-        <h2 class="headline" id="h10">Four small things worth setting up once.</h2>
+        <h2 class="headline" id="h10">Set up these four things once.</h2>
         <div class="four">
           <div><span class="disc small"><svg width="24" height="24" aria-hidden="true"><use href="#i-links"/></svg></span><h3>Links</h3><p>Save the pages you open most. This guide is already there.</p></div>
-          <div><span class="tab-replica">Tab 1<em>+</em></span><h3>Tabs</h3><p>A tab holds one canvas. Double-click to name it. Each agent gets its own.</p></div>
+          <div><span class="tab-replica">Canvas 1<em>+</em></span><h3>Canvases</h3><p>Each canvas holds its own Hatches. Give it a project folder and the agents working in that folder use it.</p></div>
           <div><span class="disc small"><svg width="24" height="24" aria-hidden="true"><use href="#i-settings"/></svg></span><h3>Hatch Home</h3><p>Choose the page every new Hatch opens. Today it is this guide.</p></div>
           <div><span class="disc small"><svg width="24" height="24" aria-hidden="true"><use href="#i-settings"/></svg></span><h3>Default browser</h3><p>One button makes Hatch your Mac’s browser. Links from other apps open in a new Hatch.</p></div>
         </div>
@@ -447,11 +465,13 @@
       <div class="close-top">
         <h2 class="headline" id="h-close">Help us make Hatch better.</h2>
         <div class="close-side">
-          <p>You are one of the first people to use Hatch, and we would like to hear what you think. We read every note.</p>
-          <ol class="controls">
+          <p class="hatch-only">You are one of the first people to use Hatch, and we would like to hear what you think. We read every note.</p>
+          <p class="visitor-only">Hatch is in early testing. Download it, give it to your agent, and tell us what you think. We read every note.</p>
+          <a class="pill big visitor-only" href="https://github.com/jamiejefferson/Hatch/releases/latest" data-download>Download Hatch for Mac <span aria-hidden="true">↓</span></a>
+          <ol class="controls hatch-only">
             <li class="control"><span class="disc"><svg width="32" height="32" aria-hidden="true"><use href="#i-feedback"/></svg></span><b>Send feedback</b><span>The feedback icon at the top right sends a note with a picture of the window.</span></li>
           </ol>
-          <p class="tried" id="tried">You tried 0 of 9 features.</p>
+          <p class="tried hatch-only" id="tried">You tried 0 of 9 features.</p>
           <button type="button" class="big-button" id="close-feedback" aria-expanded="false" aria-controls="close-form">Send feedback <span aria-hidden="true">→</span></button>
           <form class="note-form" id="close-form" data-note="close" hidden>
             <textarea class="field" name="message" maxlength="4800" placeholder="What do you think of Hatch?" aria-label="Your feedback" required></textarea>
@@ -464,9 +484,10 @@
         <img src="/assets/hatch-black.svg" width="105" height="36" alt="Hatch">
         <p class="made">Hatch is a <a href="https://projject.ai">Projject</a>, made with love.</p>
         <nav aria-label="Hatch links">
-          <span>Hatch 0.1.3</span>
+          <span id="footer-version">Hatch 0.1.36</span>
           <a href="https://github.com/jamiejefferson/Hatch">GitHub</a>
-          <a href="https://github.com/jamiejefferson/Hatch/releases/latest">Update Hatch</a>
+          <a class="hatch-only" href="https://github.com/jamiejefferson/Hatch/releases/latest" data-download>Update Hatch</a>
+          <a class="visitor-only" href="https://github.com/jamiejefferson/Hatch/releases/latest" data-download>Download Hatch</a>
         </nav>
       </footer>
     </section>

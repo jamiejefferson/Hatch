@@ -2006,3 +2006,114 @@ html:not(.show-new) .panel.whats-new + .panel {
     flex: none;
   }
 }
+
+/* ---------- Visitors and Hatch users ---------- */
+
+/* The head script adds .in-hatch when Hatch shows the page. A visitor in any other browser gets the download
+   and the tour, and the parts that only work inside Hatch stay hidden. */
+html:not(.in-hatch) .hatch-only,
+html:not(.in-hatch) .try,
+html:not(.in-hatch) .note-form:not([data-note='close']),
+html:not(.in-hatch) .esc,
+html:not(.in-hatch) .hint,
+.in-hatch .visitor-only {
+  display: none !important;
+}
+
+/* A visitor cannot press Esc to leave Fit to view, so stage 3 shows the canvas at once. */
+html:not(.in-hatch) #stage-3 .after {
+  display: flex;
+}
+
+.header-download {
+  height: 36px;
+  padding-inline: 18px;
+  font-size: 14px;
+}
+
+.get {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 48px;
+  border-top: 1px solid var(--line);
+}
+
+.get h2 {
+  margin: 0;
+}
+
+.get-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+}
+
+.get-row .pill.big {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--black);
+}
+
+.get-row .pill.big span {
+  color: var(--black);
+}
+
+.get-row .pill.big:hover {
+  background: var(--paper);
+  border-color: var(--paper);
+}
+
+.get-meta,
+.get-step {
+  margin: 0;
+  font-size: 17px;
+  line-height: 28px;
+  color: var(--body);
+}
+
+.get .prompt {
+  background: var(--charcoal);
+}
+
+.get .prompt p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  line-height: 24px;
+}
+
+.get .aside {
+  margin: 0;
+}
+
+.close .visitor-only.pill.big {
+  align-self: flex-start;
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--paper);
+}
+
+@media (max-width: 820px) {
+  .progress {
+    gap: 16px;
+  }
+
+  .header-download {
+    padding-inline: 14px;
+  }
+
+  .get .prompt {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 520px) {
+  html:not(.in-hatch) .progress-count {
+    display: none;
+  }
+}

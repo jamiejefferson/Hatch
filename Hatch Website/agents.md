@@ -2,7 +2,7 @@
 
 Hatch is a macOS browser you drive through MCP tools. The user watches the same live pages you act on. Read this page once, then work from the task list below. The running Hatch carries the same text in `get_guide`.
 
-This page describes Hatch 0.1.15. The same content sits at https://hatch-guide.vercel.app/agents as a web page.
+This page describes Hatch 0.1.15. The same content sits at https://hatch.projject.ai/agents as a web page.
 
 ## Connect to the running Hatch.
 

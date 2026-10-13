@@ -20,6 +20,28 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
+  // The head script marks a visit inside Hatch. Everywhere else the page is a tour with a download, and nothing counts as tried.
+  const inHatch = document.documentElement.classList.contains('in-hatch');
+
+  // ---------- Download ----------
+
+  // Every download link starts at the latest release page, then points at the zip itself once GitHub names it.
+  const REPO = 'jamiejefferson/Hatch';
+  fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
+    .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`GitHub answered ${res.status}.`))))
+    .then((release) => {
+      const zip = (release.assets || []).find((a) => /mac-arm64\.zip$/.test(a.name));
+      const version = String(release.tag_name || '').replace(/^v/, '');
+      if (zip) for (const a of $$('[data-download]')) a.href = zip.browser_download_url;
+      if (version) {
+        $('#footer-version').textContent = `Hatch ${version}`;
+        $('#get-meta').textContent = `Hatch ${version} needs a Mac with Apple silicon.`;
+      }
+    })
+    .catch(() => {
+      // The links keep the release page, which always holds the latest zip.
+    });
+
   const read = () => {
     try {
       return JSON.parse(localStorage.getItem(STORE)) || {};
@@ -65,6 +87,7 @@
   };
 
   const setDone = (stage, done) => {
+    if (!inHatch) return;
     const has = state.done.includes(stage);
     if (done === has) return;
     state.done = done ? [...state.done, stage] : state.done.filter((s) => s !== stage);
@@ -118,7 +141,7 @@
   const osVersion = () => (/Mac/.test(navigator.userAgent) ? 'macOS' : navigator.platform || 'unknown');
 
   async function send(note, text) {
-    const tag = note === 'close' ? '[Guide]' : `[Guide, stage ${note}]`;
+    const tag = note === 'close' ? (inHatch ? '[Guide]' : '[Guide, visitor]') : `[Guide, stage ${note}]`;
     const res = await fetch(`${FEEDBACK_URL}/rest/v1/feedback`, {
       method: 'POST',
       headers: {
@@ -209,7 +232,8 @@
     readoutSize.textContent = `${w} × ${h}`;
     const match = SIZES.find((s) => s.width === w && s.height === h) || SIZES.find((s) => s.width === w);
     for (const el of $$('.control[data-size]')) el.classList.toggle('active', match !== undefined && el.dataset.size === `${match.width}x${match.height}`);
-    readoutName.textContent = match ? `This Hatch is at the ${match.name} size.` : 'This Hatch is at a custom size.';
+    const frame = inHatch ? 'This Hatch' : 'This window';
+    readoutName.textContent = match ? `${frame} is at the ${match.name} size.` : `${frame} is at a custom size.`;
     if (w > 390) sawWide = true;
     if (w <= 390 && sawWide && scrolledTo(5)) setDone(5, true);
   };
@@ -222,6 +246,23 @@
     answer.classList.add('live');
     setDone(7, true);
   });
+
+  const copyLine = (button, line) =>
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(line.textContent);
+        button.textContent = 'Copied';
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents(line);
+        const sel = getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        button.textContent = 'Press ⌘C';
+      }
+      setTimeout(() => (button.textContent = 'Copy'), 2000);
+    });
+  copyLine($('#copy-install'), $('#install-line'));
 
   $('#copy-prompt').addEventListener('click', async (e) => {
     const text = $('#agent-prompt').textContent;

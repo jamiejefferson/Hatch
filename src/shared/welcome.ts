@@ -6,7 +6,7 @@ import { emptyTab, newId } from './workspace';
 export const whatsNewUrl = (url: string): string => `${url.split('#')[0]}#new`;
 
 /** The guide to Hatch, which a fresh install opens and keeps as Hatch Home. */
-export const WELCOME_URL = 'https://hatch-guide.vercel.app/';
+export const WELCOME_URL = 'https://hatch.projject.ai/';
 
 /** One Hatch in Fit to view with the sidebar closed, so Hatch first looks like an ordinary browser showing one page. */
 export function welcomeWorkspace(url: string): Workspace {

@@ -2,8 +2,8 @@
   "name": "hatch",
   "version": "0.2.2",
   "description": "Drive Hatch, the browser on this Mac whose live pages the user watches, from any project.",
-  "author": { "name": "Jamie Jefferson", "email": "jj@eqtr.com", "url": "https://hatch-guide.vercel.app" },
-  "homepage": "https://hatch-guide.vercel.app/agents",
+  "author": { "name": "Jamie Jefferson", "email": "jj@eqtr.com", "url": "https://hatch.projject.ai" },
+  "homepage": "https://hatch.projject.ai/agents",
   "repository": "https://github.com/jamiejefferson/Hatch.git",
   "license": "MIT",
   "keywords": ["hatch", "browser", "agent", "canvas", "mcp"],
@@ -16,6 +16,6 @@
     "developerName": "Jamie Jefferson",
     "category": "Developer Tools",
     "capabilities": ["Read", "Write"],
-    "websiteURL": "https://hatch-guide.vercel.app"
+    "websiteURL": "https://hatch.projject.ai"
   }
 }
