@@ -23,7 +23,7 @@ test('a first start shows the guide page in Fit to view, and a second start keep
     expect(JSON.parse(readFileSync(join(home, 'settings.json'), 'utf8')).newHatchPage).toBe('');
 
     // The user opens the sidebar and leaves Fit to view, and both choices last.
-    await first.win.getByTestId('panels-toggle').click();
+    await first.win.getByTestId('panel-settings').click();
     await first.win.keyboard.press('Escape');
     await expect(first.win.locator('.top-strip .fit-bar')).toHaveCount(0);
     await first.win.waitForTimeout(800);

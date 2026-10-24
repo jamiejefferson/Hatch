@@ -84,7 +84,7 @@ svg { flex-shrink: 0; display: block; }
 .app { display: flex; flex-direction: column; height: 100%; }
 .main { display: flex; flex: 1; min-height: 0; }
 
-/* ---- top strip: the side columns' switch, the canvas name, Feedback and Settings ---- */
+/* ---- top strip: the left column's switch, page history, Hatch jumps, the canvas name, Feedback and Settings ---- */
 .top-strip {
   display: flex; align-items: center; gap: 8px; flex-shrink: 0;
   height: var(--strip); padding: 0 12px 0 84px;
@@ -96,6 +96,11 @@ svg { flex-shrink: 0; display: block; }
 .strip-title { display: flex; align-items: center; gap: 8px; min-width: 0; padding-left: 4px; }
 .strip-title strong { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
 .strip-count { color: var(--ink-2); font-weight: 300; white-space: nowrap; }
+.strip-nav { display: flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 0 4px; }
+.strip-rule { width: 1px; height: 16px; margin: 0 2px; background: var(--line-strong); }
+/* Page history and the Hatch jumps sit in pale circles, so they read as buttons against the strip. */
+.round.nav { --bg: var(--line); --edge: var(--line); background: var(--fill); border-color: var(--fill); color: var(--ink); }
+.round.nav:disabled { color: var(--ink-3); opacity: 0.6; }
 .fit-bar { display: flex; align-items: center; gap: 4px; min-width: 0; padding-left: 10px; border-left: 1px solid var(--line); -webkit-app-region: no-drag; }
 .fit-bar .hatch-title { max-width: 360px; color: var(--ink-2); }
 

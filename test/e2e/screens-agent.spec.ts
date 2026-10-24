@@ -29,10 +29,12 @@ test('capture the agent-facing states', async () => {
     await capture(app, `${OUT}/6-view-request.png`);
 
     await win.getByTestId('view-request').getByRole('button', { name: 'Show the agent view' }).click();
-    await win.getByTestId('panels-toggle').click();
+    await win.getByTestId('left-toggle').click();
+    await win.getByTestId('sidebar-close').click();
     await win.waitForTimeout(500);
     await capture(app, `${OUT}/7-compare-agent-view.png`);
-    await win.getByTestId('panels-toggle').click();
+    await win.getByTestId('left-toggle').click();
+    await win.getByTestId('hatch-list').locator('.row-main').first().click();
 
     const outline = ((await call('snapshot')) as { content: { text: string }[] }).content[0]!.text;
     const ref = outline.split('\n').find((l) => l.includes('button "Delete draft"'))!.match(/\[(e\d+)\]/)![1];
@@ -41,7 +43,8 @@ test('capture the agent-facing states', async () => {
     await win.getByTestId('panel-hatch').click();
     await win.getByTestId('hatch-list').locator('.row-main').last().click();
     await win.getByTestId('view-toggle').click();
-    await win.getByTestId('panels-toggle').click();
+    await win.getByTestId('left-toggle').click();
+    await win.getByTestId('sidebar-close').click();
     await win.waitForTimeout(400);
     await capture(app, `${OUT}/8-page-dialog.png`);
     await agent.close();

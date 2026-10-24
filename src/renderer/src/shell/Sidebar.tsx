@@ -4,6 +4,7 @@ import { FeedbackPanel } from '../panels/FeedbackPanel';
 import { HatchPanel } from '../panels/HatchPanel';
 import { SettingsPanel } from '../panels/SettingsPanel';
 import { SignInsPanel } from '../panels/SignInsPanel';
+import { CloseIcon } from '../icons';
 import { actions, activeTab, useStore, type SidebarPanel } from '../state/store';
 
 const TABS: { id: SidebarPanel; label: string }[] = [
@@ -27,6 +28,10 @@ export function Sidebar() {
             {t.id === 'activity' && working && <span className="working-dot" role="img" aria-label="An agent is working on this canvas" />}
           </button>
         ))}
+        <span className="strip-space" />
+        <button className="round small quiet" aria-label="Close the sidebar" title="Close the sidebar (Cmd+Option+\)" onClick={actions.toggleSidebar} data-testid="sidebar-close">
+          <CloseIcon size={12} />
+        </button>
       </div>
       <div className="sidebar-body" role="tabpanel">
         {panel === 'hatch' && <HatchPanel />}

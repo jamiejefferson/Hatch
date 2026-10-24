@@ -1,5 +1,5 @@
 import { pages } from '../canvas/webviews';
-import { ACTION_ICON_ART, BackIcon, CommentIcon, ForwardIcon, GrabIcon, MinusIcon, NoteIcon, OutlineIcon, PlusIcon, ReloadIcon, ShowAllIcon, StopIcon } from '../icons';
+import { ACTION_ICON_ART, CommentIcon, GrabIcon, MinusIcon, NoteIcon, OutlineIcon, PlusIcon, ReloadIcon, ShowAllIcon, StopIcon } from '../icons';
 import { actions, activeTab, fitHatch, loadStateOf, selectedHatch, useStore } from '../state/store';
 
 /** The tools that act inside the selected Hatch's page, in one column beside the canvas. The zoom sits at its foot. */
@@ -18,12 +18,6 @@ export function Toolbar() {
   return (
     <nav className="toolbar" aria-label="Hatch tools" data-testid="toolbar">
       <div className="tool-group">
-        <button className="tool" aria-label="Back" title="Back" disabled={none || !load?.canGoBack} onClick={() => id && pages.back(id)} data-testid="tool-back">
-          <BackIcon />
-        </button>
-        <button className="tool" aria-label="Forward" title="Forward" disabled={none || !load?.canGoForward} onClick={() => id && pages.forward(id)} data-testid="tool-forward">
-          <ForwardIcon />
-        </button>
         {load?.loading ? (
           <button className="tool" aria-label="Stop loading" title="Stop loading" onClick={() => id && pages.stop(id)}>
             <StopIcon />

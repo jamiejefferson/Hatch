@@ -539,12 +539,33 @@ export const actions = {
     const next = name.trim().slice(0, 60);
     editTab(tabId, ({ name: _old, ...rest }) => (next ? { ...rest, name: next } : rest));
   },
-  /** One switch moves both side columns: with either one open it closes both, and with both shut it opens both. */
-  togglePanels(): void {
-    set((s) => {
-      const open = s.workspace.sidebarOpen || s.workspace.leftOpen !== false;
-      return { workspace: { ...s.workspace, sidebarOpen: !open, leftOpen: !open } };
-    });
+  /** The switch at the left end of the top strip opens and closes the left column alone. */
+  toggleLeft(): void {
+    set((s) => ({ workspace: { ...s.workspace, leftOpen: s.workspace.leftOpen === false } }));
+  },
+  toggleSidebar(): void {
+    set((s) => ({ workspace: { ...s.workspace, sidebarOpen: !s.workspace.sidebarOpen } }));
+  },
+  /** Feedback and Settings: a press shows the panel, and a second press on the panel showing closes the sidebar. */
+  togglePanel(panel: 'settings' | 'feedback'): void {
+    if (state.workspace.sidebarOpen && state.panel === panel) return set((s) => ({ workspace: { ...s.workspace, sidebarOpen: false } }));
+    if (panel === 'feedback') return void actions.openFeedback();
+    actions.showPanel(panel);
+  },
+  /**
+   * « and »: select the previous or next Hatch in the Hatches list, wrapping at either end, and centre it at the current zoom.
+   * With none selected, » starts at the first and « at the last. In Fit to view the next Hatch takes the window.
+   */
+  jumpHatch(step: 1 | -1): void {
+    const tab = activeTab(state);
+    const list = tab.hatches;
+    if (list.length === 0) return;
+    const at = list.findIndex((h) => h.id === tab.selectedHatchId);
+    const next = list[at < 0 ? (step > 0 ? 0 : list.length - 1) : (at + step + list.length) % list.length]!;
+    if (fitHatch(tab)) return actions.applyTemplate(next.id, 'fit');
+    const { width, height } = state.viewport;
+    editActiveTab((t) => ({ ...t, selectedHatchId: next.id, pan: { x: width / 2 - (next.x + next.width / 2) * t.zoom, y: height / 2 - (next.y + next.height / 2) * t.zoom } }));
+    if (state.panel !== 'comments') set({ panel: 'hatch' });
   },
 
   // canvas
@@ -618,7 +639,8 @@ export const actions = {
       // Fit to view shows one Hatch, so selecting nothing or another Hatch leaves it.
       return { ...t, selectedHatchId: hatchId, hatches: t.hatches.map((h) => (h.id === hatchId ? h : leaveFit(h))) };
     });
-    if (hatchId && state.panel !== 'comments') set({ panel: 'hatch' });
+    // The user's selection opens a closed sidebar on the Hatch tab, which no switch in the top strip opens.
+    if (hatchId) set((s) => ({ panel: s.panel === 'comments' ? s.panel : 'hatch', workspace: s.workspace.sidebarOpen ? s.workspace : { ...s.workspace, sidebarOpen: true } }));
   },
   /** Opens a Hatch for an address, or returns an error message when the address does not parse. */
   openHatch(input: string, options: { tabId?: string; byAgent?: boolean } = {}): { hatchId: string } | { error: string } {
@@ -780,6 +802,7 @@ export const actions = {
   },
   startPicking(hatchId: string): void {
     set({ picking: hatchId, pickPurpose: 'comment', draft: null, openThread: null, commentError: null });
+    actions.showPanel('comments');
     if (!state.settings.showComments) void actions.updateSettings({ showComments: true });
   },
   startGrab(hatchId: string): void {

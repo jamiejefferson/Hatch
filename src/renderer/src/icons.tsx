@@ -16,7 +16,9 @@ const make = (d: string, extra?: React.ReactNode) =>
 export const CloseIcon = make('M4 4l8 8M12 4l-8 8');
 export const PlusIcon = make('M8 3v10M3 8h10');
 export const MinusIcon = make('M3 8h10');
-export const PanelsIcon = make('M2.5 3.5h11v9h-11zM6 3.5v9M10 3.5v9');
+export const LeftColumnIcon = make('M2.5 3.5h11v9h-11zM6 3.5v9');
+export const JumpBackIcon = make('M8 3.5L3.5 8 8 12.5M12.5 3.5L8 8l4.5 4.5');
+export const JumpForwardIcon = make('M3.5 3.5L8 8l-4.5 4.5M8 3.5L12.5 8 8 12.5');
 export const BackIcon = make('M10 3L5 8l5 5');
 export const ForwardIcon = make('M6 3l5 5-5 5');
 export const ReloadIcon = make('M13 8a5 5 0 1 1-1.5-3.5M13 2.5v3h-3');

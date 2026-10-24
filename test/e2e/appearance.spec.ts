@@ -20,7 +20,7 @@ test('dark mode changes the interface and lasts, and the hidden sidebar slides o
     await expect.poll(() => JSON.parse(readFileSync(join(home, 'settings.json'), 'utf8')).theme).toBe('dark');
 
     // Outside full screen the toolbar stays when the left column shuts.
-    await win.getByTestId('panels-toggle').click();
+    await win.getByTestId('left-toggle').click();
     await expect(win.getByTestId('toolbar')).toBeVisible();
     await expect(win.getByTestId('toolbar-edge')).toHaveCount(0);
 
