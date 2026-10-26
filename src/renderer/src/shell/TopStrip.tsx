@@ -1,4 +1,4 @@
-import { BackIcon, CloseIcon, FeedbackIcon, ForwardIcon, JumpBackIcon, JumpForwardIcon, LeftColumnIcon, ReleaseIcon, SettingsIcon } from '../icons';
+import { BackIcon, CloseIcon, FeedbackIcon, ForwardIcon, JumpBackIcon, JumpForwardIcon, LeftColumnIcon, PlusIcon, ReleaseIcon, SettingsIcon } from '../icons';
 import { actions, activeTab, fitHatch, loadStateOf, selectedHatch, tabLabel, useStore } from '../state/store';
 import type { Hatch } from '@shared/types';
 import { useState } from 'react';
@@ -27,50 +27,66 @@ export function TopStrip() {
 
   return (
     <header className="top-strip">
-      <button className="round quiet" aria-label={leftOpen ? 'Hide the left column' : 'Show the left column'} title={leftOpen ? 'Hide the left column' : 'Show the left column'} aria-expanded={leftOpen} onClick={actions.toggleLeft} data-testid="left-toggle">
+      <button className="round quiet" aria-label={leftOpen ? 'Hide the left column' : 'Show the left column'} title={leftOpen ? 'Hide the left column' : 'Show the left column'} data-detail="Shows or hides your canvases, Hatches, projects and links." data-keys="⌘\" aria-expanded={leftOpen} onClick={actions.toggleLeft} data-testid="left-toggle">
         <LeftColumnIcon />
       </button>
-      <div className="strip-nav" role="group" aria-label="Page history and Hatches">
-        <button className="round nav" aria-label="Back" title="Back (Cmd+[)" disabled={!id || !load?.canGoBack} onClick={() => id && pages.back(id)} data-testid="tool-back">
+      <div className="strip-nav" role="group" aria-label="Page history">
+        <button className="round nav" aria-label="Back" title="Back" data-detail="Goes to the previous page in the selected Hatch." data-keys="⌘[" disabled={!id || !load?.canGoBack} onClick={() => id && pages.back(id)} data-testid="tool-back">
           <BackIcon />
         </button>
-        <button className="round nav" aria-label="Forward" title="Forward (Cmd+])" disabled={!id || !load?.canGoForward} onClick={() => id && pages.forward(id)} data-testid="tool-forward">
+        <button className="round nav" aria-label="Forward" title="Forward" data-detail="Goes to the next page in the selected Hatch." data-keys="⌘]" disabled={!id || !load?.canGoForward} onClick={() => id && pages.forward(id)} data-testid="tool-forward">
           <ForwardIcon />
-        </button>
-        <span className="strip-rule" aria-hidden="true" />
-        <button className="round nav" aria-label="Previous Hatch" title="Previous Hatch (Cmd+Option+Left)" disabled={count === 0} onClick={() => actions.jumpHatch(-1)} data-testid="hatch-previous">
-          <JumpBackIcon />
-        </button>
-        <button className="round nav" aria-label="Next Hatch" title="Next Hatch (Cmd+Option+Right)" disabled={count === 0} onClick={() => actions.jumpHatch(1)} data-testid="hatch-next">
-          <JumpForwardIcon />
         </button>
       </div>
       <div className="strip-title" onContextMenu={(e) => actions.openContextMenu(e, tab.id, fit?.id ?? null)}>
         <strong data-testid="canvas-title">{label}</strong>
         {fit ? <FitBar hatch={fit} /> : <span className="strip-count" data-testid="strip-count">{place ? `Hatch ${place} of ${count}` : `${count} ${count === 1 ? 'Hatch' : 'Hatches'}`}</span>}
       </div>
+      {/* The jumps sit to the right of the title. In Fit to view a plus between them opens a new Hatch in Fit to view, then the frame's own two controls follow. */}
+      <div className="strip-nav" role="group" aria-label="Hatches">
+        <button className="round nav" aria-label="Previous Hatch" title="Previous Hatch" data-detail="Selects the Hatch before this one and brings it into view." data-keys="⌥⌘←" disabled={count === 0} onClick={() => actions.jumpHatch(-1)} data-testid="hatch-previous">
+          <JumpBackIcon />
+        </button>
+        {fit && (
+          <button className="round nav" aria-label="New Hatch" title="New Hatch" data-detail="Opens a page in a new Hatch, filling the view." data-keys="⌘N" onClick={actions.requestNewHatch} data-testid="fit-new-hatch">
+            <PlusIcon size={14} />
+          </button>
+        )}
+        <button className="round nav" aria-label="Next Hatch" title="Next Hatch" data-detail="Selects the Hatch after this one and brings it into view." data-keys="⌥⌘→" disabled={count === 0} onClick={() => actions.jumpHatch(1)} data-testid="hatch-next">
+          <JumpForwardIcon />
+        </button>
+      </div>
+      {fit && <FitControls hatch={fit} />}
       <div className="strip-space" />
-      <button className={`round quiet${feedback ? ' current' : ''}`} aria-label={feedback ? 'Close feedback' : 'Send feedback'} title={feedback ? 'Close feedback' : 'Send feedback'} aria-pressed={feedback} onClick={() => actions.togglePanel('feedback')} data-testid="panel-feedback">
+      <button className={`round quiet${feedback ? ' current' : ''}`} aria-label={feedback ? 'Close feedback' : 'Send feedback'} title={feedback ? 'Close feedback' : 'Send feedback'} data-detail="Tells the people who make Hatch what works and what does not, with a picture of the window." aria-pressed={feedback} onClick={() => actions.togglePanel('feedback')} data-testid="panel-feedback">
         <FeedbackIcon />
       </button>
-      <button className={`round quiet${settings ? ' current' : ''}`} aria-label={settings ? 'Close Settings' : 'Settings'} title={settings ? 'Close Settings' : 'Settings'} aria-pressed={settings} onClick={() => actions.togglePanel('settings')} data-testid="panel-settings">
+      <button className={`round quiet${settings ? ' current' : ''}`} aria-label={settings ? 'Close Settings' : 'Settings'} title={settings ? 'Close Settings' : 'Settings'} data-detail="Holds the look, agent connections, Jev, sign-ins and where Hatch keeps its files." aria-pressed={settings} onClick={() => actions.togglePanel('settings')} data-testid="panel-settings">
         <SettingsIcon />
       </button>
     </header>
   );
 }
 
-/** In Fit to view the Hatch's title and its two frame controls sit in the strip, so the page takes the whole canvas. */
+/** In Fit to view the Hatch's title sits in the strip, so the page takes the whole canvas. */
 function FitBar({ hatch }: { hatch: Hatch }) {
   const [editing, setEditing] = useState(false);
   return (
     <div className="fit-bar" data-testid={`header-${hatch.id}`}>
       <TitleAddress hatch={hatch} editing={editing} onEdit={() => setEditing(true)} onDone={() => setEditing(false)} />
       <SoundButton hatch={hatch} />
-      <button className="round small quiet" aria-label="Leave Fit to view" title="Leave Fit to view (Esc)" onClick={() => actions.toggleFit(hatch.id)} data-testid="leave-fit">
+    </div>
+  );
+}
+
+/** The frame's two controls, after the jumps. */
+function FitControls({ hatch }: { hatch: Hatch }) {
+  return (
+    <div className="strip-nav" role="group" aria-label="This Hatch">
+      <button className="round small quiet" aria-label="Leave Fit to view" title="Leave Fit to view" data-detail="Puts this Hatch back on the canvas at its own size." data-keys="⌘F Esc" onClick={() => actions.toggleFit(hatch.id)} data-testid="leave-fit">
         <ReleaseIcon size={14} />
       </button>
-      <button className="round small quiet" aria-label="Close this Hatch" title="Close this Hatch" onClick={() => actions.closeHatch(hatch.id)} data-testid={`bar-close-${hatch.id}`}>
+      <button className="round small quiet" aria-label="Close this Hatch" title="Close this Hatch" data-detail="Closes the page. Reopen it with ⇧⌘T." data-keys="⌘W" onClick={() => actions.closeHatch(hatch.id)} data-testid={`bar-close-${hatch.id}`}>
         <CloseIcon size={12} />
       </button>
     </div>

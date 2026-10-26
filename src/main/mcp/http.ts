@@ -5,6 +5,8 @@ import { dirname } from 'node:path';
 import { app } from 'electron';
 import { dataFile } from '../paths';
 import { createEndpoint, type McpEndpoint } from './server';
+import { handleHandoff } from '../credentials/extension-handoff';
+import { HANDOFF_PATH } from '@shared/signin-handoff';
 
 export const DEFAULT_PORT = 42824;
 const FALLBACK_PORTS = 10;
@@ -36,6 +38,8 @@ function listen(port: number): Promise<Server> {
 }
 
 function route(req: IncomingMessage, res: ServerResponse, port: number): void {
+  // The browser extension's door comes before the guard, because the extension sends its own origin. It checks that origin itself.
+  if (new URL(req.url ?? '/', 'http://127.0.0.1').pathname === HANDOFF_PATH) return handleHandoff(req, res, port);
   const refused = guard(req.headers, port);
   if (refused) {
     res.writeHead(403, { 'content-type': 'application/json' }).end(JSON.stringify({ error: refused }));

@@ -649,3 +649,34 @@ h2 .count { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0
 .folder-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .attach-modal .choice-list svg { flex-shrink: 0; color: var(--ink-2); }
 .attach-modal { width: 480px; }
+
+/* ---- tooltip: a control's name, its shortcut and a sentence on what it does ---- */
+.tooltip {
+  position: fixed; z-index: 3000; max-width: 260px; padding: 7px 10px;
+  background: var(--ink); color: var(--surface); border-radius: 8px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.18); pointer-events: none;
+  animation: tooltip-in 90ms ease-out;
+}
+.tooltip-head { display: flex; align-items: center; gap: 10px; }
+.tooltip-label { font-weight: 600; }
+.tooltip-keys { display: flex; gap: 4px; margin-left: auto; }
+.tooltip kbd {
+  padding: 0 5px; min-width: 18px; border-radius: 4px; text-align: center;
+  font: 500 11px/16px var(--sans); color: var(--surface);
+  background: rgb(255 255 255 / 0.16);
+}
+:root[data-theme='dark'] .tooltip kbd { background: rgb(0 0 0 / 0.12); }
+.tooltip-detail { margin: 3px 0 0; font-weight: 300; opacity: 0.85; }
+@keyframes tooltip-in { from { opacity: 0; transform: translateY(-2px); } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .tooltip kbd { background: rgb(0 0 0 / 0.12); } }
+/* A pan gesture passes over live pages, so its momentum stays with the canvas. */
+.canvas.panning .hatch-page { pointer-events: none; }
+/* Search rows under the New Hatch box. The marked row is the one Enter opens. */
+.search-list { margin-top: 8px; }
+.search-list button { height: 36px; }
+.search-list button.current { background: var(--ground); }
+.search-list svg { color: var(--ink-2); }
+.search-list .query { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.search-list .url { flex: none; }
+.hint.steps { margin: 8px 0 12px; padding-left: 18px; }
+.hint.steps li + li { margin-top: 4px; }

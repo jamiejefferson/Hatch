@@ -29,7 +29,7 @@ export function Sidebar() {
           </button>
         ))}
         <span className="strip-space" />
-        <button className="round small quiet" aria-label="Close the sidebar" title="Close the sidebar (Cmd+Option+\)" onClick={actions.toggleSidebar} data-testid="sidebar-close">
+        <button className="round small quiet" aria-label="Close the sidebar" title="Close the sidebar" data-keys="⌥⌘\" onClick={actions.toggleSidebar} data-testid="sidebar-close">
           <CloseIcon size={12} />
         </button>
       </div>

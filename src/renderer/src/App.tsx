@@ -14,6 +14,7 @@ import { ConnectionBanner } from './shell/Connect';
 import { ContextMenu, Toast } from './shell/ContextMenu';
 import { Guide } from './shell/Guide';
 import { Intro } from './shell/Intro';
+import { Tooltip } from './shell/Tooltip';
 import { TopStrip } from './shell/TopStrip';
 import { WhatsNew } from './shell/WhatsNew';
 import { actions, activeTab, boot, flushSave, getState, listen, useStore } from './state/store';
@@ -41,6 +42,7 @@ function run(command: MenuCommand): void {
     case 'inspect-hatch': return void (selected && pages.inspect(selected));
     case 'deselect': return actions.escape();
     case 'toggle-view': return void (selected && actions.toggleView(selected));
+    case 'toggle-fit': return void (selected && actions.toggleFit(selected));
     case 'show-guide': return actions.startGuide();
     case 'send-feedback': return void actions.openFeedback();
   }
@@ -120,6 +122,7 @@ function Shell({ tabs, activeTabId, sidebarOpen, leftOpen }: { tabs: Tab[]; acti
       <SignInThroughModal />
       <ContextMenu />
       <Toast />
+      <Tooltip />
       <Guide />
       <WhatsNew />
     </div>

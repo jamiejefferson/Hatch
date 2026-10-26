@@ -27,6 +27,10 @@ export function createWindow(bounds?: Rectangle): BrowserWindow {
   // The interface hears no blur of its own while a page holds the focus, and needs one to hand the keyboard back (canvas/keyboard.ts).
   win.on('blur', () => !win.webContents.isDestroyed() && win.webContents.send('window:blur', null));
   watchFullScreen(win);
+  // A three-finger swipe moves between Hatches in Fit to view. Up and down mean nothing yet.
+  win.on('swipe', (_e, direction) => {
+    if ((direction === 'left' || direction === 'right') && !win.webContents.isDestroyed()) win.webContents.send('window:swipe', direction);
+  });
   win.once('ready-to-show', () => {
     if (!process.env.HATCH_HIDDEN) win.show();
   });

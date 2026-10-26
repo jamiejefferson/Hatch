@@ -1,4 +1,5 @@
-import { BrowserWindow, clipboard, dialog, ipcMain, shell, webContents } from 'electron';
+import { join } from 'node:path';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, webContents } from 'electron';
 import { parseAddress } from '@shared/address';
 import type { FeedbackInput } from '@shared/feedback';
 import { THEMES, type SavedCanvas, type SavedLink, type Settings, type Theme, type Workspace } from '@shared/types';
@@ -29,6 +30,7 @@ import { logOf, projectsState, publish, register, remove, start, stop, update } 
 import { syncWatchers } from './servers/watch';
 import { cleanFolder, linksFile, setFolders } from './store/folders';
 import { hasKey, keyHint, keyProvider, setKey, testKey } from './jev/client';
+import { suggest } from './search';
 import { canvasesStore, linksStore, settingsStore, workspaceStore } from './store/stores';
 
 export function registerIpc(): void {
@@ -39,6 +41,7 @@ export function registerIpc(): void {
     void syncFolderCanvases(repaired);
   });
 
+  ipcMain.handle('search:suggest', (_e, text: string) => suggest(String(text ?? '')));
   ipcMain.handle('links:list', () => linksStore.read());
   ipcMain.handle('links:add', (_e, link: { name: string; url: string; folder?: string }) =>
     linksStore.update((links) => {
@@ -187,6 +190,11 @@ export function registerIpc(): void {
   ipcMain.handle('connection:info', () => connectionInfo());
   ipcMain.handle('connection:examples', () => shell.openPath(connectionInfo().examples));
   ipcMain.handle('data:open-folder', () => shell.openPath(hatchHome()));
+  // The browser extension ships inside the app. Finder shows the folder, which the user loads unpacked in their browser.
+  ipcMain.handle('extension:reveal', () => {
+    const folder = app.isPackaged ? join(process.resourcesPath, 'browser-extension') : join(app.getAppPath(), 'browser-extension');
+    shell.showItemInFolder(join(folder, 'manifest.json'));
+  });
 
   ipcMain.handle('skill:state', () => skillState());
   ipcMain.handle('skill:install', safely(async () => installSkill()));

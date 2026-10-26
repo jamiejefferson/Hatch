@@ -9,7 +9,7 @@ export type Outcome<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export type MenuCommand =
   | 'new-hatch' | 'new-tab' | 'close-hatch' | 'duplicate-hatch' | 'close-tab' | 'reload-hatch' | 'back' | 'forward'
-  | 'zoom-in' | 'zoom-out' | 'zoom-actual' | 'toggle-left' | 'toggle-sidebar' | 'previous-hatch' | 'next-hatch' | 'inspect-hatch' | 'deselect' | 'toggle-view' | 'show-guide' | 'send-feedback' | 'reopen-closed';
+  | 'zoom-in' | 'zoom-out' | 'zoom-actual' | 'toggle-left' | 'toggle-sidebar' | 'previous-hatch' | 'next-hatch' | 'inspect-hatch' | 'deselect' | 'toggle-view' | 'toggle-fit' | 'show-guide' | 'send-feedback' | 'reopen-closed';
 
 /** Messages the main process pushes to the interface. */
 export interface Pushes {
@@ -24,6 +24,8 @@ export interface Pushes {
   'window:blur': null;
   /** The window entered or left macOS full screen. */
   'window:fullscreen': boolean;
+  /** A three-finger swipe across the trackpad, which macOS sends when "Swipe between pages" allows three fingers. */
+  'window:swipe': 'left' | 'right';
   /** In full screen, how far the pointer sits from the window's left edge, up to 160 pixels. */
   'pointer:edge': number;
   /** A page started or stopped playing sound. */
@@ -43,6 +45,8 @@ export interface Pushes {
   'consent:state': { hatchId: string; request: ConsentRequest | null };
   /** A page asked for a passkey, and Hatch offers to finish the sign-in in another browser. */
   'signin:through': SignInThrough;
+  /** Hatch's browser extension brought a site's sign-in across. */
+  'signin:arrived': { site: string };
   /** One line for the foot of the window, such as a download that has landed. */
   toast: string;
 }
@@ -66,6 +70,8 @@ export interface ActivityBoot {
 export interface HatchApi {
   loadWorkspace(): Promise<Workspace>;
   saveWorkspace(workspace: Workspace): Promise<void>;
+  /** Google's suggestions for what the user typed in the New Hatch box, or none when the service does not answer. */
+  suggest(text: string): Promise<string[]>;
   listLinks(): Promise<SavedLink[]>;
   addLink(link: { name: string; url: string; folder?: string }): Promise<SavedLink[]>;
   removeLink(id: string): Promise<SavedLink[]>;
@@ -135,6 +141,8 @@ export interface HatchApi {
   answerConsent(hatchId: string, answer: ConsentAnswer): Promise<void>;
   connection(): Promise<ConnectionInfo>;
   openSetupExamples(): Promise<string>;
+  /** Shows the browser extension's folder in Finder, ready to load unpacked in Chrome, Arc, Brave or Edge. */
+  revealExtension(): Promise<void>;
   openDataFolder(): Promise<string>;
   /** Whether the /hatch skill sits in the Claude Code and Codex skill folders, matching this version of Hatch. */
   skillState(): Promise<'installed' | 'missing' | 'outdated'>;

@@ -34,6 +34,9 @@ export const pages = {
   back: (hatchId: string): void => withPage(hatchId, (p) => p.canGoBack() && p.goBack()),
   forward: (hatchId: string): void => withPage(hatchId, (p) => p.canGoForward() && p.goForward()),
   inspect: (hatchId: string): void => withPage(hatchId, (p) => p.openDevTools()),
+  /** A scroll over a Hatch the user has not selected, passed on at a point in the page's own pixels. */
+  scroll: (hatchId: string, x: number, y: number, deltaX: number, deltaY: number): void =>
+    withPage(hatchId, (p) => p.sendInputEvent({ type: 'mouseWheel', x: Math.round(x), y: Math.round(y), deltaX: -deltaX, deltaY: -deltaY, canScroll: true, hasPreciseScrollingDeltas: true })),
   // Chromium keeps the mute on the page's webContents across navigations, so HatchPage sets it once the page attaches and again when it changes.
   setMuted: (hatchId: string, muted: boolean): void => withPage(hatchId, (p) => p.setAudioMuted(muted)),
 };

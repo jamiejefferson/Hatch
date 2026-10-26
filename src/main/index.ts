@@ -1,4 +1,5 @@
 import { setUpSigninIdentity } from './signin-identity';
+import { keepSessionCookies, saveSessionCookiesNow } from './credentials/session-cookies';
 import { setUpSignInThrough } from './credentials/signin-through';
 import { join } from 'node:path';
 import { app, BrowserWindow, type Rectangle } from 'electron';
@@ -65,7 +66,7 @@ if (!app.requestSingleInstanceLock()) {
     openLink(link);
   });
 
-  void app.whenReady().then(() => {
+  void app.whenReady().then(async () => {
     if (app.isPackaged) app.setAsDefaultProtocolClient('hatch');
     setUpPagesSession();
     setUpSigninIdentity();
@@ -86,6 +87,8 @@ if (!app.requestSingleInstanceLock()) {
     // Feedback that failed to send last time goes out now.
     setTimeout(() => void flushOutbox(), 5000);
     buildMenu(() => mainWindow);
+    // Last run's session cookies go back before the first page loads, so a site signed in with one stays signed in.
+    await keepSessionCookies().catch((error) => console.error('[cookies] Hatch could not restore the session cookies:', error));
     open();
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) open();
@@ -108,6 +111,6 @@ if (!app.requestSingleInstanceLock()) {
     stopWatchingCommentFiles();
     // Quitting never waits on an agent. A connected agent can hold a stream open, which would keep the endpoint from closing.
     const limit = new Promise((resolve) => setTimeout(resolve, 2000));
-    void Promise.race([Promise.all([workspaceStore.settled(), stopMcp()]), limit]).finally(() => app.quit());
+    void Promise.race([Promise.all([workspaceStore.settled(), stopMcp(), saveSessionCookiesNow()]), limit]).finally(() => app.quit());
   });
 }

@@ -50,6 +50,7 @@ export function SignInsPanel() {
           <PlusIcon /> Save this sign-in
         </button>
       </form>
+      <SignInExtension />
       <BringSignIn />
       {signIns.length > 0 && (
         <ul className="signin-list">
@@ -78,6 +79,24 @@ export function SignInsPanel() {
         </ul>
       )}
     </>
+  );
+}
+
+/** The browser extension hands a site's sign-in to Hatch from inside the browser, so macOS never asks for the Keychain. */
+function SignInExtension() {
+  return (
+    <section data-testid="signin-extension">
+      <h2>Send a sign-in from your browser</h2>
+      <p className="hint">Hatch's extension for Chrome, Arc, Brave and Edge sends the sign-in for the site you are on with one press, and your Mac never asks for its password.</p>
+      <ol className="hint steps">
+        <li>Open your browser's extensions page, such as chrome://extensions, and switch on Developer mode.</li>
+        <li>Press Load unpacked and choose the folder Hatch shows you.</li>
+        <li>Sign in to a site there, press the Hatch button in the toolbar, and Hatch opens the site signed in.</li>
+      </ol>
+      <button className="button" onClick={() => void window.hatch.revealExtension()} data-testid="reveal-extension">
+        Show the extension folder
+      </button>
+    </section>
   );
 }
 
@@ -112,8 +131,8 @@ function BringSignIn() {
 
   return (
     <section data-testid="bring-signin">
-      <h2>Bring a sign-in from another browser</h2>
-      <p className="hint">Google refuses to sign anyone in inside Hatch. Sign in to the site in your usual browser, open the same site in a Hatch, then copy the sign-in across. Hatch copies the cookies for that one site.</p>
+      <h2>Copy a sign-in from a browser's files</h2>
+      <p className="hint">Google refuses to sign anyone in inside Hatch. Sign in to the site in your usual browser, open the same site in a Hatch, then copy the sign-in across. Hatch copies the cookies for that one site, and macOS asks for your password to unlock the browser's cookie key.</p>
       {profiles !== null && profiles.length === 0 && <p className="hint">Hatch found no Chrome, Arc, Brave or Edge on this Mac.</p>}
       {profiles !== null && profiles.length > 1 && (
         <div className="chips" role="radiogroup" aria-label="Browser">

@@ -62,8 +62,9 @@ export function HatchPage({ hatch, rect, hidden }: Props) {
         actions.pageChanged(id, { url: e.url });
         navState();
       }),
-      on<Event & { channel: string }>('ipc-message', (e) => {
+      on<Event & { channel: string; args: unknown[] }>('ipc-message', (e) => {
         if (e.channel === 'hatch:pointer') claimKeyboard(page);
+        if (e.channel === 'hatch:swipe') actions.swipePage(id, e.args[0] === 'back' ? 'back' : 'forward');
       }),
       on<Event & { title: string }>('page-title-updated', (e) => actions.pageChanged(id, { title: e.title })),
       on<Fail>('did-fail-load', (e) => {
@@ -91,6 +92,7 @@ export function HatchPage({ hatch, rect, hidden }: Props) {
       // React drops a bare boolean on this element, so the attribute goes in as a string.
       {...({ allowpopups: 'true' } as object)}
       className="hatch-page"
+      data-page={hatch.id}
       style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height, ...(hidden ? { opacity: 0, pointerEvents: 'none' as const } : null) }}
     />
   );

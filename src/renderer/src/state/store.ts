@@ -14,6 +14,7 @@ import { savedCanvasFromTab, tabFromSavedCanvas } from '@shared/canvases';
 import { folderName, oneCanvasPerFolder } from '@shared/project-canvas';
 import { DEFAULT_SETTINGS } from '@shared/types';
 import { emptyTab, emptyWorkspace, MAX_NOTE_LENGTH, newId } from '@shared/workspace';
+import { pages } from '../canvas/webviews';
 
 /** The right sidebar's three tabs, and the two pages its top-strip buttons open. */
 export type SidebarPanel = 'hatch' | 'comments' | 'activity' | 'settings' | 'feedback';
@@ -24,6 +25,9 @@ export type LeftPanel = 'canvases' | 'library';
 export type Closed = { id: string; kind: 'hatch'; tabId: string; hatch: Hatch } | { id: string; kind: 'canvas'; tab: Tab; index: number; name: string; blank?: string };
 /** Reopen remembers this many closed Hatches and canvases. */
 const CLOSED_LIMIT = 20;
+/** After a swipe goes back or forward, the next one waits this long. */
+const SWIPE_PAUSE_MS = 700;
+let lastSwipe = 0;
 
 export interface LoadState {
   loading: boolean;
@@ -93,6 +97,8 @@ export interface State {
   popups: Record<string, { url: string }>;
   /** Where a double tap asked for the next new Hatch, in canvas pixels. */
   newHatchAt: Point | null;
+  /** The New Hatch box was opened from Fit to view, so the page it opens fills the view too. */
+  newHatchFit: boolean;
   /** The right-click menu: where it opened, and the tab and Hatch it speaks for. */
   contextMenu: { x: number; y: number; tabId: string; hatchId: string | null } | null;
   /** The canvas whose working folder Hatch asks for: a canvas the user just made, or one the user chose to attach. */
@@ -158,6 +164,7 @@ let state: State = {
   consents: {},
   popups: {},
   newHatchAt: null,
+  newHatchFit: false,
   contextMenu: null,
   actionEditor: null,
   attachPrompt: null,
@@ -269,6 +276,7 @@ export function listen(): () => void {
     }),
     window.hatch.on('page:escape', (hatchId) => actions.escape(hatchId)),
     window.hatch.on('window:fullscreen', (fullScreen) => set({ fullScreen })),
+    window.hatch.on('window:swipe', (direction) => actions.swipeWindow(direction)),
     window.hatch.on('page:audible', ({ hatchId, audible }) =>
       set((s) => {
         const { [hatchId]: _old, ...rest } = s.audible;
@@ -277,6 +285,13 @@ export function listen(): () => void {
     ),
     window.hatch.on('toast', (text) => actions.toast(text)),
     window.hatch.on('signin:through', (through) => set({ signInThrough: through })),
+    // The browser extension brought the sign-in this dialog waits for, so the Hatch opens the page it began from, signed in.
+    window.hatch.on('signin:arrived', ({ site }) => {
+      const through = state.signInThrough;
+      if (!through || through.site !== site) return;
+      pages.navigate(through.hatchId, through.url);
+      actions.closeSignInThrough();
+    }),
     window.hatch.on('popup:blocked', ({ hatchId, url }) => set((s) => ({ popups: { ...s.popups, [hatchId]: { url } } }))),
     window.hatch.on('page:changed', (hatchId) => set((s) => ({ pageVersion: { ...s.pageVersion, [hatchId]: (s.pageVersion[hatchId] ?? 0) + 1 } }))),
     window.hatch.on('dialog:state', ({ hatchId, dialog }) =>
@@ -612,6 +627,20 @@ export const actions = {
       return h && !fitHatch(t) ? { ...t, pan: panToReveal({ x: h.x, y: h.y, width: h.width, height: h.height }, t.pan, t.zoom, state.viewport) } : t;
     });
   },
+  /** A two-finger swipe across a page in Fit to view goes back or forward. On the canvas a sideways scroll stays a scroll. */
+  swipePage(hatchId: string, direction: 'back' | 'forward'): void {
+    const fit = fitHatch(activeTab(state));
+    // Momentum from the swipe can reach the page that loads next, so one swipe counts once.
+    if (fit?.id !== hatchId || Date.now() - lastSwipe < SWIPE_PAUSE_MS) return;
+    lastSwipe = Date.now();
+    if (direction === 'back') pages.back(hatchId);
+    else pages.forward(hatchId);
+  },
+  /** A three-finger swipe in Fit to view moves to the next or previous Hatch, as the jump buttons do. */
+  swipeWindow(direction: 'left' | 'right'): void {
+    if (!fitHatch(activeTab(state))) return;
+    actions.jumpHatch(direction === 'left' ? 1 : -1);
+  },
   /** Fit to view is a toggle: on, one Hatch fills the window; off, the Hatch returns to its size on the canvas. */
   toggleFit(hatchId: string): void {
     const hatch = findHatch(hatchId);
@@ -656,7 +685,11 @@ export const actions = {
       const pan = panToReveal({ ...spot, width: hatch.width, height: hatch.height }, t.pan, t.zoom, state.viewport);
       return { ...t, hatches: [...t.hatches.map(leaveFit), hatch], selectedHatchId: hatch.id, pan };
     });
-    if (!options.byAgent) set({ newHatchOpen: false, newHatchAt: null, panel: 'hatch' });
+    if (!options.byAgent) {
+      const fit = state.newHatchFit;
+      set({ newHatchOpen: false, newHatchAt: null, newHatchFit: false, panel: 'hatch' });
+      if (fit) actions.applyTemplate(hatch.id, 'fit');
+    }
     return { hatchId: hatch.id };
   },
   /** A double tap on the canvas opens the new Hatch where the user tapped. */
@@ -667,13 +700,15 @@ export const actions = {
   dismissPopup(hatchId: string): void {
     set((s) => ({ popups: Object.fromEntries(Object.entries(s.popups).filter(([id]) => id !== hatchId)) }));
   },
+  /** Opens the New Hatch box, or the default page when Settings names one. A Hatch opened from Fit to view takes the view in turn. */
   requestNewHatch(): void {
+    set({ newHatchFit: fitHatch(activeTab(state)) !== null });
     const page = state.settings.newHatchPage;
     if (page && 'hatchId' in actions.openHatch(page)) return;
     set({ newHatchOpen: true });
   },
   closeNewHatch(): void {
-    set({ newHatchOpen: false, newHatchAt: null });
+    set({ newHatchOpen: false, newHatchAt: null, newHatchFit: false });
   },
   closeHatch(hatchId: string): void {
     const tabId = tabOf(hatchId);

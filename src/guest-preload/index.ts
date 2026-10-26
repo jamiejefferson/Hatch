@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer, webFrame } from 'electron';
 import type { Anchor } from '@shared/comments';
 import { describeElement, resolveAnchor } from './anchors';
 import { serialiseForPaper, cssBlockOf } from './grab';
+import { SwipeTracker } from '@shared/swipe';
 
 // Hatch answers every alert, confirm and prompt itself. Electron throws on prompt(), and it settles alert and confirm
 // on its own when the window sits in the background, which is where Hatch usually sits while an agent works.
@@ -37,6 +38,28 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // A press by the user's own pointer lets the interface hand the keyboard to this page (canvas/keyboard.ts).
 window.addEventListener('pointerdown', (e) => e.isTrusted && ipcRenderer.sendToHost('hatch:pointer'), true);
+
+// A sideways two-finger swipe over something that cannot scroll that way asks Hatch to go back or forward. The interface acts on it in Fit to view alone.
+// The listener runs last, on the window, so a page that takes the scroll for itself, such as a carousel, keeps it.
+const swipe = new SwipeTracker();
+const canScrollSideways = (start: EventTarget | null, direction: number): boolean => {
+  for (let el = start instanceof Element ? start : null; el; el = el.parentElement ?? ((el.getRootNode() as ShadowRoot).host ?? null)) {
+    if (el.scrollWidth <= el.clientWidth + 1) continue;
+    const overflow = getComputedStyle(el).overflowX;
+    if (el !== document.scrollingElement && overflow !== 'auto' && overflow !== 'scroll') continue;
+    if (direction < 0 ? el.scrollLeft > 0 : el.scrollLeft + el.clientWidth < el.scrollWidth - 1) return true;
+  }
+  return false;
+};
+window.addEventListener(
+  'wheel',
+  (e) => {
+    if (e.ctrlKey || e.defaultPrevented) return;
+    const direction = swipe.feed(e.deltaX, e.deltaY, performance.now(), canScrollSideways(e.target, Math.sign(e.deltaX)));
+    if (direction) ipcRenderer.sendToHost('hatch:swipe', direction);
+  },
+  { passive: true },
+);
 
 // ---- Comments and picking. Hatch draws pins and highlights in its own layer, and this script tells it where the elements sit.
 

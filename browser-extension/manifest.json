@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Hatch sign-in",
+  "version": "1.0.0",
+  "description": "Sends your sign-in for the site in this tab to Hatch, so Hatch never asks for your Mac password.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuOfOQsBA4RWuGVS6JSKXjUCqtERbpf14M4ReTBD8fgDLEs1zAElY6gztyz4JFfmP2P5uefi52AcKGa0UtsowoDAu+3zNKRWUvDQT09ekOkrkxU4isBxHdR0TbN4uXScrhVCK4yhOUXnQu0RNs7CLtiYzr47VYPtoT1S95F1oZ7Grs/b2GGE9UDFIBbjstPnpWjkey37biYgkShPpLm88UAnQrhnCpaxM542gS8s5629UNpFAcGIBPd+L0D/gMLpGXWKXOUMEOnko8IMOvMverRmVe3z7GoCmsP7hGfisPn0cc7kHN3nkvw4Ys1Zg/wRelVacW2b7zuGI4Hhuaa3TwQIDAQAB",
+  "permissions": [
+    "cookies",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "*://*/*"
+  ],
+  "action": {
+    "default_title": "Send this sign-in to Hatch",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

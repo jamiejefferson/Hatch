@@ -73,7 +73,7 @@ test('dragging the bottom handle makes the Hatch taller with no reload', async (
   await expect(win.getByTestId('size-h')).not.toHaveValue('1024');
 });
 
-test('an unselected Hatch leaves the wheel to the canvas, and the selected Hatch scrolls', async () => {
+test('the wheel scrolls the page under the pointer, selected or not, and leaves the canvas where it is', async () => {
   const shield = win.locator('[data-testid^="shield-"]');
   await expect(shield).toHaveCount(1);
   // The pointer goes to the middle of the part of the Hatch the canvas shows, because the columns cover the rest.
@@ -84,8 +84,11 @@ test('an unselected Hatch leaves the wheel to the canvas, and the selected Hatch
   const box = { x: left, y: top, width: Math.min(whole.x + whole.width, area.x + area.width) - left, height: Math.min(whole.y + whole.height, area.y + area.height) - top };
   await win.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await win.mouse.wheel(0, 120);
+  await expect.poll(async () => (await sizes())[0]!.y).toBeGreaterThan(0);
+  // The canvas did not pan: the Hatch sits where it sat.
+  expect(await shield.boundingBox()).toEqual(whole);
+  const unselected = (await sizes())[0]!.y;
   await win.waitForTimeout(300);
-  expect((await sizes())[0]!.y).toBe(0);
 
   await win.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect(win.getByTestId('link-field')).toHaveValue(`${site.url}/index.html`);
@@ -93,7 +96,7 @@ test('an unselected Hatch leaves the wheel to the canvas, and the selected Hatch
   // The first wheel event after a tap releases the shield that waits for a double tap, and the ones after it scroll the page.
   await win.mouse.wheel(0, 1);
   await win.mouse.wheel(0, 120);
-  await expect.poll(async () => (await sizes())[0]!.y).toBeGreaterThan(0);
+  await expect.poll(async () => (await sizes())[0]!.y).toBeGreaterThan(unselected);
 });
 
 test('Fit to view fills the canvas area, and leaving it restores the size', async () => {

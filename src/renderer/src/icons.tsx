@@ -19,6 +19,8 @@ export const MinusIcon = make('M3 8h10');
 export const LeftColumnIcon = make('M2.5 3.5h11v9h-11zM6 3.5v9');
 export const JumpBackIcon = make('M8 3.5L3.5 8 8 12.5M12.5 3.5L8 8l4.5 4.5');
 export const JumpForwardIcon = make('M3.5 3.5L8 8l-4.5 4.5M8 3.5L12.5 8 8 12.5');
+export const SearchIcon = make('M10.5 10.5l3 3', <circle cx="7" cy="7" r="4.5" />);
+export const ArrowRightIcon = make('M3 8h10M9 4l4 4-4 4');
 export const BackIcon = make('M10 3L5 8l5 5');
 export const ForwardIcon = make('M6 3l5 5-5 5');
 export const ReloadIcon = make('M13 8a5 5 0 1 1-1.5-3.5M13 2.5v3h-3');

@@ -21,6 +21,8 @@ declare global {
     isLoading(): boolean;
     openDevTools(): void;
     setAudioMuted(muted: boolean): void;
+    /** Hands the page an input event as if it came from the user, such as a scroll the canvas passes on. */
+    sendInputEvent(event: { type: 'mouseWheel'; x: number; y: number; deltaX: number; deltaY: number; canScroll?: boolean; hasPreciseScrollingDeltas?: boolean }): void;
     /** Sends a message to the script Hatch runs inside the page. */
     send(channel: string, ...args: unknown[]): Promise<void>;
   }

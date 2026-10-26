@@ -1,13 +1,14 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { HatchApi, Pushes } from './api';
 
-const PUSHES: (keyof Pushes)[] = ['command', 'activity:event', 'agents:work', 'agent:act', 'page:changed', 'window:blur', 'window:fullscreen', 'pointer:edge', 'page:escape', 'page:audible', 'popup:blocked', 'dialog:state', 'projects:state', 'projects:log', 'links:state', 'comments:changed', 'signins:state', 'consent:state', 'connection:state', 'signin:through', 'toast'];
+const PUSHES: (keyof Pushes)[] = ['command', 'activity:event', 'agents:work', 'agent:act', 'page:changed', 'window:blur', 'window:fullscreen', 'window:swipe', 'pointer:edge', 'page:escape', 'page:audible', 'popup:blocked', 'dialog:state', 'projects:state', 'projects:log', 'links:state', 'comments:changed', 'signins:state', 'consent:state', 'connection:state', 'signin:through', 'signin:arrived', 'toast'];
 
 const api: HatchApi = {
   intro: process.env.HATCH_INTRO === '1' || !process.env.HATCH_HIDDEN,
   guide: process.env.HATCH_GUIDE !== '0',
   loadWorkspace: () => ipcRenderer.invoke('workspace:load'),
   saveWorkspace: (workspace) => ipcRenderer.invoke('workspace:save', workspace),
+  suggest: (text) => ipcRenderer.invoke('search:suggest', text),
   listLinks: () => ipcRenderer.invoke('links:list'),
   addLink: (link) => ipcRenderer.invoke('links:add', link),
   removeLink: (id) => ipcRenderer.invoke('links:remove', id),
@@ -41,6 +42,7 @@ const api: HatchApi = {
   connection: () => ipcRenderer.invoke('connection:info'),
   openSetupExamples: () => ipcRenderer.invoke('connection:examples'),
   openDataFolder: () => ipcRenderer.invoke('data:open-folder'),
+  revealExtension: () => ipcRenderer.invoke('extension:reveal'),
   signIns: () => ipcRenderer.invoke('signins:list'),
   addSignIn: (input) => ipcRenderer.invoke('signins:add', input),
   removeSignIn: (id) => ipcRenderer.invoke('signins:remove', id),

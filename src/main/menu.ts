@@ -37,6 +37,7 @@ export function buildMenu(getWindow: () => BrowserWindow | null): void {
         item('Zoom Canvas Out', 'CmdOrCtrl+-', 'zoom-out'),
         item('Canvas at 100%', 'CmdOrCtrl+0', 'zoom-actual'),
         { type: 'separator' },
+        item('Fit Hatch to View', 'CmdOrCtrl+F', 'toggle-fit'),
         item('Switch Between Page and Agent View', 'CmdOrCtrl+Shift+A', 'toggle-view'),
         item('Show or Hide Left Column', 'CmdOrCtrl+\\', 'toggle-left'),
         item('Show or Hide Sidebar', 'Alt+CmdOrCtrl+\\', 'toggle-sidebar'),

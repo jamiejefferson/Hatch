@@ -8,9 +8,12 @@ import { startDrag } from './drag';
 import { HatchOverlay } from './HatchOverlay';
 import { HatchPage } from './HatchPage';
 import { Notes } from './Notes';
+import { pages } from './webviews';
 
 /** Stands for the empty canvas in the double-tap state. */
 const EMPTY = 'canvas';
+/** A pause this long between wheel events ends one scroll gesture. A trackpad's momentum arrives every frame, well inside it. */
+const GESTURE_GAP_MS = 180;
 
 interface View {
   pan: Point;
@@ -28,6 +31,8 @@ export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
   // The first tap selects a Hatch, which would take its shield away before the second tap lands. The shield stays for the length of a double tap.
   const [armed, setArmed] = useState<string | null>(null);
   const armTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latch = useRef<{ target: string; at: number } | null>(null);
+  const panEnd = useRef<ReturnType<typeof setTimeout> | null>(null);
   const viewport = useStore((s) => s.viewport);
   const fit = fitHatch(tab);
   const view = viewFor(tab, fit);
@@ -47,21 +52,38 @@ export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
     return () => observer.disconnect();
   }, [active]);
 
-  // Wheel pans and pinch zooms. The listener is non-passive so a pinch never zooms Hatch's own interface.
+  // The scroll follows the pointer: over a Hatch it scrolls that page, over the empty canvas it pans. Pinch zooms.
+  // The listener is non-passive so a pinch never zooms Hatch's own interface.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const onWheel = (e: WheelEvent): void => {
       e.preventDefault();
-      // A scroll straight after a tap belongs to the page, so the shield that waits for a second tap lets go.
-      if ((e.target as HTMLElement).closest('.shield.armed')) return setArmed(null);
       if (e.ctrlKey || e.metaKey) {
         const box = el.getBoundingClientRect();
-        const current = tab.zoom;
-        actions.zoomTo(current * Math.exp(-e.deltaY * 0.01), { x: e.clientX - box.left, y: e.clientY - box.top });
-      } else {
-        actions.panBy(-e.deltaX, -e.deltaY);
+        actions.zoomTo(tab.zoom * Math.exp(-e.deltaY * 0.01), { x: e.clientX - box.left, y: e.clientY - box.top });
+        return;
       }
+      // One gesture, momentum included, keeps the target it started on, so a pan never turns into a page scroll as a Hatch slides under the pointer.
+      const now = performance.now();
+      const shield = (e.target as HTMLElement).closest<HTMLElement>('.shield');
+      // A scroll straight after a tap belongs to the page, so the shield that waits for a second tap lets go.
+      if (shield?.classList.contains('armed')) setArmed(null);
+      if (!latch.current || now - latch.current.at > GESTURE_GAP_MS) latch.current = { target: shield?.dataset.hatch ?? EMPTY, at: now };
+      latch.current.at = now;
+      const target = latch.current.target;
+      if (target === EMPTY) {
+        // While the canvas pans, live pages let the scroll pass through, so momentum over the selected Hatch keeps panning.
+        el.classList.add('panning');
+        if (panEnd.current) clearTimeout(panEnd.current);
+        panEnd.current = setTimeout(() => el.classList.remove('panning'), GESTURE_GAP_MS);
+        return actions.panBy(-e.deltaX, -e.deltaY);
+      }
+      const page = el.querySelector<HTMLElement>(`[data-page="${target}"]`);
+      if (!page) return;
+      const box = page.getBoundingClientRect();
+      const scale = box.width / page.offsetWidth || 1;
+      pages.scroll(target, (e.clientX - box.left) / scale, (e.clientY - box.top) / scale, e.deltaX, e.deltaY);
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
@@ -104,7 +126,7 @@ export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
             <div key={h.id}>
               <HatchPage hatch={h} rect={rect} hidden={hidden} />
               {(h.id !== tab.selectedHatchId || armed === h.id) && !hidden && h !== fit && (
-                <div className={`shield${armed === h.id ? ' armed' : ''}`} style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }} onPointerDown={(e) => e.button === 0 && panOrSelect(h.id)(e)} onContextMenu={(e) => actions.openContextMenu(e, tab.id, h.id)} data-testid={`shield-${h.id}`} />
+                <div className={`shield${armed === h.id ? ' armed' : ''}`} style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }} onPointerDown={(e) => e.button === 0 && panOrSelect(h.id)(e)} onContextMenu={(e) => actions.openContextMenu(e, tab.id, h.id)} data-hatch={h.id} data-testid={`shield-${h.id}`} />
               )}
             </div>
           );

@@ -60,7 +60,7 @@ function CanvasesTab() {
         onToggle={flip('canvases')}
         testId="canvases"
         action={
-          <button className="round small quiet" aria-label="New canvas" title="New canvas" onClick={() => actions.newCanvasFromUser()} data-testid="new-canvas">
+          <button className="round small quiet" aria-label="New canvas" title="New canvas" data-detail="Opens an empty canvas for a new set of pages." data-keys="⌘T" onClick={() => actions.newCanvasFromUser()} data-testid="new-canvas">
             <PlusIcon size={14} />
           </button>
         }
@@ -72,7 +72,7 @@ function CanvasesTab() {
         open={open.hatches}
         onToggle={flip('hatches')}
         action={
-          <button className="round small quiet" aria-label="New Hatch" title="New Hatch" onClick={actions.requestNewHatch} data-testid="new-hatch">
+          <button className="round small quiet" aria-label="New Hatch" title="New Hatch" data-detail="Opens a page on this canvas. Search Google, paste a link or name a project." data-keys="⌘N" onClick={actions.requestNewHatch} data-testid="new-hatch">
             <PlusIcon size={14} />
           </button>
         }
@@ -156,7 +156,7 @@ function CanvasList({ current }: { current: string }) {
               <MoreIcon size={12} />
             </button>
             <PinButton pinned={!!t.savedId && pinned.has(t.savedId)} label={label} onClick={() => void actions.togglePin(t.id)} />
-            <button className="row-close" aria-label={`Close ${label}`} title="Close this canvas" onClick={() => actions.closeTab(t.id)}>
+            <button className="row-close" aria-label={`Close ${label}`} title="Close this canvas" data-keys="⇧⌘W" onClick={() => actions.closeTab(t.id)}>
               <CloseIcon size={12} />
             </button>
           </li>
@@ -203,10 +203,10 @@ function HatchList({ tab }: { tab: Tab }) {
             </button>
             {working[h.id] && <span className="working-dot" role="img" aria-label="An agent is working in this Hatch" />}
             <span className="row-count">{h.template === 'fit' ? 'Fit' : h.width}</span>
-            <button className="row-action" aria-label={`Duplicate ${hatchLabel(h)}`} title="Duplicate this Hatch (Cmd+D, or Cmd-drag its title)" onClick={() => actions.duplicateHatch(h.id)} data-testid={`duplicate-${h.id}`}>
+            <button className="row-action" aria-label={`Duplicate ${hatchLabel(h)}`} title="Duplicate this Hatch" data-detail="Opens the same page beside it at the same size. Cmd-drag a title does the same." data-keys="⌘D" onClick={() => actions.duplicateHatch(h.id)} data-testid={`duplicate-${h.id}`}>
               <DuplicateIcon size={12} />
             </button>
-            <button className="row-close" aria-label={`Close ${hatchLabel(h)}`} title="Close this Hatch" onClick={() => actions.closeHatch(h.id)}>
+            <button className="row-close" aria-label={`Close ${hatchLabel(h)}`} title="Close this Hatch" data-keys="⌘W" onClick={() => actions.closeHatch(h.id)}>
               <CloseIcon size={12} />
             </button>
           </li>
@@ -226,13 +226,12 @@ function ClosedList() {
     <ul className="row-list" data-testid="closed-list">
       {[...shown].reverse().map((c, i) => {
         const label = c.kind === 'hatch' ? hatchLabel(c.hatch) : c.name;
-        const shortcut = i === 0 ? ' (Cmd+Shift+T)' : '';
         return (
           <li key={c.id}>
             <span className="row-icon" aria-hidden="true">
               {c.kind === 'hatch' ? <HatchIcon size={14} /> : <ShowAllIcon size={14} />}
             </span>
-            <button className="row-main" onClick={() => actions.reopenClosed(c.id)} title={`Reopen ${c.kind === 'hatch' ? 'this Hatch' : 'this canvas'}${shortcut}`}>
+            <button className="row-main" onClick={() => actions.reopenClosed(c.id)} title={`Reopen ${c.kind === 'hatch' ? 'this Hatch' : 'this canvas'}`} data-keys={i === 0 ? '⇧⌘T' : undefined}>
               {label}
             </button>
             {c.kind === 'canvas' && (

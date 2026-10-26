@@ -14,6 +14,9 @@ extraResources:
   # The /hatch skill Settings copies into Claude Code and Codex.
   - from: plugins/hatch/skills/hatch/SKILL.md
     to: skills/hatch/SKILL.md
+  # The browser extension that hands a site's sign-in to Hatch. Settings opens the folder, and the user loads it unpacked.
+  - from: browser-extension
+    to: browser-extension
 protocols:
   - name: Hatch project address
     schemes: [hatch]

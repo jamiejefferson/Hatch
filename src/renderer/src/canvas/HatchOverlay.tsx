@@ -126,10 +126,10 @@ export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked }: P
       {working && <span className="working-dot" role="status" aria-label="An agent is working in this Hatch" />}
       {title}
       <SoundButton hatch={hatch} />
-      <button className="round small quiet" aria-label="Fit to view" title="Fit to view" aria-pressed={false} onClick={run(() => actions.toggleFit(id))} data-testid="fit-toggle">
+      <button className="round small quiet" aria-label="Fit to view" title="Fit to view" data-detail="Fills the canvas with this page. Swipe sideways with two fingers to go back or forward." data-keys="⌘F" aria-pressed={false} onClick={run(() => actions.toggleFit(id))} data-testid="fit-toggle">
         <FitIcon size={14} />
       </button>
-      <button className="round small quiet" aria-label="Close this Hatch" title="Close this Hatch" onClick={() => actions.closeHatch(id)} data-testid={`bar-close-${id}`}>
+      <button className="round small quiet" aria-label="Close this Hatch" title="Close this Hatch" data-detail="Closes the page. Reopen it with ⇧⌘T." data-keys="⌘W" onClick={() => actions.closeHatch(id)} data-testid={`bar-close-${id}`}>
         <CloseIcon size={12} />
       </button>
     </div>

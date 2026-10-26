@@ -117,8 +117,8 @@ export function SignInThroughModal() {
           <h1 id="through-title">
             Sign in to {site} in {browserName}, then come back
           </h1>
-          <p className="hint">Use Touch ID, your phone or a password there. Once the site shows you signed in, bring the sign-in across and this Hatch opens the page again, signed in.</p>
-          <p className="hint">macOS asks for your password the first time, because {browserName} keeps its cookie key in the Keychain. Choose Always Allow and it stops asking.</p>
+          <p className="hint">Use Touch ID, your phone or a password there. Once the site shows you signed in, press the Hatch button in {browserName}'s toolbar, and this Hatch opens the page again, signed in.</p>
+          <p className="hint">Without Hatch's browser extension, bring the sign-in across here instead. macOS then asks for your password, because {browserName} keeps its cookie key in the Keychain. Settings, under Sign-ins, shows how to add the extension.</p>
           {error && (
             <p className="field-error" role="alert" data-testid="through-error">
               {error}

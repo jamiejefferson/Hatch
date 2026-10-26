@@ -16,6 +16,12 @@ export function serveSite(): Promise<{ url: string; close(): Promise<void> }> {
       res.writeHead(200, { 'content-type': 'text/html' }).end(`<title>Account</title><h1 id="who">${session ? `Signed in as ${session}` : 'Signed out'}</h1>`);
       return;
     }
+    if (path === '/suggest') {
+      // Stands in for Google's suggestions, in the same shape.
+      const q = new URL(req.url ?? '/', 'http://x').searchParams.get('q') ?? '';
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify([q, [q, `${q} fonts`, `${q} academy`]]));
+      return;
+    }
     if (path === '/slow') {
       // A page that takes three seconds, for the timeout tests.
       setTimeout(() => res.writeHead(200, { 'content-type': 'text/html' }).end('<title>Slow page</title><h1>Slow page arrived</h1>'), 3000);
@@ -35,7 +41,9 @@ export function serveSite(): Promise<{ url: string; close(): Promise<void> }> {
     try {
       const file = join(SITE, path === '/' ? 'index.html' : path);
       if (!file.startsWith(SITE)) throw new Error('outside');
-      res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' }).end(readFileSync(file));
+      // The file is read before the headers go, so a missing file still answers 404.
+      const content = readFileSync(file);
+      res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' }).end(content);
     } catch {
       res.writeHead(404).end('Not found');
     }
