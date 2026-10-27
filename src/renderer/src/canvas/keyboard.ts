@@ -8,7 +8,14 @@ let owner: WebviewElement | null = null;
 const release = (): void => {
   owner = null;
 };
-window.addEventListener('pointerdown', release, true);
+// A press in Hatch's own interface takes the keyboard back from a page, because a webview keeps DOM focus through a click on the
+// canvas, and Cmd+A, Cmd+Z and Delete would then go to the page the user left. test/e2e/organise.spec.ts guards this.
+const reclaim = (): void => {
+  release();
+  const held = document.activeElement;
+  if (held instanceof HTMLElement && held.tagName === 'WEBVIEW') held.blur();
+};
+window.addEventListener('pointerdown', reclaim, true);
 window.addEventListener('blur', release);
 window.hatch.on('window:blur', release);
 

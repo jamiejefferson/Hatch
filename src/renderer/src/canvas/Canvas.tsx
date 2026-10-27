@@ -3,11 +3,13 @@ import { toScreen, type Point, type Rect } from '@shared/geometry';
 import { HEADER_OFFSET } from '@shared/workspace';
 import type { Hatch, Tab } from '@shared/types';
 import { PlusIcon } from '../icons';
-import { actions, fitHatch, useStore } from '../state/store';
+import { actions, fitHatch, NOTE_SIZE, useStore } from '../state/store';
 import { startDrag } from './drag';
 import { HatchOverlay } from './HatchOverlay';
 import { HatchPage } from './HatchPage';
 import { Notes } from './Notes';
+import { GroupOutlines, Marquee, SelectionBar, SelectionOutline } from './Selection';
+import type { Box } from '@shared/arrange';
 import { pages } from './webviews';
 
 /** Stands for the empty canvas in the double-tap state. */
@@ -32,6 +34,8 @@ export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
   const [armed, setArmed] = useState<string | null>(null);
   const armTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latch = useRef<{ target: string; at: number } | null>(null);
+  const [marquee, setMarquee] = useState<Box | null>(null);
+  const selection = useStore((s) => s.selection);
   const panEnd = useRef<ReturnType<typeof setTimeout> | null>(null);
   const viewport = useStore((s) => s.viewport);
   const fit = fitHatch(tab);
@@ -91,6 +95,14 @@ export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
 
   /** A drag on the canvas or on a shielded Hatch pans. A tap selects what was under it, and a second tap on the same Hatch fits it to the view. */
   const panOrSelect = (hatchId: string | null) => (e: React.PointerEvent) => {
+    // Shift adds a Hatch to the selection, or draws a selection box on the empty canvas. A plain drag still pans.
+    if (e.shiftKey && !fit) {
+      if (hatchId) {
+        e.preventDefault();
+        return actions.toggleSelected(hatchId);
+      }
+      return drawSelection(e);
+    }
     const start = tab.pan;
     startDrag(e, {
       cursor: 'grabbing',
@@ -114,6 +126,32 @@ export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
       },
     });
   };
+  /** A Shift-drag on the empty canvas: every Hatch and free note the box touches joins the selection. */
+  const drawSelection = (e: React.PointerEvent): void => {
+    const area = ref.current!.getBoundingClientRect();
+    const from = { x: e.clientX - area.left, y: e.clientY - area.top };
+    const kept = selection;
+    startDrag(e, {
+      cursor: 'crosshair',
+      onMove: (dx, dy) => setMarquee({ x: Math.min(from.x, from.x + dx), y: Math.min(from.y, from.y + dy), width: Math.abs(dx), height: Math.abs(dy) }),
+      onEnd: (moved) => {
+        setMarquee((box) => {
+          if (moved && box) {
+            const c = { x: (box.x - tab.pan.x) / tab.zoom, y: (box.y - tab.pan.y) / tab.zoom, width: box.width / tab.zoom, height: box.height / tab.zoom };
+            const touches = (b: Box): boolean => b.x < c.x + c.width && b.x + b.width > c.x && b.y < c.y + c.height && b.y + b.height > c.y;
+            const title = HEADER_OFFSET / tab.zoom;
+            const note = { width: NOTE_SIZE.width / tab.zoom, height: NOTE_SIZE.height / tab.zoom };
+            const hit = new Set<string>();
+            for (const h of tab.hatches) if (touches({ x: h.x, y: h.y - title, width: h.width, height: h.height + title })) hit.add(h.id);
+            for (const n of tab.notes ?? []) if (touches({ x: n.x, y: n.y, ...note })) hit.add(n.attachedTo ?? n.id);
+            if (hit.size) actions.selectItems([...new Set([...kept, ...hit])]);
+          }
+          return null;
+        });
+      },
+    });
+  };
+
   return (
     // CDP refuses a screenshot of a webview under visibility: hidden, so an agent's background tab stays rendered at opacity 0.
     // An inactive canvas stays rendered beneath the active one, out of reach of the pointer, the keyboard and screen readers.
@@ -136,10 +174,14 @@ export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
       <div className="overlay">
         {tab.hatches.map((h) =>
           fit !== null && h !== fit ? null : (
-            <HatchOverlay key={h.id} tabId={tab.id} hatch={h} size={rectOf(h)} screen={toScreen(rectOf(h), view.pan, view.zoom)} zoom={view.zoom} selected={h.id === tab.selectedHatchId} docked={h === fit} />
+            <HatchOverlay key={h.id} tabId={tab.id} hatch={h} size={rectOf(h)} screen={toScreen(rectOf(h), view.pan, view.zoom)} zoom={view.zoom} selected={h.id === tab.selectedHatchId} docked={h === fit} inSelection={selection.length > 1 && selection.includes(h.id)} />
           ),
         )}
+        {!fit && <GroupOutlines tab={tab} pan={view.pan} zoom={view.zoom} />}
+        {!fit && <SelectionOutline tab={tab} pan={view.pan} zoom={view.zoom} />}
         {!fit && <Notes tab={tab} pan={view.pan} zoom={view.zoom} origin={() => ref.current?.getBoundingClientRect() ?? null} />}
+        {!fit && active && <SelectionBar tab={tab} pan={view.pan} zoom={view.zoom} area={viewport} />}
+        <Marquee box={marquee} />
         {tab.hatches.length === 0 && (
           <div className="canvas-empty">
             <p>This tab has no pages yet.</p>

@@ -8,6 +8,7 @@ import { jevRunTools } from './jev-run';
 import { hatchTools } from './hatches';
 import { navigateTools } from './navigate';
 import { noteTools } from './notes';
+import { organiseTools } from './organise';
 import { linkTools, projectTools } from './projects';
 import { readTools } from './read';
 import { sessionTools } from './session';
@@ -15,4 +16,4 @@ import { stepTools } from './steps';
 import type { Tool } from './types';
 
 /** The tool list is static. A tool that a setting switches off stays listed and explains itself when called. */
-export const TOOLS: Tool[] = [...sessionTools, ...canvasTools, ...hatchTools, ...navigateTools, ...readTools, ...extractTools, ...actTools, ...stepTools, ...jevRunTools, ...jevDecideTools, ...projectTools, ...linkTools, ...commentTools, ...noteTools, ...credentialTools];
+export const TOOLS: Tool[] = [...sessionTools, ...canvasTools, ...hatchTools, ...navigateTools, ...readTools, ...extractTools, ...actTools, ...stepTools, ...jevRunTools, ...jevDecideTools, ...projectTools, ...linkTools, ...commentTools, ...noteTools, ...organiseTools, ...credentialTools];

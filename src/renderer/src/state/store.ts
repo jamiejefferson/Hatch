@@ -9,12 +9,13 @@ import type { Anchor, CommentStatus, PageComments } from '@shared/comments';
 import type { ConsentAnswer, ConsentRequest, SignIn } from '@shared/signins';
 import type { SignInThrough } from '@shared/signin-through';
 import type { ConnectionInfo, Outcome } from '../../../preload/api';
-import type { ActionButton, ProjectsState, ActivityEntry, AgentAct, AgentWorkState, DialogState, Hatch, HatchView, InterfaceState, Note, SavedCanvas, SavedLink, Settings, Tab, TemplateId, ViewRequest, Workspace } from '@shared/types';
+import type { CanvasContext, Group, ActionButton, ProjectsState, ActivityEntry, AgentAct, AgentWorkState, DialogState, Hatch, HatchView, InterfaceState, Note, SavedCanvas, SavedLink, Settings, Tab, TemplateId, ViewRequest, Workspace } from '@shared/types';
 import { savedCanvasFromTab, tabFromSavedCanvas } from '@shared/canvases';
 import { folderName, oneCanvasPerFolder } from '@shared/project-canvas';
 import { DEFAULT_SETTINGS } from '@shared/types';
-import { emptyTab, emptyWorkspace, MAX_NOTE_LENGTH, newId } from '@shared/workspace';
+import { emptyTab, emptyWorkspace, HEADER_OFFSET, MAX_CONTEXTS, MAX_GROUP_NAME, MAX_NOTE_LENGTH, newId, repairGroups } from '@shared/workspace';
 import { pages } from '../canvas/webviews';
+import { applyMoves, arrange, bounds, freshIds, groupOf, lockedAmong, measureAt, unitsFor, withAttached, type ArrangeMode, type Box } from '@shared/arrange';
 
 /** The right sidebar's three tabs, and the two pages its top-strip buttons open. */
 export type SidebarPanel = 'hatch' | 'comments' | 'activity' | 'settings' | 'feedback';
@@ -25,6 +26,9 @@ export type LeftPanel = 'canvases' | 'library';
 export type Closed = { id: string; kind: 'hatch'; tabId: string; hatch: Hatch } | { id: string; kind: 'canvas'; tab: Tab; index: number; name: string; blank?: string };
 /** Reopen remembers this many closed Hatches and canvases. */
 const CLOSED_LIMIT = 20;
+/** Undo remembers this many layout edits. */
+const UNDO_LIMIT = 50;
+let noticeTimer: ReturnType<typeof setTimeout> | null = null;
 /** After a swipe goes back or forward, the next one waits this long. */
 const SWIPE_PAUSE_MS = 700;
 let lastSwipe = 0;
@@ -119,6 +123,27 @@ export interface State {
   fullScreen: boolean;
   /** What the user closed this session, the latest last. */
   closed: Closed[];
+  /** The Hatches and notes the user selected on the active canvas. A click selects one; Shift adds and removes. */
+  selection: string[];
+  /** The group the user selected by its name, whose members make the selection. */
+  selectedGroup: string | null;
+  /** The group whose name the user is typing. */
+  renamingGroup: string | null;
+  /** The Add a prompt popover over the selection is open. */
+  promptOpen: boolean;
+  /** Layout edits the user can undo and redo, the latest last. */
+  layoutPast: LayoutSnapshot[];
+  layoutFuture: LayoutSnapshot[];
+  /** The notice that says what an arrangement changed and offers Undo. */
+  layoutNotice: string | null;
+}
+
+/** Where every Hatch and note sat, and the groups, before a layout edit. Undo puts them back and touches nothing else. */
+interface LayoutSnapshot {
+  tabId: string;
+  hatches: { id: string; x: number; y: number }[];
+  notes: { id: string; x: number; y: number; attachedTo?: string }[];
+  groups: Group[];
 }
 
 const IDLE: LoadState = { loading: false, canGoBack: false, canGoForward: false, error: null };
@@ -173,6 +198,13 @@ let state: State = {
   guideOpen: false,
   feedbackShot: null,
   audible: {},
+  selection: [],
+  selectedGroup: null,
+  renamingGroup: null,
+  promptOpen: false,
+  layoutPast: [],
+  layoutFuture: [],
+  layoutNotice: null,
   fullScreen: false,
   closed: [],
 };
@@ -325,6 +357,89 @@ export function listen(): () => void {
   return () => offs.forEach((off) => off());
 }
 
+
+// ---- selection, groups, arrangement and undo ----
+
+/** How the canvas measures items for arranging: a note keeps its size on screen, and a Hatch's title row sits above its page. */
+const measureOf = (t: Tab) => measureAt(t.zoom, NOTE_SIZE, HEADER_OFFSET);
+
+function snapshotOf(t: Tab): LayoutSnapshot {
+  return {
+    tabId: t.id,
+    hatches: t.hatches.map((h) => ({ id: h.id, x: h.x, y: h.y })),
+    notes: (t.notes ?? []).map((n) => ({ id: n.id, x: n.x, y: n.y, ...(n.attachedTo ? { attachedTo: n.attachedTo } : {}) })),
+    groups: t.groups ?? [],
+  };
+}
+
+/** Puts places, attachments and groups back. A Hatch or note closed since then stays closed, and pages are never touched. */
+function restoreLayout(t: Tab, snap: LayoutSnapshot): Tab {
+  const hatchAt = new Map(snap.hatches.map((h) => [h.id, h]));
+  const noteAt = new Map(snap.notes.map((n) => [n.id, n]));
+  const hatches = t.hatches.map((h) => {
+    const at = hatchAt.get(h.id);
+    return at ? { ...h, x: at.x, y: at.y } : h;
+  });
+  const ids = new Set(hatches.map((h) => h.id));
+  const notes = (t.notes ?? []).map((n) => {
+    const at = noteAt.get(n.id);
+    if (!at) return n;
+    const { attachedTo: _old, ...rest } = n;
+    return { ...rest, x: at.x, y: at.y, ...(at.attachedTo && ids.has(at.attachedTo) ? { attachedTo: at.attachedTo } : {}) };
+  });
+  const groups = repairGroups(snap.groups, new Set([...ids, ...notes.filter((n) => !n.attachedTo).map((n) => n.id)]));
+  return { ...t, hatches, notes, groups };
+}
+
+/** Remembers the layout before a change, so Undo can put it back. A new change clears Redo. */
+function recordLayout(tabId: string): void {
+  const t = state.workspace.tabs.find((x) => x.id === tabId);
+  if (!t) return;
+  set((s) => ({ layoutPast: [...s.layoutPast, snapshotOf(t)].slice(-UNDO_LIMIT), layoutFuture: [] }));
+}
+
+function noticeLayout(text: string): void {
+  set({ layoutNotice: text });
+  if (noticeTimer) clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => set({ layoutNotice: null }), 6000);
+}
+
+const itemsWord = (n: number): string => `${n} ${n === 1 ? 'item' : 'items'}`;
+
+/** The items a selection stands for, as Hatch ids and free-note ids. An attached note stands for its Hatch. */
+function unitIds(t: Tab, ids: string[]): string[] {
+  const out = new Set<string>();
+  for (const id of ids) {
+    const note = t.notes?.find((n) => n.id === id);
+    out.add(note?.attachedTo ?? id);
+  }
+  return [...out].filter((id) => t.hatches.some((h) => h.id === id) || t.notes?.some((n) => n.id === id));
+}
+
+/** Takes items out of whatever group holds them. A group left with fewer than two items ends. */
+const withoutInGroups = (groups: Group[], ids: string[]): Group[] =>
+  groups.map((g) => ({ ...g, members: g.members.filter((m) => !ids.includes(m)) })).filter((g) => g.members.length >= 2);
+
+/** A Hatch or note that leaves the canvas lets go of its attachments and its group. */
+function forgetItem(t: Tab, id: string): Tab {
+  const notes = t.notes?.map((n) => {
+    if (n.attachedTo !== id) return n;
+    const { attachedTo: _gone, ...rest } = n;
+    return rest;
+  });
+  const groups = t.groups ? withoutInGroups(t.groups, [id]) : undefined;
+  return { ...t, ...(notes ? { notes } : {}), ...(groups ? { groups } : {}) };
+}
+
+/** Where a note goes when it attaches: under its Hatch, below the notes already attached there. */
+function attachSpot(t: Tab, hatchId: string, noteId: string): Point {
+  const h = t.hatches.find((x) => x.id === hatchId)!;
+  const gap = 16 / t.zoom;
+  const others = (t.notes ?? []).filter((n) => n.attachedTo === hatchId && n.id !== noteId);
+  const below = others.length ? Math.max(...others.map((n) => n.y + NOTE_SIZE.height / t.zoom)) : h.y + h.height;
+  return { x: Math.round(h.x), y: Math.round(below + gap) };
+}
+
 /** What the main process asks of the interface on an agent's behalf. */
 function serve(method: string, params: unknown): unknown {
   const p = (params ?? {}) as unknown;
@@ -353,8 +468,67 @@ function serve(method: string, params: unknown): unknown {
     case 'closeTab':
       return actions.closeTab((p as { tabId: string }).tabId);
     case 'addNote': {
-      const { tabId, text, author } = p as { tabId: string; text: string; author: string };
-      return actions.addNote(tabId, text, author);
+      const { tabId, text, author, attachTo } = p as { tabId: string; text: string; author: string; attachTo?: string };
+      const tab = state.workspace.tabs.find((t) => t.id === tabId);
+      if (attachTo && !tab?.hatches.some((h) => h.id === attachTo)) throw new Error(`No Hatch on that canvas has the id ${attachTo}.`);
+      const id = actions.addNote(tabId, text, author);
+      // An agent's attachment is no user's layout edit, so it goes straight in, under the Hatch.
+      if (attachTo) editTab(tabId, (t) => ({ ...t, notes: (t.notes ?? []).map((n) => (n.id === id ? { ...n, ...attachSpot(t, attachTo, id), attachedTo: attachTo } : n)) }));
+      return id;
+    }
+    case 'context': {
+      const { id } = p as { id: string };
+      for (const t of state.workspace.tabs) {
+        const context = t.contexts?.find((c) => c.id === id);
+        if (!context) continue;
+        const items = context.members.map((m) => {
+          const h = t.hatches.find((x) => x.id === m);
+          if (h) return { kind: 'hatch', id: m, open: true, title: h.title, url: h.url, group: groupOf(t, m)?.name ?? null };
+          const n = t.notes?.find((x) => x.id === m);
+          if (n) return { kind: 'note', id: m, open: true, text: n.text, author: n.author, attachedTo: n.attachedTo ?? null, group: groupOf(t, m)?.name ?? null };
+          return { kind: 'gone', id: m, open: false };
+        });
+        return { tabId: t.id, canvas: tabLabel(state, t), prompt: context.prompt ?? null, createdAt: context.createdAt, items };
+      }
+      throw new Error('No open canvas holds that context. Its canvas may have closed, so ask the user to copy the link again.');
+    }
+    case 'groups': {
+      const tab = state.workspace.tabs.find((t) => t.id === (p as { tabId: string }).tabId);
+      if (!tab) throw new Error('That canvas has closed.');
+      return (tab.groups ?? []).map((g) => ({
+        id: g.id,
+        name: g.name,
+        locked: g.locked === true,
+        members: g.members.map((m) => {
+          const h = tab.hatches.find((x) => x.id === m);
+          return h ? { kind: 'hatch', id: m, title: hatchLabel(h) } : { kind: 'note', id: m, title: tab.notes?.find((x) => x.id === m)?.text.slice(0, 80) ?? m };
+        }),
+        attachedNotes: (tab.notes ?? []).filter((n) => n.attachedTo && g.members.includes(n.attachedTo)).map((n) => n.id),
+      }));
+    }
+    case 'groupItems': {
+      const { tabId, ids, name } = p as { tabId: string; ids: string[]; name: string };
+      const tab = state.workspace.tabs.find((t) => t.id === tabId);
+      if (!tab) throw new Error('That canvas has closed.');
+      const unknown = ids.filter((id) => !tab.hatches.some((h) => h.id === id) && !tab.notes?.some((n) => n.id === id));
+      if (unknown.length) throw new Error(`No Hatch or note on that canvas has the id ${unknown.join(', ')}.`);
+      const members = unitIds(tab, ids);
+      if (members.length < 2) throw new Error('A group needs two or more Hatches or notes.');
+      if (lockedAmong(tab, members).length) throw new Error('Some of those items sit in a locked group. The user locked it, so leave it as it is.');
+      recordLayout(tabId);
+      const group: Group = { id: newId('group'), name: name.trim().slice(0, MAX_GROUP_NAME) || 'Group', members };
+      editTab(tabId, (t) => ({ ...t, groups: [...withoutInGroups(t.groups ?? [], members), group] }));
+      return group.id;
+    }
+    case 'arrangeItems': {
+      const { tabId, ids, groupId, mode } = p as { tabId: string; ids?: string[]; groupId?: string; mode: ArrangeMode };
+      const tab = state.workspace.tabs.find((t) => t.id === tabId);
+      if (!tab) throw new Error('That canvas has closed.');
+      const group = groupId ? tab.groups?.find((g) => g.id === groupId) : null;
+      if (groupId && !group) throw new Error(`No group on that canvas has the id ${groupId}. Call list_groups to see them.`);
+      const result = actions.arrangeItems(tabId, group ? group.members : (ids ?? []), mode);
+      if ('error' in result) throw new Error(result.error);
+      return result.moved;
     }
     case 'notes': {
       const tab = state.workspace.tabs.find((t) => t.id === (p as { tabId: string }).tabId);
@@ -533,7 +707,8 @@ export const actions = {
     }));
   },
   activateTab(tabId: string): void {
-    set((s) => ({ workspace: { ...s.workspace, activeTabId: tabId } }));
+    // A selection belongs to the canvas it was made on.
+    set((s) => ({ workspace: { ...s.workspace, activeTabId: tabId }, ...(s.workspace.activeTabId === tabId ? {} : { selection: [], selectedGroup: null, promptOpen: false }) }));
   },
   closeTab(tabId: string): void {
     const index = state.workspace.tabs.findIndex((t) => t.id === tabId);
@@ -581,6 +756,251 @@ export const actions = {
     const { width, height } = state.viewport;
     editActiveTab((t) => ({ ...t, selectedHatchId: next.id, pan: { x: width / 2 - (next.x + next.width / 2) * t.zoom, y: height / 2 - (next.y + next.height / 2) * t.zoom } }));
     if (state.panel !== 'comments') set({ panel: 'hatch' });
+  },
+
+  // selection, groups and arrangement
+  /** Shift-click: adds an item to the selection, or takes it out. A Hatch added becomes the one the sidebar shows. */
+  toggleSelected(id: string): void {
+    const t = activeTab(state);
+    const base = state.selection.length ? state.selection : [t.selectedHatchId].filter((x): x is string => !!x);
+    const next = base.includes(id) ? base.filter((x) => x !== id) : [...base, id];
+    const hatch = [...next].reverse().find((x) => t.hatches.some((h) => h.id === x)) ?? null;
+    if (state.editingNote) actions.finishNote();
+    editActiveTab((tab) => ({ ...tab, selectedHatchId: hatch, hatches: tab.hatches.map(leaveFit) }));
+    set({ selection: next, selectedGroup: null, selectedNote: next.length === 1 && !hatch ? next[0]! : null, promptOpen: false });
+  },
+  /** A selection box or Cmd+A: these items, and no group. */
+  selectItems(ids: string[]): void {
+    const t = activeTab(state);
+    const hatch = ids.find((x) => t.hatches.some((h) => h.id === x)) ?? null;
+    if (state.editingNote) actions.finishNote();
+    editActiveTab((tab) => ({ ...tab, selectedHatchId: hatch }));
+    set({ selection: ids, selectedGroup: null, selectedNote: ids.length === 1 && !hatch ? ids[0]! : null, promptOpen: false });
+  },
+  selectAll(): void {
+    const t = activeTab(state);
+    if (fitHatch(t)) return;
+    actions.selectItems([...t.hatches.map((h) => h.id), ...(t.notes ?? []).filter((n) => !n.attachedTo).map((n) => n.id)]);
+  },
+  clearSelection(): void {
+    editActiveTab((t) => (t.selectedHatchId ? { ...t, selectedHatchId: null } : t));
+    set({ selection: [], selectedGroup: null, selectedNote: null, promptOpen: false });
+  },
+  /** A click on a group's name selects its items as one. */
+  selectGroup(groupId: string): void {
+    const g = activeTab(state).groups?.find((x) => x.id === groupId);
+    if (!g) return;
+    actions.selectItems(g.members);
+    set({ selectedGroup: groupId });
+  },
+
+  /**
+   * Starts a drag of a Hatch's title or a note. The selection moves together when the item is part of it, and a group moves as one.
+   * A Hatch takes its attached notes along. Returns null when a locked group holds the item.
+   */
+  beginMove(id: string): { to(dx: number, dy: number): void; end(moved: boolean): void } | null {
+    const t = activeTab(state);
+    const note = t.notes?.find((n) => n.id === id);
+    const group = groupOf(t, id);
+    const own = note?.attachedTo ? [id] : state.selection.includes(id) && state.selection.length > 1 ? unitIds(t, state.selection) : group && !note?.attachedTo ? group.members : [id];
+    const ids = note?.attachedTo ? own : withAttached(t, own);
+    if (lockedAmong(t, ids).length) {
+      actions.toast('This group is locked. Unlock it from the group menu to move it.');
+      return null;
+    }
+    const start = new Map<string, Point>([...t.hatches, ...(t.notes ?? [])].filter((x) => ids.includes(x.id)).map((x) => [x.id, { x: x.x, y: x.y }]));
+    let recorded = false;
+    return {
+      to: (dx, dy) => {
+        if (!recorded) {
+          recordLayout(t.id);
+          recorded = true;
+        }
+        editTab(t.id, (tab) => ({
+          ...tab,
+          hatches: tab.hatches.map((h) => (start.has(h.id) ? { ...h, x: Math.round(start.get(h.id)!.x + dx), y: Math.round(start.get(h.id)!.y + dy) } : h)),
+          ...(tab.notes ? { notes: tab.notes.map((n) => (start.has(n.id) ? { ...n, x: Math.round(start.get(n.id)!.x + dx), y: Math.round(start.get(n.id)!.y + dy) } : n)) } : {}),
+        }));
+      },
+      end: (moved) => {
+        // A lone note dropped on a page attaches to that Hatch; an attached note dropped far from its Hatch lets go.
+        if (moved && note && ids.length === 1) actions.dropNote(id);
+      },
+    };
+  },
+  /** Decides what a dropped note belongs to. */
+  dropNote(noteId: string): void {
+    const t = activeTab(state);
+    const n = t.notes?.find((x) => x.id === noteId);
+    if (!n) return;
+    const m = measureOf(t);
+    const centre = { x: n.x + m.note.width / 2, y: n.y + m.note.height / 2 };
+    const over = [...t.hatches].reverse().find((h) => centre.x >= h.x && centre.x <= h.x + h.width && centre.y >= h.y - m.title && centre.y <= h.y + h.height);
+    if (over && over.id !== n.attachedTo) return actions.attachNote(noteId, over.id, { recorded: true });
+    if (!n.attachedTo) return;
+    const h = t.hatches.find((x) => x.id === n.attachedTo);
+    const reach = 200;
+    const near = h && centre.x >= h.x - reach && centre.x <= h.x + h.width + reach && centre.y >= h.y - reach && centre.y <= h.y + h.height + reach;
+    if (!near) actions.attachNote(noteId, null, { recorded: true });
+  },
+  /** Attaches a note to a Hatch, under its page, or lets it go when `hatchId` is null. */
+  attachNote(noteId: string, hatchId: string | null, options: { recorded?: boolean } = {}): void {
+    const found = findNote(noteId);
+    if (!found) return;
+    if (!options.recorded) recordLayout(found.tabId);
+    editTab(found.tabId, (t) => {
+      const spot = hatchId ? attachSpot(t, hatchId, noteId) : null;
+      const groups = hatchId && t.groups ? withoutInGroups(t.groups, [noteId]) : t.groups;
+      return {
+        ...t,
+        ...(groups ? { groups } : {}),
+        notes: (t.notes ?? []).map((n) => {
+          if (n.id !== noteId) return n;
+          const { attachedTo: _old, ...rest } = n;
+          return spot ? { ...rest, ...spot, attachedTo: hatchId! } : rest;
+        }),
+      };
+    });
+    const t = state.workspace.tabs.find((x) => x.id === found.tabId)!;
+    const h = hatchId ? t.hatches.find((x) => x.id === hatchId) : null;
+    noticeLayout(h ? `Attached the note to ${hatchLabel(h)}` : 'The note stands on its own now');
+  },
+
+  /** Group: the selected Hatches and free notes become one named group. Items leave any group they were in. */
+  groupSelection(): string | null {
+    const t = activeTab(state);
+    const members = unitIds(t, state.selection);
+    if (members.length < 2) return null;
+    recordLayout(t.id);
+    const used = new Set((t.groups ?? []).map((g) => g.name));
+    let n = (t.groups?.length ?? 0) + 1;
+    while (used.has(`Group ${n}`)) n++;
+    const group: Group = { id: newId('group'), name: `Group ${n}`, members };
+    editActiveTab((tab) => ({ ...tab, groups: [...withoutInGroups(tab.groups ?? [], members), group] }));
+    set({ selectedGroup: group.id, renamingGroup: group.id });
+    return group.id;
+  },
+  ungroup(groupId: string): void {
+    const t = activeTab(state);
+    if (!t.groups?.some((g) => g.id === groupId)) return;
+    recordLayout(t.id);
+    editActiveTab((tab) => ({ ...tab, groups: (tab.groups ?? []).filter((g) => g.id !== groupId) }));
+    set((s) => ({ selectedGroup: s.selectedGroup === groupId ? null : s.selectedGroup }));
+    noticeLayout('Ungrouped. Every Hatch and note stays.');
+  },
+  renameGroup(groupId: string, name: string): void {
+    const clean = name.trim().slice(0, MAX_GROUP_NAME);
+    set({ renamingGroup: null });
+    const t = activeTab(state);
+    const g = t.groups?.find((x) => x.id === groupId);
+    if (!g || !clean || clean === g.name) return;
+    recordLayout(t.id);
+    editActiveTab((tab) => ({ ...tab, groups: (tab.groups ?? []).map((x) => (x.id === groupId ? { ...x, name: clean } : x)) }));
+  },
+  startRenamingGroup(groupId: string | null): void {
+    set({ renamingGroup: groupId });
+  },
+  toggleLock(groupId: string): void {
+    const t = activeTab(state);
+    const g = t.groups?.find((x) => x.id === groupId);
+    if (!g) return;
+    recordLayout(t.id);
+    editActiveTab((tab) => ({ ...tab, groups: (tab.groups ?? []).map((x) => (x.id === groupId ? (x.locked ? { id: x.id, name: x.name, members: x.members } : { ...x, locked: true }) : x)) }));
+    noticeLayout(g.locked ? `Unlocked ${g.name}` : `Locked ${g.name}. Its items stay where they are.`);
+  },
+
+  /** Arrange: tidies, lines up or spreads the selection. Pages keep their sizes, attached notes travel with their Hatch, and nothing else moves. */
+  arrangeSelection(mode: ArrangeMode): void {
+    const t = activeTab(state);
+    const ids = unitIds(t, state.selection);
+    const result = actions.arrangeItems(t.id, ids, mode);
+    if ('error' in result) return actions.toast(result.error);
+    if (result.moved === 0) return noticeLayout('Everything was in place already');
+    // The notice counts what the user arranged, attached notes included, whatever moved.
+    const count = withAttached(t, ids).length;
+    const verb = mode === 'tidy' ? 'Tidied' : mode.startsWith('align') ? 'Aligned' : mode.startsWith('distribute') ? 'Spread out' : 'Arranged';
+    noticeLayout(`${verb} ${itemsWord(count)}`);
+  },
+  /** Arranges items on any canvas, for the user or an agent. Refuses locked items by name, and counts what moved. */
+  arrangeItems(tabId: string, ids: string[], mode: ArrangeMode): { moved: number } | { error: string } {
+    const t = state.workspace.tabs.find((x) => x.id === tabId);
+    if (!t) return { error: 'That canvas has closed.' };
+    if (fitHatch(t)) return { error: 'Leave Fit to view to arrange the canvas.' };
+    const units = unitsFor(t, unitIds(t, ids), measureOf(t));
+    if (units.length < 2) return { error: 'Choose two or more Hatches or notes to arrange.' };
+    const locked = lockedAmong(t, units.map((u) => u.id));
+    if (locked.length) return { error: `${itemsWord(locked.length)} sit in a locked group, so Hatch left everything where it was. Unlock the group to arrange it.` };
+    const moves = arrange(units, mode);
+    if (moves.size === 0) return { moved: 0 };
+    recordLayout(tabId);
+    editTab(tabId, (tab) => applyMoves(tab, moves));
+    return { moved: moves.size };
+  },
+  /** Fit selection to view moves the camera alone: every selected item shows, and nothing on the canvas moves. */
+  fitSelection(): void {
+    const t = activeTab(state);
+    const units = unitsFor(t, unitIds(t, state.selection), measureOf(t));
+    if (!units.length || fitHatch(t)) return;
+    actions.showBox(bounds(units.map((u) => u.box)));
+  },
+  showBox(box: Box): void {
+    const margin = 64;
+    editActiveTab((t) => {
+      const zoom = clampZoom(Math.min((state.viewport.width - margin * 2) / box.width, (state.viewport.height - margin * 2) / box.height, 1));
+      return { ...t, zoom, pan: { x: (state.viewport.width - box.width * zoom) / 2 - box.x * zoom, y: (state.viewport.height - box.height * zoom) / 2 - box.y * zoom } };
+    });
+  },
+
+  /** Undo for the canvas layout. Typing in a page or a note keeps its own undo, which the caller decides. */
+  undoLayout(): void {
+    const snap = state.layoutPast[state.layoutPast.length - 1];
+    const t = snap && state.workspace.tabs.find((x) => x.id === snap.tabId);
+    if (!snap || !t) return actions.toast('There is no canvas change to undo.');
+    set((s) => ({ layoutPast: s.layoutPast.slice(0, -1), layoutFuture: [...s.layoutFuture, snapshotOf(t)] }));
+    editTab(snap.tabId, (tab) => restoreLayout(tab, snap));
+    noticeLayout('Undid the last canvas change');
+  },
+  redoLayout(): void {
+    const snap = state.layoutFuture[state.layoutFuture.length - 1];
+    const t = snap && state.workspace.tabs.find((x) => x.id === snap.tabId);
+    if (!snap || !t) return;
+    set((s) => ({ layoutFuture: s.layoutFuture.slice(0, -1), layoutPast: [...s.layoutPast, snapshotOf(t)] }));
+    editTab(snap.tabId, (tab) => restoreLayout(tab, snap));
+    noticeLayout('Redid the canvas change');
+  },
+  dismissLayoutNotice(): void {
+    set({ layoutNotice: null });
+  },
+
+  // context links
+  openPrompt(open: boolean): void {
+    set({ promptOpen: open });
+  },
+  /** The items a context link would carry for the current selection: the selected Hatches, their attached notes and the selected notes. */
+  contextItems(): string[] {
+    const t = activeTab(state);
+    const ids = state.selection.length ? state.selection : [t.selectedHatchId].filter((x): x is string => !!x);
+    return withAttached(t, unitIds(t, ids));
+  },
+  /** Stores the chosen items, fixed, and copies a link an agent reads through get_context. With a prompt, the prompt goes first. */
+  async copyContext(options: { prompt?: string; exclude?: string[] } = {}): Promise<string | null> {
+    const t = activeTab(state);
+    const members = actions.contextItems().filter((id) => !options.exclude?.includes(id));
+    if (!members.length) {
+      actions.toast('Choose at least one Hatch or note for the context.');
+      return null;
+    }
+    const prompt = options.prompt?.trim().slice(0, MAX_NOTE_LENGTH);
+    const context: CanvasContext = { id: newId('ctx'), members, createdAt: new Date().toISOString(), ...(prompt ? { prompt } : {}) };
+    editActiveTab((tab) => ({ ...tab, contexts: [...(tab.contexts ?? []), context].slice(-MAX_CONTEXTS) }));
+    const link = hatchLink(context.id);
+    const hatches = members.filter((id) => t.hatches.some((h) => h.id === id)).length;
+    const notes = members.length - hatches;
+    const count = [hatches ? `${hatches} ${hatches === 1 ? 'Hatch' : 'Hatches'}` : '', notes ? `${notes} ${notes === 1 ? 'note' : 'notes'}` : ''].filter(Boolean).join(' and ');
+    await window.hatch.copyText(prompt ? `${prompt}\n\nHatch context: ${link}\nRead it with Hatch's get_context tool.` : link);
+    set({ promptOpen: false });
+    actions.toast(prompt ? `Copied your prompt with a context link for ${count}. Paste it into your agent.` : `Copied a context link for ${count}. Paste it into your agent.`);
+    return context.id;
   },
 
   // canvas
@@ -652,7 +1072,9 @@ export const actions = {
   escape(fromHatchId?: string): void {
     if (!fromHatchId && state.placingNote) return set({ placingNote: false });
     if (!fromHatchId && state.editingNote) return actions.finishNote();
-    if (!fromHatchId && state.selectedNote) return set({ selectedNote: null });
+    if (!fromHatchId && state.promptOpen) return set({ promptOpen: false });
+    if (!fromHatchId && state.selectedNote) return set({ selectedNote: null, selection: [] });
+    if (!fromHatchId && state.selection.length > 1) return actions.clearSelection();
     const tab = activeTab(state);
     const fit = fitHatch(tab);
     if (fit) return fromHatchId && fromHatchId !== fit.id ? undefined : editHatch(fit.id, leaveFit);
@@ -668,6 +1090,7 @@ export const actions = {
       // Fit to view shows one Hatch, so selecting nothing or another Hatch leaves it.
       return { ...t, selectedHatchId: hatchId, hatches: t.hatches.map((h) => (h.id === hatchId ? h : leaveFit(h))) };
     });
+    set({ selection: hatchId ? [hatchId] : [], selectedGroup: null, promptOpen: false });
     // The user's selection opens a closed sidebar on the Hatch tab, which no switch in the top strip opens.
     if (hatchId) set((s) => ({ panel: s.panel === 'comments' ? s.panel : 'hatch', workspace: s.workspace.sidebarOpen ? s.workspace : { ...s.workspace, sidebarOpen: true } }));
   },
@@ -715,7 +1138,8 @@ export const actions = {
     const hatch = findHatch(hatchId);
     if (!tabId || !hatch) return;
     remember({ id: newId('closed'), kind: 'hatch', tabId, hatch: leaveFit(hatch) });
-    editTab(tabId, (t) => ({ ...t, hatches: t.hatches.filter((h) => h.id !== hatchId), selectedHatchId: t.selectedHatchId === hatchId ? null : t.selectedHatchId }));
+    editTab(tabId, (t) => forgetItem({ ...t, hatches: t.hatches.filter((h) => h.id !== hatchId), selectedHatchId: t.selectedHatchId === hatchId ? null : t.selectedHatchId }, hatchId));
+    set((s) => ({ selection: s.selection.filter((x) => x !== hatchId) }));
     set((s) => {
       const { [hatchId]: _load, ...load } = s.load;
       const { [hatchId]: _request, ...viewRequests } = s.viewRequests;
@@ -743,8 +1167,9 @@ export const actions = {
     // A second copy would list the same canvas twice.
     const { savedId, ...closedTab } = entry.tab;
     if (savedId && state.savedCanvases.some((c) => c.id === savedId)) return actions.openSavedCanvas(savedId);
-    const ids = new Map(entry.tab.hatches.map((h) => [h.id, newId('hatch')]));
-    const tab: Tab = { ...closedTab, id: newId('tab'), hatches: entry.tab.hatches.map((h) => ({ ...h, id: ids.get(h.id)! })), selectedHatchId: entry.tab.selectedHatchId ? (ids.get(entry.tab.selectedHatchId) ?? null) : null };
+    // Fresh ids for every Hatch and note, carried into attachments and groups. Context links named the old ids, so they stay behind.
+    const { map: ids, contexts: _contexts, ...fresh } = freshIds(closedTab, newId);
+    const tab: Tab = { ...fresh, id: newId('tab'), selectedHatchId: entry.tab.selectedHatchId ? (ids.get(entry.tab.selectedHatchId) ?? null) : null };
     set((s) => {
       // The empty canvas that stood in for the closed one gives way to it, while the user has left it empty.
       const tabs = s.workspace.tabs.filter((t) => t.id !== entry.blank || t.hatches.length > 0 || t.name);
@@ -981,13 +1406,14 @@ export const actions = {
   deleteNote(noteId: string): void {
     const found = findNote(noteId);
     if (!found) return;
-    editTab(found.tabId, (t) => ({ ...t, notes: (t.notes ?? []).filter((n) => n.id !== noteId) }));
+    editTab(found.tabId, (t) => forgetItem({ ...t, notes: (t.notes ?? []).filter((n) => n.id !== noteId) }, noteId));
+    set((s) => ({ selection: s.selection.filter((x) => x !== noteId) }));
     set((s) => ({ selectedNote: s.selectedNote === noteId ? null : s.selectedNote, editingNote: s.editingNote === noteId ? null : s.editingNote }));
   },
   selectNote(noteId: string | null): void {
     if (state.editingNote && state.editingNote !== noteId) actions.finishNote();
     if (noteId) editActiveTab((t) => (t.selectedHatchId ? { ...t, selectedHatchId: null } : t));
-    set({ selectedNote: noteId });
+    set({ selectedNote: noteId, selection: noteId ? [noteId] : [], selectedGroup: null, promptOpen: false });
   },
   /** A note picked in the Comments tab: Fit to view lets go, and the canvas brings the note into sight. */
   showNote(noteId: string): void {

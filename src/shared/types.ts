@@ -35,6 +35,29 @@ export interface Note {
   author: string;
   /** When the note was made, as an ISO date. The Comments tab lists notes and comments in this order. */
   createdAt: string;
+  /** The Hatch this note belongs to. It moves with that Hatch and travels with it through every arrangement. */
+  attachedTo?: string;
+}
+
+/** A named set of Hatches and free notes that moves and arranges as one. Attached notes come with their Hatch. */
+export interface Group {
+  id: string;
+  name: string;
+  /** Hatch and note ids. A note attached to a member Hatch belongs through its Hatch and is not listed. */
+  members: string[];
+  /** The user, or an agent, cannot move or arrange a locked group's items. */
+  locked?: boolean;
+}
+
+/**
+ * What a context link names: a fixed set of Hatches and notes, and the prompt the user wrote for it, if any.
+ * The ids never follow a later selection or a change to a group. The pages themselves stay live.
+ */
+export interface CanvasContext {
+  id: string;
+  members: string[];
+  prompt?: string;
+  createdAt: string;
 }
 
 export interface Tab {
@@ -47,6 +70,9 @@ export interface Tab {
   zoom: number;
   /** The canvas's notes. An older workspace lacks them. */
   notes?: Note[];
+  groups?: Group[];
+  /** Context links the user copied from this canvas, the newest last. */
+  contexts?: CanvasContext[];
   /** The pinned copy of this canvas in canvases.json, which follows the canvas while it is open and stays when it closes. */
   savedId?: string;
   /** The working folder this canvas belongs to, an absolute path. An agent working in that folder, or inside it, works here. One canvas per folder. */
@@ -80,6 +106,7 @@ export interface SavedCanvas {
   pan: { x: number; y: number };
   zoom: number;
   notes?: Note[];
+  groups?: Group[];
   /** The working folder the canvas belonged to when it was pinned. */
   folder?: string;
 }

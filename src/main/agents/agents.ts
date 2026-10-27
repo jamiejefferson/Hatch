@@ -133,6 +133,7 @@ export async function canvasForFolder(folder: string, state?: InterfaceState): P
  */
 export async function hatchFor(agent: Agent, link?: string, canvas?: string): Promise<{ tabId: string; hatchId: string | null; state: InterfaceState }> {
   const named = link ? idFromLink(link) : undefined;
+  if (named?.startsWith('ctx_')) throw new HatchError('That link names a context: several Hatches and notes the user chose. Call get_context with it, then act on the Hatch ids it lists.');
   if (named) await followLink(agent, named);
   const { tabId, state } = await tabFor(agent, named ? undefined : canvas);
   const tab = state.tabs.find((t) => t.id === tabId)!;

@@ -15,9 +15,12 @@ import { ContextMenu, Toast } from './shell/ContextMenu';
 import { Guide } from './shell/Guide';
 import { Intro } from './shell/Intro';
 import { Tooltip } from './shell/Tooltip';
+import { LayoutNotice } from './canvas/Selection';
 import { TopStrip } from './shell/TopStrip';
 import { WhatsNew } from './shell/WhatsNew';
 import { actions, activeTab, boot, flushSave, getState, listen, useStore } from './state/store';
+
+const inField = (): boolean => document.activeElement?.closest('input, textarea, select, [contenteditable]') != null;
 
 function run(command: MenuCommand): void {
   const tab = activeTab(getState());
@@ -43,6 +46,11 @@ function run(command: MenuCommand): void {
     case 'deselect': return actions.escape();
     case 'toggle-view': return void (selected && actions.toggleView(selected));
     case 'toggle-fit': return void (selected && actions.toggleFit(selected));
+    // In a text field these keep their usual meaning. Elsewhere in Hatch's interface they act on the canvas.
+    case 'undo': return inField() ? void document.execCommand('undo') : actions.undoLayout();
+    case 'redo': return inField() ? void document.execCommand('redo') : actions.redoLayout();
+    case 'select-all': return inField() ? void document.execCommand('selectAll') : actions.selectAll();
+    case 'group': return void actions.groupSelection();
     case 'show-guide': return actions.startGuide();
     case 'send-feedback': return void actions.openFeedback();
   }
@@ -121,7 +129,10 @@ function Shell({ tabs, activeTabId, sidebarOpen, leftOpen }: { tabs: Tab[]; acti
       <AttachCanvasModal />
       <SignInThroughModal />
       <ContextMenu />
-      <Toast />
+      <div className="notices">
+        <LayoutNotice />
+        <Toast />
+      </div>
       <Tooltip />
       <Guide />
       <WhatsNew />

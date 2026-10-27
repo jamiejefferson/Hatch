@@ -2,7 +2,7 @@
 import { cleanPath, oneCanvasPerFolder } from './project-canvas';
 import { clampZoom } from './geometry';
 import { clampSize, templateForSize } from './templates';
-import type { Hatch, Note, Tab, TemplateId, Workspace } from './types';
+import type { CanvasContext, Group, Hatch, Note, Tab, TemplateId, Workspace } from './types';
 
 export const newId = (prefix: string): string => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 
@@ -45,14 +45,16 @@ function repairTab(raw: unknown): Tab | null {
     else fitSeen = true;
   }
   const name = str(source.name, '').trim().slice(0, 60);
-  const notes = repairNotes(source.notes);
-  return { id: str(source.id, newId('tab')), ...(name ? { name } : {}), hatches, selectedHatchId: selected, pan: { x: num(pan.x, 40), y: num(pan.y, 68) }, zoom: clampZoom(num(source.zoom, 0.62)), ...(notes.length ? { notes } : {}), ...(typeof source.savedId === 'string' ? { savedId: source.savedId } : {}), ...(typeof source.folder === 'string' && source.folder.startsWith('/') ? { folder: cleanPath(source.folder) } : {}) };
+  const notes = repairNotes(source.notes, new Set(hatches.map((h) => h.id)));
+  const groups = repairGroups(source.groups, new Set([...hatches.map((h) => h.id), ...notes.filter((n) => !n.attachedTo).map((n) => n.id)]));
+  const contexts = repairContexts(source.contexts);
+  return { id: str(source.id, newId('tab')), ...(name ? { name } : {}), hatches, selectedHatchId: selected, pan: { x: num(pan.x, 40), y: num(pan.y, 68) }, zoom: clampZoom(num(source.zoom, 0.62)), ...(notes.length ? { notes } : {}), ...(groups.length ? { groups } : {}), ...(contexts.length ? { contexts } : {}), ...(typeof source.savedId === 'string' ? { savedId: source.savedId } : {}), ...(typeof source.folder === 'string' && source.folder.startsWith('/') ? { folder: cleanPath(source.folder) } : {}) };
 }
 
 export const MAX_NOTE_LENGTH = 2000;
 
-/** Keeps the notes that hold words. A note left empty is a note the user gave up on. */
-export function repairNotes(raw: unknown): Note[] {
+/** Keeps the notes that hold words. A note left empty is a note the user gave up on. An attachment to a Hatch that has gone lets go. */
+export function repairNotes(raw: unknown, hatchIds?: Set<string>): Note[] {
   if (!Array.isArray(raw)) return [];
   const out: Note[] = [];
   for (const item of raw) {
@@ -60,9 +62,45 @@ export function repairNotes(raw: unknown): Note[] {
     const source = item as Record<string, unknown>;
     const text = str(source.text, '').slice(0, MAX_NOTE_LENGTH);
     if (!text.trim()) continue;
-    out.push({ id: str(source.id, newId('note')), text, x: num(source.x, 0), y: num(source.y, 0), author: str(source.author, 'user') || 'user', createdAt: str(source.createdAt, '') });
+    const attachedTo = typeof source.attachedTo === 'string' && (!hatchIds || hatchIds.has(source.attachedTo)) ? source.attachedTo : null;
+    out.push({ id: str(source.id, newId('note')), text, x: num(source.x, 0), y: num(source.y, 0), author: str(source.author, 'user') || 'user', createdAt: str(source.createdAt, ''), ...(attachedTo ? { attachedTo } : {}) });
   }
   return out;
+}
+
+export const MAX_GROUP_NAME = 60;
+/** A canvas keeps this many context links. The oldest go first. */
+export const MAX_CONTEXTS = 50;
+
+/** Keeps groups whose members still exist, each member in one group alone. A group needs two members. */
+export function repairGroups(raw: unknown, itemIds: Set<string>): Group[] {
+  if (!Array.isArray(raw)) return [];
+  const taken = new Set<string>();
+  const out: Group[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const source = item as Record<string, unknown>;
+    const members = (Array.isArray(source.members) ? source.members : []).filter((m): m is string => typeof m === 'string' && itemIds.has(m) && !taken.has(m));
+    if (members.length < 2) continue;
+    members.forEach((m) => taken.add(m));
+    const name = str(source.name, '').trim().slice(0, MAX_GROUP_NAME) || 'Group';
+    out.push({ id: str(source.id, newId('group')), name, members, ...(source.locked === true ? { locked: true } : {}) });
+  }
+  return out;
+}
+
+export function repairContexts(raw: unknown): CanvasContext[] {
+  if (!Array.isArray(raw)) return [];
+  const out: CanvasContext[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const source = item as Record<string, unknown>;
+    const members = (Array.isArray(source.members) ? source.members : []).filter((m): m is string => typeof m === 'string');
+    if (typeof source.id !== 'string' || members.length === 0) continue;
+    const prompt = str(source.prompt, '').slice(0, MAX_NOTE_LENGTH);
+    out.push({ id: source.id, members, createdAt: str(source.createdAt, ''), ...(prompt.trim() ? { prompt } : {}) });
+  }
+  return out.slice(-MAX_CONTEXTS);
 }
 
 export function repairHatch(raw: unknown): Hatch | null {

@@ -21,6 +21,8 @@ interface Props {
   selected: boolean;
   /** Fit to view docks the header as a toolbar. */
   docked: boolean;
+  /** The Hatch is one of several selected items. */
+  inSelection?: boolean;
 }
 
 const BAR_MIN = 200;
@@ -59,7 +61,7 @@ export function SoundButton({ hatch }: { hatch: Hatch }) {
 }
 
 /** Everything Hatch draws around a page. It sits above the canvas and never scales, so it stays crisp at every zoom. */
-export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked }: Props) {
+export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked, inSelection }: Props) {
   const [hover, setHover] = useState(false);
   const [editing, setEditing] = useState(false);
   const load = useStore((s) => loadStateOf(s, hatch.id));
@@ -83,6 +85,11 @@ export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked }: P
 
   const move = (e: React.PointerEvent): void => {
     if (docked || (e.target as HTMLElement).closest('button')) return;
+    // Shift-click adds this Hatch to the selection, or takes it out.
+    if (e.shiftKey && e.button === 0) {
+      e.preventDefault();
+      return actions.toggleSelected(id);
+    }
     // Cmd-drag, or Option-drag as in Figma, leaves this Hatch in place and drags a copy of it.
     if (e.metaKey || e.altKey) {
       let copy: string | null = null;
@@ -99,10 +106,13 @@ export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked }: P
     }
     // A click on the title, with no drag, turns it into the page's link.
     const onTitle = (e.target as HTMLElement).closest('.hatch-title') !== null;
+    // The selection moves together when this Hatch is part of it, and a group moves as one. A locked group stays put.
+    const drag = actions.beginMove(id);
     startDrag(e, {
-      cursor: 'grabbing',
-      onMove: (dx, dy) => actions.moveHatch(id, hatch.x + dx / zoom, hatch.y + dy / zoom),
+      cursor: drag ? 'grabbing' : 'not-allowed',
+      onMove: (dx, dy) => drag?.to(dx / zoom, dy / zoom),
       onEnd: (moved) => {
+        drag?.end(moved);
         if (moved) return;
         actions.select(id);
         if (onTitle) setEditing(true);
@@ -147,7 +157,7 @@ export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked }: P
     <>
       {header}
       {(!docked || working) && (
-        <div className={`hatch-border${selected && !docked ? ' selected' : ''}${working ? ' working' : ''}`} style={box} data-testid={working ? `in-use-${id}` : undefined}>
+        <div className={`hatch-border${selected && !docked ? ' selected' : ''}${inSelection && !docked ? ' in-selection' : ''}${working ? ' working' : ''}`} style={box} data-testid={working ? `in-use-${id}` : inSelection ? `in-selection-${id}` : undefined}>
           {working && (
             <span className="sparkle" aria-hidden="true" data-testid={`sparkle-${id}`}>
               <svg viewBox="0 0 16 16" width="16" height="16">

@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import type { Point } from '@shared/geometry';
-import type { Note, Tab } from '@shared/types';
+import type { Hatch, Note, Tab } from '@shared/types';
 import { BinIcon } from '../icons';
-import { actions, NOTE_SIZE, useStore } from '../state/store';
+import { actions, hatchLabel, NOTE_SIZE, useStore } from '../state/store';
 import { startDrag } from './drag';
 
 export const noteAuthor = (note: Note): string => (note.author === 'user' ? 'You' : note.author);
@@ -14,6 +14,7 @@ export const noteAuthor = (note: Note): string => (note.author === 'user' ? 'You
 export function Notes({ tab, pan, zoom, origin }: { tab: Tab; pan: Point; zoom: number; origin: () => DOMRect | null }) {
   const placing = useStore((s) => s.placingNote);
   const selected = useStore((s) => s.selectedNote);
+  const selection = useStore((s) => s.selection);
   const editing = useStore((s) => s.editingNote);
 
   const place = (e: React.PointerEvent): void => {
@@ -27,14 +28,14 @@ export function Notes({ tab, pan, zoom, origin }: { tab: Tab; pan: Point; zoom: 
   return (
     <>
       {(tab.notes ?? []).map((n) => (
-        <NoteCard key={n.id} note={n} left={n.x * zoom + pan.x} top={n.y * zoom + pan.y} zoom={zoom} selected={n.id === selected} editing={n.id === editing} />
+        <NoteCard key={n.id} note={n} left={n.x * zoom + pan.x} top={n.y * zoom + pan.y} zoom={zoom} selected={n.id === selected} inSelection={selection.length > 1 && selection.includes(n.attachedTo ?? n.id)} editing={n.id === editing} attachedTo={n.attachedTo ? (tab.hatches.find((h) => h.id === n.attachedTo) ?? null) : null} />
       ))}
       {placing && <div className="note-placer" onPointerDown={place} aria-label="Click where the note goes" data-testid="note-placer" />}
     </>
   );
 }
 
-function NoteCard({ note, left, top, zoom, selected, editing }: { note: Note; left: number; top: number; zoom: number; selected: boolean; editing: boolean }) {
+function NoteCard({ note, left, top, zoom, selected, inSelection, editing, attachedTo }: { note: Note; left: number; top: number; zoom: number; selected: boolean; inSelection: boolean; editing: boolean; attachedTo: Hatch | null }) {
   const field = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -47,21 +48,33 @@ function NoteCard({ note, left, top, zoom, selected, editing }: { note: Note; le
   const drag = (e: React.PointerEvent): void => {
     if (e.button !== 0 || editing || (e.target as HTMLElement).closest('button')) return;
     e.stopPropagation();
-    const start = { x: note.x, y: note.y };
+    // Shift-click adds the note to the selection, or takes it out.
+    if (e.shiftKey) {
+      e.preventDefault();
+      return actions.toggleSelected(note.id);
+    }
+    // Dropped on a page, a note attaches to that Hatch; dropped far from its Hatch, an attached note stands alone again.
+    const drag = actions.beginMove(note.id);
     startDrag(e, {
-      cursor: 'grabbing',
-      onMove: (dx, dy) => actions.moveNote(note.id, start.x + dx / zoom, start.y + dy / zoom),
+      cursor: drag ? 'grabbing' : 'not-allowed',
+      onMove: (dx, dy) => drag?.to(dx / zoom, dy / zoom),
       onEnd: (moved) => {
+        drag?.end(moved);
         if (!moved) actions.selectNote(note.id);
       },
     });
   };
 
   return (
-    <div className={`note${selected ? ' selected' : ''}${editing ? ' editing' : ''}`} style={{ left, top, width: NOTE_SIZE.width }} onPointerDown={drag} onDoubleClick={() => actions.startEditingNote(note.id)} data-testid={`note-${note.id}`}>
+    <div className={`note${selected ? ' selected' : ''}${inSelection ? ' in-selection' : ''}${editing ? ' editing' : ''}`} style={{ left, top, width: NOTE_SIZE.width }} onPointerDown={drag} onDoubleClick={() => actions.startEditingNote(note.id)} data-testid={`note-${note.id}`}>
       {selected && (
         <div className="note-bar">
           <span>{editing ? 'Esc to finish' : 'Double-click to edit'}</span>
+          {attachedTo && !editing && (
+            <button className="text-button underline" onPointerDown={(e) => e.stopPropagation()} onClick={() => actions.attachNote(note.id, null)} title="Detach" data-detail="Lets the note stand on its own, so it stays put when its Hatch moves." data-testid="note-detach">
+              Detach
+            </button>
+          )}
           <button className="round small quiet" aria-label="Delete this note" title="Delete this note" onPointerDown={(e) => e.stopPropagation()} onClick={() => actions.deleteNote(note.id)} data-testid="note-delete">
             <BinIcon size={14} />
           </button>
@@ -88,7 +101,10 @@ function NoteCard({ note, left, top, zoom, selected, editing }: { note: Note; le
         ) : (
           <p className="note-text">{note.text}</p>
         )}
-        <span className="note-author">{note.author === 'user' ? 'You' : `Agent · ${note.author}`}</span>
+        <span className="note-author" data-testid="note-author">
+          {note.author === 'user' ? 'You' : `Agent · ${note.author}`}
+          {attachedTo ? ` · attached to ${hatchLabel(attachedTo)}` : ''}
+        </span>
       </div>
     </div>
   );
