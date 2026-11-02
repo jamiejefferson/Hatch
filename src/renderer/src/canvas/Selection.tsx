@@ -32,7 +32,7 @@ function unitsOfSelection(tab: Tab, selection: string[]): string[] {
   return [...out].filter((id) => tab.hatches.some((h) => h.id === id) || tab.notes?.some((n) => n.id === id));
 }
 
-/** Each group's solid outline, with its name and item count above. A click on the name selects the group; a double-click renames it. */
+/** Each group's solid outline, with its name and item count above. A click on the name selects the group, a double-click renames it, and a right-click offers its link. */
 export function GroupOutlines({ tab, pan, zoom }: { tab: Tab; pan: Point; zoom: number }) {
   const renaming = useStore((s) => s.renamingGroup);
   const selectedGroup = useStore((s) => s.selectedGroup);
@@ -44,7 +44,7 @@ export function GroupOutlines({ tab, pan, zoom }: { tab: Tab; pan: Point; zoom: 
         const r = screenBox(box, pan, zoom);
         return (
           <div key={g.id} className={`group-outline${selectedGroup === g.id ? ' selected' : ''}${g.locked ? ' locked' : ''}`} style={{ left: r.x, top: r.y, width: r.width, height: r.height }} data-testid={`group-${g.id}`}>
-            <div className="group-label">
+            <div className="group-label" onContextMenu={(e) => actions.openContextMenu(e, tab.id, null, g.id)}>
               {renaming === g.id ? (
                 <GroupName group={g} />
               ) : (

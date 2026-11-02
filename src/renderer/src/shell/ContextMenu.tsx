@@ -1,14 +1,22 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { groupOf } from '@shared/arrange';
 import { folderName } from '@shared/project-canvas';
 import { CloseIcon, CopyIcon, DuplicateIcon, FolderIcon, MutedIcon, SoundIcon, FitIcon, ReleaseIcon, SaveLinkIcon, SignInsIcon } from '../icons';
 import { actions, hatchLabel, useStore } from '../state/store';
 
-/** The right-click menu for a Hatch, a canvas or a tab. Its first job is the link a user pastes to an agent. */
+/** The right-click menu for a Hatch, a group, a canvas or a tab. Its first job is the link a user pastes to an agent. */
 export function ContextMenu() {
   const menu = useStore((s) => s.contextMenu);
   const hatch = useStore((s) => (menu?.hatchId ? (s.workspace.tabs.flatMap((t) => t.hatches).find((h) => h.id === menu.hatchId) ?? null) : null));
   const saved = useStore((s) => (hatch ? s.links.some((l) => l.url === hatch.url) : false));
   const folder = useStore((s) => (menu ? (s.workspace.tabs.find((t) => t.id === menu.tabId)?.folder ?? '') : ''));
+  // A right-click on a group's name speaks for that group; a right-click on a grouped Hatch offers its group too.
+  const group = useStore((s) => {
+    const tab = menu ? s.workspace.tabs.find((t) => t.id === menu.tabId) : undefined;
+    if (!tab || !menu) return null;
+    if (menu.groupId) return tab.groups?.find((g) => g.id === menu.groupId) ?? null;
+    return menu.hatchId ? groupOf(tab, menu.hatchId) : null;
+  });
   const ref = useRef<HTMLDivElement>(null);
   const [spot, setSpot] = useState({ left: 0, top: 0 });
 
@@ -50,6 +58,11 @@ export function ContextMenu() {
         {hatch && (
           <button role="menuitem" onClick={run(() => void actions.copyLink(hatch.id, 'Hatch'))} data-testid="copy-hatch-link">
             <CopyIcon /> Copy link to this Hatch
+          </button>
+        )}
+        {group && (
+          <button role="menuitem" onClick={run(() => void actions.copyLink(group.id, 'group'))} data-testid="copy-group-link">
+            <CopyIcon /> {menu.groupId ? 'Copy link to this group' : `Copy link to the group “${group.name}”`}
           </button>
         )}
         <button role="menuitem" onClick={run(() => void actions.copyLink(menu.tabId, 'canvas'))} data-testid="copy-canvas-link">

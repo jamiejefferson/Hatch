@@ -129,3 +129,17 @@ test('the right-click menu offers to sign in through another browser', async () 
     await site.close();
   }
 });
+
+test('the right-click menu offers it while the page is still on its first load', async () => {
+  const site = await serveSite();
+  const { app, win } = await launch(freshHome());
+  try {
+    await openHatch(win, `${site.url}/slow`);
+    await win.locator('[data-testid^="header-"]').first().click({ button: 'right' });
+    await win.getByTestId('menu-signin-through').click();
+    await expect(win.getByTestId('signin-through')).toContainText('Sign in to 127.0.0.1 through another browser');
+  } finally {
+    await app.close();
+    await site.close();
+  }
+});

@@ -7,7 +7,8 @@ import { hatchLink } from '@shared/hatch-link';
 import { hatchAddress, projectOf, projectUrl, PROXY_PORT } from '@shared/project-address';
 import type { Anchor, CommentStatus, PageComments } from '@shared/comments';
 import type { ConsentAnswer, ConsentRequest, SignIn } from '@shared/signins';
-import type { SignInThrough } from '@shared/signin-through';
+import { signInStart, type SignInThrough } from '@shared/signin-through';
+import { siteOf } from '@shared/cookie-import';
 import type { ConnectionInfo, Outcome } from '../../../preload/api';
 import type { CanvasContext, Group, ActionButton, ProjectsState, ActivityEntry, AgentAct, AgentWorkState, DialogState, Hatch, HatchView, InterfaceState, Note, SavedCanvas, SavedLink, Settings, Tab, TemplateId, ViewRequest, Workspace } from '@shared/types';
 import { savedCanvasFromTab, tabFromSavedCanvas } from '@shared/canvases';
@@ -103,8 +104,8 @@ export interface State {
   newHatchAt: Point | null;
   /** The New Hatch box was opened from Fit to view, so the page it opens fills the view too. */
   newHatchFit: boolean;
-  /** The right-click menu: where it opened, and the tab and Hatch it speaks for. */
-  contextMenu: { x: number; y: number; tabId: string; hatchId: string | null } | null;
+  /** The right-click menu: where it opened, and the tab, Hatch and group it speaks for. */
+  contextMenu: { x: number; y: number; tabId: string; hatchId: string | null; groupId?: string } | null;
   /** The canvas whose working folder Hatch asks for: a canvas the user just made, or one the user chose to attach. */
   attachPrompt: string | null;
   /** A sign-in the user may finish in another browser: offered when a page asks for a passkey, or asked for from the menu. */
@@ -404,6 +405,15 @@ function noticeLayout(text: string): void {
   noticeTimer = setTimeout(() => set({ layoutNotice: null }), 6000);
 }
 
+/** The items `start` names, each at its start place plus the drag's distance. */
+function shifted(tab: Tab, start: Map<string, Point>, dx: number, dy: number): Tab {
+  const at = <T extends { id: string; x: number; y: number }>(item: T): T => {
+    const from = start.get(item.id);
+    return from ? { ...item, x: Math.round(from.x + dx), y: Math.round(from.y + dy) } : item;
+  };
+  return { ...tab, hatches: tab.hatches.map(at), ...(tab.notes ? { notes: tab.notes.map(at) } : {}) };
+}
+
 const itemsWord = (n: number): string => `${n} ${n === 1 ? 'item' : 'items'}`;
 
 /** The items a selection stands for, as Hatch ids and free-note ids. An attached note stands for its Hatch. */
@@ -477,20 +487,23 @@ function serve(method: string, params: unknown): unknown {
       return id;
     }
     case 'context': {
+      // A context link holds the items the user chose, fixed; a group link reads the group as it stands now.
       const { id } = p as { id: string };
       for (const t of state.workspace.tabs) {
         const context = t.contexts?.find((c) => c.id === id);
-        if (!context) continue;
-        const items = context.members.map((m) => {
+        const group = context ? null : t.groups?.find((g) => g.id === id);
+        if (!context && !group) continue;
+        const members = context ? context.members : withAttached(t, group!.members);
+        const items = members.map((m) => {
           const h = t.hatches.find((x) => x.id === m);
           if (h) return { kind: 'hatch', id: m, open: true, title: h.title, url: h.url, group: groupOf(t, m)?.name ?? null };
           const n = t.notes?.find((x) => x.id === m);
           if (n) return { kind: 'note', id: m, open: true, text: n.text, author: n.author, attachedTo: n.attachedTo ?? null, group: groupOf(t, m)?.name ?? null };
           return { kind: 'gone', id: m, open: false };
         });
-        return { tabId: t.id, canvas: tabLabel(state, t), prompt: context.prompt ?? null, createdAt: context.createdAt, items };
+        return { tabId: t.id, canvas: tabLabel(state, t), prompt: context?.prompt ?? null, createdAt: context?.createdAt ?? null, group: group ? { id: group.id, name: group.name, locked: group.locked === true } : null, items };
       }
-      throw new Error('No open canvas holds that context. Its canvas may have closed, so ask the user to copy the link again.');
+      throw new Error(id.startsWith('group_') ? 'No open canvas holds that group. The user may have ungrouped it or closed its canvas, so ask them to copy the link again.' : 'No open canvas holds that context. Its canvas may have closed, so ask the user to copy the link again.');
     }
     case 'groups': {
       const tab = state.workspace.tabs.find((t) => t.id === (p as { tabId: string }).tabId);
@@ -678,7 +691,11 @@ export const actions = {
   },
   /** Offers to sign in to a Hatch's site through another browser. */
   async askSignInThrough(hatchId: string): Promise<void> {
-    const through = await window.hatch.signInThrough(hatchId);
+    const answer = await window.hatch.signInThrough(hatchId);
+    // A page still on its first load has no history yet, so the Hatch's own address stands in.
+    const address = state.workspace.tabs.flatMap((t) => t.hatches).find((h) => h.id === hatchId)?.url ?? '';
+    const start = answer ? null : signInStart([address], 0);
+    const through = answer ?? (start ? { hatchId, url: start, site: siteOf(new URL(start).hostname), reason: 'user' as const } : null);
     if (through) set({ signInThrough: through });
     else actions.toast('Open a web page in this Hatch first, then sign in through another browser.');
   },
@@ -816,15 +833,49 @@ export const actions = {
           recordLayout(t.id);
           recorded = true;
         }
-        editTab(t.id, (tab) => ({
-          ...tab,
-          hatches: tab.hatches.map((h) => (start.has(h.id) ? { ...h, x: Math.round(start.get(h.id)!.x + dx), y: Math.round(start.get(h.id)!.y + dy) } : h)),
-          ...(tab.notes ? { notes: tab.notes.map((n) => (start.has(n.id) ? { ...n, x: Math.round(start.get(n.id)!.x + dx), y: Math.round(start.get(n.id)!.y + dy) } : n)) } : {}),
-        }));
+        editTab(t.id, (tab) => shifted(tab, start, dx, dy));
       },
       end: (moved) => {
         // A lone note dropped on a page attaches to that Hatch; an attached note dropped far from its Hatch lets go.
         if (moved && note && ids.length === 1) actions.dropNote(id);
+      },
+    };
+  },
+  /**
+   * Starts an Option-drag or Cmd-drag of a Hatch or a note, as in Figma: the originals stay put and copies follow the pointer.
+   * The copies are the selection when the item is part of it, else the item, and a Hatch brings copies of its attached notes.
+   * Nothing is copied until the pointer moves. The copies join no group, and the copies end up selected.
+   */
+  beginCopy(id: string): { to(dx: number, dy: number): void; end(moved: boolean): void } {
+    const t = activeTab(state);
+    const note = t.notes?.find((n) => n.id === id);
+    const many = !note?.attachedTo && state.selection.includes(id) && state.selection.length > 1;
+    const ids = note?.attachedTo ? [id] : withAttached(t, many ? unitIds(t, state.selection) : [id]);
+    let start: Map<string, Point> | null = null;
+    return {
+      to: (dx, dy) => {
+        if (!start) {
+          // A copy belongs to no action button, so the button keeps returning to the Hatch it opened. A copied note is a new note.
+          const now = new Date().toISOString();
+          const copies = freshIds({ hatches: t.hatches.filter((h) => ids.includes(h.id)).map(({ action: _action, ...h }) => leaveFit(h)), notes: (t.notes ?? []).filter((n) => ids.includes(n.id)).map((n) => ({ ...n, createdAt: now })) }, newId);
+          const made = [...copies.hatches, ...(copies.notes ?? [])];
+          start = new Map(made.map((x) => [x.id, { x: x.x, y: x.y }]));
+          editTab(t.id, (tab) => ({ ...tab, hatches: [...tab.hatches, ...copies.hatches], notes: [...(tab.notes ?? []), ...(copies.notes ?? [])] }));
+        }
+        const from = start;
+        editTab(t.id, (tab) => shifted(tab, from, dx, dy));
+      },
+      end: (moved) => {
+        if (!moved || !start) return;
+        const tab = state.workspace.tabs.find((x) => x.id === t.id);
+        if (!tab) return;
+        const units = unitIds(tab, [...start.keys()]);
+        const only = units.length === 1 ? units[0]! : null;
+        if (only && tab.hatches.some((h) => h.id === only)) return actions.select(only);
+        if (!only) return actions.selectItems(units);
+        actions.selectNote(only);
+        // A lone copied note dropped on a page attaches to that Hatch.
+        actions.dropNote(only);
       },
     };
   },
@@ -1316,16 +1367,16 @@ export const actions = {
     if (hatch && applyComments(hatchId, await window.hatch.removeComment(hatch.url, threadId))) set({ openThread: null });
   },
 
-  openContextMenu(e: { clientX: number; clientY: number; preventDefault(): void; stopPropagation(): void }, tabId: string, hatchId: string | null): void {
+  openContextMenu(e: { clientX: number; clientY: number; preventDefault(): void; stopPropagation(): void }, tabId: string, hatchId: string | null, groupId?: string): void {
     e.preventDefault();
     e.stopPropagation();
-    set({ contextMenu: { x: e.clientX, y: e.clientY, tabId, hatchId } });
+    set({ contextMenu: { x: e.clientX, y: e.clientY, tabId, hatchId, ...(groupId ? { groupId } : {}) } });
   },
   closeContextMenu(): void {
     if (state.contextMenu) set({ contextMenu: null });
   },
-  /** Copies the link an agent follows to one Hatch or to a whole canvas. */
-  async copyLink(id: string, what: 'Hatch' | 'canvas'): Promise<void> {
+  /** Copies the link an agent follows to one Hatch, a group or a whole canvas. */
+  async copyLink(id: string, what: 'Hatch' | 'group' | 'canvas'): Promise<void> {
     await window.hatch.copyText(hatchLink(id));
     actions.toast(`Link to this ${what} copied. Paste it to your agent.`);
   },

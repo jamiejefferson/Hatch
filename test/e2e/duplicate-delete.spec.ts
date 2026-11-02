@@ -1,4 +1,4 @@
-// Duplicating a Hatch from its row, the menu and a Cmd-drag, and closing the selected Hatch with the Delete key.
+// Duplicating a Hatch from its row, the menu, a Cmd-drag on its title and an Option-drag on its page, and closing the selected Hatch with the Delete key.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
@@ -8,7 +8,7 @@ import { freshHome, launch, openHatch, serveSite } from './helpers';
 const hatches = (home: string) => (JSON.parse(readFileSync(join(home, 'workspace.json'), 'utf8')) as Workspace).tabs[0]!.hatches;
 const rows = (win: Page) => win.getByTestId('hatch-list').locator('li');
 
-test('a Hatch duplicates from its row, the menu and a Cmd-drag, and Delete closes the selected one', async () => {
+test('a Hatch duplicates from its row, the menu, a Cmd-drag and an Option-drag, and Delete closes the selected one', async () => {
   const site = await serveSite();
   const home = freshHome();
   const { app, win } = await launch(home);
@@ -53,16 +53,31 @@ test('a Hatch duplicates from its row, the menu and a Cmd-drag, and Delete close
     expect(after[3]!.x).toBe(before.x);
     expect(after[3]!.y).toBeGreaterThan(before.y);
 
+    // An Option-drag on a page the user has not selected copies it too, and the page stays where it was.
+    const other = after[1]!;
+    const page = (await win.getByTestId(`shield-${other.id}`).boundingBox())!;
+    await win.keyboard.down('Alt');
+    await win.mouse.move(page.x + page.width / 2, page.y + page.height / 2);
+    await win.mouse.down();
+    await win.mouse.move(page.x + page.width / 2 + 80, page.y + page.height / 2 + 80, { steps: 6 });
+    await win.mouse.up();
+    await win.keyboard.up('Alt');
+    await expect(rows(win)).toHaveCount(5);
+    await win.waitForTimeout(700);
+    expect(hatches(home)[1]).toMatchObject({ x: other.x, y: other.y });
+    expect(hatches(home)[4]!.url).toBe(other.url);
+    expect(hatches(home)[4]!.x).toBeGreaterThan(other.x);
+
     // Delete closes the selected Hatch while the focus sits in Hatch's own interface.
     await win.getByTestId('toolbar').click({ position: { x: 4, y: 300 } });
     await win.keyboard.press('Backspace');
-    await expect(rows(win)).toHaveCount(3);
+    await expect(rows(win)).toHaveCount(4);
 
     // Typing in a field never closes a Hatch.
     await win.getByTestId(`header-${id}`).click();
     await win.getByTestId('link-field').focus();
     await win.keyboard.press('Backspace');
-    await expect(rows(win)).toHaveCount(3);
+    await expect(rows(win)).toHaveCount(4);
   } finally {
     await app.close();
     await site.close();

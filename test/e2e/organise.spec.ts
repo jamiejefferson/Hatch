@@ -286,6 +286,83 @@ test('an agent attaches a note, groups its results and arranges only them', asyn
   await capture(app, 'test-results/screens/33-agent-results.png');
 });
 
+test('a group link reads the group as it stands, with the open comments on its pages', async () => {
+  const [, b, c] = tab().hatches;
+  const group = tab().groups!.find((g) => g.name === 'Results')!;
+  // An open comment on a page in the group travels with the link.
+  const outline = (await call('snapshot', { hatch: c!.id })).text.split('\n');
+  const ref = (outline.find((l) => l.includes('heading')) ?? outline.find((l) => /\[e\d+\]/.test(l))!).match(/\[(e\d+)\]/)![1]!;
+  expect((await call('add_comment', { ref, text: 'Check the price on this one.', hatch: c!.id })).isError).toBe(false);
+
+  // A right-click on the group's name copies a link to the group.
+  await win.getByTestId(`group-${group.id}`).getByTestId('group-name').click({ button: 'right' });
+  await expect(win.getByTestId('copy-group-link')).toHaveText('Copy link to this group');
+  await capture(app, 'test-results/screens/35-group-menu.png');
+  await win.getByTestId('copy-group-link').click();
+  const link = await clipboard();
+  expect(link).toBe(`hatch:@${group.id}`);
+  const read = await call('get_context', { link });
+  expect(read.isError).toBe(false);
+  expect(read.text).toContain(`The group "Results" (group ${group.id})`);
+  expect(read.text).toContain(`Hatch ${b!.id}`);
+  expect(read.text).toContain(`Hatch ${c!.id}`);
+  expect(read.text).toContain(`attached to Hatch ${c!.id}`);
+  expect(read.text).toMatch(/Open comment \S+ \(#1\) on .*"Check the price on this one\."/);
+
+  // A grouped Hatch's own menu offers its group by name.
+  await header(b!.id).click({ button: 'right' });
+  await expect(win.getByTestId('copy-group-link')).toHaveText('Copy link to the group “Results”');
+  await win.keyboard.press('Escape');
+
+  // A group link passed where a Hatch belongs points the agent at get_context.
+  const wrong = await call('snapshot', { hatch: link });
+  expect(wrong.text).toContain('Call get_context');
+});
+
+test('an Option-drag copies a note, or the whole selection, and leaves the originals in place', async () => {
+  await win.keyboard.press('Escape');
+  await win.getByTestId('show-all').click();
+  await settle();
+  const before = tab();
+  const note = before.notes!.find((n) => n.author !== 'user')!;
+  const card = (await win.getByTestId(`note-${note.id}`).boundingBox())!;
+  await win.keyboard.down('Alt');
+  await win.mouse.move(card.x + card.width / 2, card.y + card.height / 2);
+  await win.mouse.down();
+  await win.mouse.move(card.x + card.width / 2 + 60, card.y + card.height / 2 + 160, { steps: 6 });
+  await win.mouse.up();
+  await win.keyboard.up('Alt');
+  await settle();
+  const after = tab();
+  expect(after.notes!.length).toBe(before.notes!.length + 1);
+  const copy = after.notes!.at(-1)!;
+  expect([copy.text, copy.author]).toEqual([note.text, note.author]);
+  expect(after.notes!.find((n) => n.id === note.id)).toMatchObject({ x: note.x, y: note.y, attachedTo: note.attachedTo });
+
+  // With two Hatches selected, an Option-drag on one title copies both, with their attached notes.
+  const [a, b] = after.hatches;
+  await header(a!.id).click();
+  await header(b!.id).click({ modifiers: ['Shift'] });
+  const title = (await header(b!.id).boundingBox())!;
+  await win.keyboard.down('Alt');
+  await win.mouse.move(title.x + 30, title.y + title.height / 2);
+  await win.mouse.down();
+  await win.mouse.move(title.x + 30, title.y + title.height / 2 + 200, { steps: 6 });
+  await win.mouse.up();
+  await win.keyboard.up('Alt');
+  await settle();
+  const copied = tab();
+  expect(copied.hatches.length).toBe(after.hatches.length + 2);
+  expect(copied.hatches.slice(0, after.hatches.length).map((h) => [h.x, h.y])).toEqual(after.hatches.map((h) => [h.x, h.y]));
+  expect(copied.hatches.slice(-2).map((h) => h.url)).toEqual([a!.url, b!.url]);
+  const attached = after.notes!.filter((n) => n.attachedTo === a!.id || n.attachedTo === b!.id).length;
+  expect(copied.notes!.length).toBe(after.notes!.length + attached);
+  // The copies join no group.
+  const members = copied.groups!.flatMap((g) => g.members);
+  expect(copied.hatches.slice(-2).some((h) => members.includes(h.id))).toBe(false);
+  await expect(win.getByTestId('selection-bar')).toBeVisible();
+});
+
 test('a press on the canvas takes the keyboard back from a page, so Select All selects the canvas', async () => {
   await win.keyboard.press('Escape');
   // A page holds the keyboard, as it does after the user clicks into it or an agent opens it.

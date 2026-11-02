@@ -53,6 +53,18 @@ function NoteCard({ note, left, top, zoom, selected, inSelection, editing, attac
       e.preventDefault();
       return actions.toggleSelected(note.id);
     }
+    // Cmd-drag, or Option-drag as in Figma, leaves the note in place and drags a copy, which attaches to the page it lands on.
+    if (e.metaKey || e.altKey) {
+      const copy = actions.beginCopy(note.id);
+      return startDrag(e, {
+        cursor: 'copy',
+        onMove: (dx, dy) => copy.to(dx / zoom, dy / zoom),
+        onEnd: (moved) => {
+          copy.end(moved);
+          if (!moved) actions.selectNote(note.id);
+        },
+      });
+    }
     // Dropped on a page, a note attaches to that Hatch; dropped far from its Hatch, an attached note stands alone again.
     const drag = actions.beginMove(note.id);
     startDrag(e, {

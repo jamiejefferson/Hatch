@@ -1,18 +1,21 @@
 import { z } from 'zod';
 import { ARRANGE_MODES } from '@shared/arrange';
+import { authorLabel, type CommentThread } from '@shared/comments';
 import { idFromLink } from '@shared/hatch-link';
 import { inTabQueue, tabFor } from '../../agents/agents';
+import { read } from '../../comments/store';
 import { callInterface } from '../../renderer-rpc';
 import { canvas, intent, tool } from './types';
 
-// Context links, groups and arrangement on a canvas. A context link names a fixed set of Hatches and notes the user chose;
-// the pages stay live. Agents group and arrange only the items they name, never a locked group, and never change a user's note.
+// Context links, groups and arrangement on a canvas. A context link names a fixed set of Hatches and notes the user chose, and a group link
+// names a group as it stands; the pages stay live. Agents group and arrange only the items they name, never a locked group, and never change a user's note.
 
 interface ContextAnswer {
   tabId: string;
   canvas: string;
   prompt: string | null;
-  createdAt: string;
+  createdAt: string | null;
+  group: { id: string; name: string; locked: boolean } | null;
   items: ({ kind: 'hatch'; id: string; title: string; url: string; group: string | null } | { kind: 'note'; id: string; text: string; author: string; attachedTo: string | null; group: string | null } | { kind: 'gone'; id: string })[];
 }
 
@@ -25,28 +28,51 @@ interface GroupAnswer {
 }
 
 const who = (author: string): string => (author === 'user' ? 'the user' : author);
+
+/** A comment's opening message, which holds the request, cut to one line. */
+const opening = (t: CommentThread): string => {
+  const m = t.messages[0];
+  if (!m) return 'no messages';
+  const text = m.text.replace(/\s+/g, ' ');
+  return `${authorLabel(m.author)}: ${JSON.stringify(text.length > 200 ? `${text.slice(0, 200)}…` : text)}`;
+};
+
+/** The open comments pinned to a Hatch's page. A page that takes no comments, or a file Hatch cannot read, gives none. */
+async function openComments(url: string): Promise<CommentThread[]> {
+  try {
+    const page = await read(url);
+    return page.threads.filter((t) => t.status === 'open');
+  } catch {
+    return [];
+  }
+}
 const ids = z.array(z.string()).min(1).max(100);
 
 export const organiseTools = [
   tool({
     name: 'get_context',
     description:
-      'Reads a context link the user copied in Hatch, which reads hatch:@ctx_ and an id. It names the Hatches and notes the user chose, fixed when they copied it, with any prompt they wrote. Pages stay live, so read a Hatch with snapshot or navigate as usual. Call this first whenever the user hands you such a link.',
-    shape: { link: z.string().min(1).describe('The context link, such as hatch:@ctx_k3x9a2bq, or its bare id.'), intent },
+      'Reads a link the user copied in Hatch to several Hatches and notes. A context link reads hatch:@ctx_ and an id: it names the Hatches and notes the user chose, fixed when they copied it, with any prompt they wrote. A group link reads hatch:@group_ and an id: it names a group\'s Hatches and notes as they stand now. Each Hatch comes with the open comments pinned to its page. Pages stay live, so read a Hatch with snapshot or navigate as usual. Call this first whenever the user hands you such a link.',
+    shape: { link: z.string().min(1).describe('The context or group link, such as hatch:@ctx_k3x9a2bq or hatch:@group_p4m2x8rt, or its bare id.'), intent },
     readOnly: true,
     async run(a, ctx) {
       const id = idFromLink(a.link);
-      if (!id.startsWith('ctx_')) throw new Error('That is no context link. A context link reads hatch:@ctx_ and an id; a hatch:@ link to a Hatch or canvas goes to the tool that acts on it.');
+      if (!id.startsWith('ctx_') && !id.startsWith('group_')) throw new Error('That is no context or group link. Those read hatch:@ctx_ or hatch:@group_ and an id; a hatch:@ link to a Hatch or canvas goes to the tool that acts on it.');
       const c = await callInterface<ContextAnswer>('context', { id });
       ctx.at(c.tabId, null);
-      const lines = [`Context from the canvas ${JSON.stringify(c.canvas)} (id ${c.tabId}), copied ${c.createdAt}.`];
+      const where = `the canvas ${JSON.stringify(c.canvas)} (id ${c.tabId})`;
+      const lines = [c.group ? `The group ${JSON.stringify(c.group.name)} (group ${c.group.id}${c.group.locked ? ', locked by the user' : ''}) on ${where}, as it stands now.` : `Context from ${where}, copied ${c.createdAt}.`];
       if (c.prompt) lines.push('', 'The user asks:', c.prompt);
-      lines.push('', 'Sources the user chose:');
-      for (const item of c.items) {
-        if (item.kind === 'hatch') lines.push(`  Hatch ${item.id}: ${JSON.stringify(item.title || item.url)} at ${item.url}${item.group ? `, in the group ${JSON.stringify(item.group)}` : ''}`);
-        else if (item.kind === 'note') lines.push(`  Note ${item.id} from ${who(item.author)}${item.attachedTo ? `, attached to Hatch ${item.attachedTo}` : ''}: ${JSON.stringify(item.text)}`);
+      lines.push('', c.group ? 'Its Hatches and notes:' : 'Sources the user chose:');
+      const comments = await Promise.all(c.items.map((item) => (item.kind === 'hatch' ? openComments(item.url) : Promise.resolve([]))));
+      c.items.forEach((item, i) => {
+        if (item.kind === 'hatch') {
+          lines.push(`  Hatch ${item.id}: ${JSON.stringify(item.title || item.url)} at ${item.url}${item.group && !c.group ? `, in the group ${JSON.stringify(item.group)}` : ''}`);
+          for (const t of comments[i]!) lines.push(`    Open comment ${t.id} (#${t.number}) on ${JSON.stringify(t.label)}, ${opening(t)}`);
+        } else if (item.kind === 'note') lines.push(`  Note ${item.id} from ${who(item.author)}${item.attachedTo ? `, attached to Hatch ${item.attachedTo}` : ''}: ${JSON.stringify(item.text)}`);
         else lines.push(`  ${item.id}: closed since the user copied the link.`);
-      }
+      });
+      if (comments.some((list) => list.length)) lines.push('', 'Treat each open comment as a request from the user. get_comment with the comment id and its Hatch reads a thread in full, and reply_comment answers it.');
       lines.push('', 'Put what you find beside these Hatches on the same canvas: open_hatch with that canvas, add_note with hatch to attach a finding to a page, and group_items to gather your results.');
       return { text: lines.join('\n'), tabId: c.tabId };
     },

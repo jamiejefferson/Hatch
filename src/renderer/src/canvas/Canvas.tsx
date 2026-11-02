@@ -103,6 +103,18 @@ export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
       }
       return drawSelection(e);
     }
+    // Option-drag or Cmd-drag on a page the user has not selected drags a copy of it, as on its title.
+    if ((e.altKey || e.metaKey) && hatchId && !fit) {
+      const copy = actions.beginCopy(hatchId);
+      return startDrag(e, {
+        cursor: 'copy',
+        onMove: (dx, dy) => copy.to(dx / tab.zoom, dy / tab.zoom),
+        onEnd: (moved) => {
+          copy.end(moved);
+          if (!moved) actions.select(hatchId);
+        },
+      });
+    }
     const start = tab.pan;
     startDrag(e, {
       cursor: 'grabbing',

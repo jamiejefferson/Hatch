@@ -34,6 +34,16 @@ export function NewHatchModal() {
   const [error, setError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [highlight, setHighlight] = useState(0);
+  // The box empties in the same render that opens it. Emptied any later, it wipes an address entered the moment the box shows.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setText('');
+      setSuggestions([]);
+      setError(null);
+    }
+  }
   const named = projects.find((p) => p.name === text.trim().toLowerCase());
   // Text that starts like an address, such as javascript:, stays an address, so the box can say why it will not open.
   const searching = text.trim() !== '' && !named && !parseAddress(text).ok && !/^[a-z][a-z0-9+.-]*:/i.test(text.trim());
@@ -59,12 +69,8 @@ export function NewHatchModal() {
   useEffect(() => {
     const el = dialog.current;
     if (!el) return;
-    if (open && !el.open) {
-      setText('');
-      setSuggestions([]);
-      setError(null);
-      el.showModal();
-    } else if (!open && el.open) el.close();
+    if (open && !el.open) el.showModal();
+    else if (!open && el.open) el.close();
   }, [open]);
 
   const submit = (e: React.FormEvent): void => {

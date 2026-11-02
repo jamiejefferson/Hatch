@@ -90,16 +90,14 @@ export function HatchOverlay({ tabId, hatch, screen, zoom, selected, docked, inS
       e.preventDefault();
       return actions.toggleSelected(id);
     }
-    // Cmd-drag, or Option-drag as in Figma, leaves this Hatch in place and drags a copy of it.
+    // Cmd-drag, or Option-drag as in Figma, leaves this Hatch, or the selection it sits in, in place and drags a copy.
     if (e.metaKey || e.altKey) {
-      let copy: string | null = null;
+      const copy = actions.beginCopy(id);
       return startDrag(e, {
         cursor: 'copy',
-        onMove: (dx, dy) => {
-          copy ??= actions.duplicateHatch(id, { x: hatch.x, y: hatch.y });
-          if (copy) actions.moveHatch(copy, hatch.x + dx / zoom, hatch.y + dy / zoom);
-        },
+        onMove: (dx, dy) => copy.to(dx / zoom, dy / zoom),
         onEnd: (moved) => {
+          copy.end(moved);
           if (!moved) actions.select(id);
         },
       });
