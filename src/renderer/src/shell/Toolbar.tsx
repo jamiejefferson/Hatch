@@ -1,7 +1,7 @@
 import { labelForUrl } from '@shared/address';
 import { pages } from '../canvas/webviews';
 import { ACTION_ICON_ART, CommentIcon, GrabIcon, MinusIcon, NoteIcon, OutlineIcon, PlusIcon, ReloadIcon, ShowAllIcon, StopIcon } from '../icons';
-import { actions, activeTab, fitHatch, loadStateOf, selectedHatch, useStore } from '../state/store';
+import { actions, activeTab, commenting, fitHatch, loadStateOf, selectedHatch, useStore } from '../state/store';
 
 /** The tools that act inside the selected Hatch's page, in one column beside the canvas. The zoom sits at its foot. */
 export function Toolbar() {
@@ -9,6 +9,7 @@ export function Toolbar() {
   const tab = useStore(activeTab);
   const load = useStore((s) => (hatch ? loadStateOf(s, hatch.id) : null));
   const picking = useStore((s) => (hatch && s.picking === hatch.id ? s.pickPurpose : null));
+  const commentTool = useStore(commenting);
   const fit = fitHatch(tab);
   const id = hatch?.id;
   const none = !id;
@@ -35,7 +36,7 @@ export function Toolbar() {
         </button>
       </div>
       <div className="tool-group">
-        <button className="tool" aria-label={picking === 'comment' ? 'Stop adding a comment' : 'Add a comment'} title={picking === 'comment' ? 'Stop adding a comment' : 'Add a comment'} data-detail="Pins a comment to an element of the page, where an agent can read it and act on it." aria-pressed={picking === 'comment'} disabled={none} onClick={() => id && (picking === 'comment' ? actions.stopPicking() : actions.startPicking(id))} data-testid="add-comment">
+        <button className="tool" aria-label={commentTool ? 'Stop adding comments' : 'Add a comment'} title={commentTool ? 'Stop adding comments' : 'Add a comment'} data-detail="Pins comments to elements of the page, where an agent can read them and act on them. The tool stays on until you press it again or double-click the canvas." aria-pressed={commentTool} disabled={none && !commentTool} onClick={() => (commentTool ? actions.stopPicking() : id && actions.startPicking(id))} data-testid="add-comment">
           <CommentIcon />
         </button>
         {/* Notes belong to the canvas, so the button needs no selected Hatch. They hide in Fit to view, and the button waits there. */}

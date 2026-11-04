@@ -33,6 +33,10 @@ export function CommentLayer({ hatch, screen, zoom }: Props) {
   const canvas = useStore((s) => s.viewport);
   const [rects, setRects] = useState<Record<string, Box | null>>({});
   const [hover, setHover] = useState<Box | null>(null);
+  // The hint covers part of the page, so it goes after the first click with the tool and comes back with the next press.
+  const [hintDone, setHintDone] = useState(false);
+  const draftBox = useRef<HTMLDivElement>(null);
+  const draftInput = (): HTMLTextAreaElement | null | undefined => draftBox.current?.querySelector('textarea');
 
   const threads = page?.threads ?? NO_THREADS;
   const pageKey = hatch.url.split(/[?#]/)[0];
@@ -68,23 +72,34 @@ export function CommentLayer({ hatch, screen, zoom }: Props) {
   }, [id, tracked]);
 
   useEffect(() => {
-    if (!picking) setHover(null);
+    if (picking) return;
+    setHover(null);
+    setHintDone(false);
+    // Turning the tool off takes an empty draft with it. A draft with words in it waits for the user to pin or discard it.
+    if (draft && !draftInput()?.value.trim()) actions.closeThread();
   }, [picking]);
 
-  // Esc backs out of picking, a draft or an open thread before it deselects the Hatch.
-  const busy = picking || !!draft || !!openId;
+  // A click on another element moves the draft, and the cursor goes back to its words.
   useEffect(() => {
-    if (!busy) return;
+    if (!draft) return;
+    setHintDone(true);
+    draftInput()?.focus();
+  }, [draft]);
+
+  // Esc backs out of a draft or an open thread first, then out of the tool, before it deselects the Hatch.
+  const writing = !!draft || !!openId;
+  useEffect(() => {
+    if (!picking && !writing) return;
     const onKey = (e: KeyboardEvent): void => {
       if (e.key !== 'Escape') return;
       e.preventDefault();
       e.stopPropagation();
-      if (picking) actions.stopPicking();
-      else actions.closeThread();
+      if (writing) actions.closeThread();
+      else actions.stopPicking();
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [busy, picking]);
+  }, [picking, writing]);
 
   if (hatch.view !== 'page') return null;
 
@@ -120,10 +135,12 @@ export function CommentLayer({ hatch, screen, zoom }: Props) {
     <>
       {picking && (
         <>
-          <div className="pick-shield" style={{ left: screen.x, top: screen.y, width: screen.width, height: screen.height }} onPointerMove={pick(false)} onClick={pick(true)} data-testid={`pick-${id}`} />
-          <div className="pick-hint" style={{ left: screen.x + 12, top: screen.y + 12 }} role="status">
-            {purpose === 'grab' ? 'Click the element to copy for Paper. Esc cancels.' : 'Click the element your comment is about. Esc cancels.'}
-          </div>
+          <div className="pick-shield" style={{ left: screen.x, top: screen.y, width: screen.width, height: screen.height }} onPointerMove={pick(false)} onClick={pick(true)} data-hatch={id} data-testid={`pick-${id}`} />
+          {!writing && !hintDone && (
+            <div className="pick-hint" style={{ left: screen.x + 12, top: screen.y + 12 }} role="status" data-testid="pick-hint">
+              {purpose === 'grab' ? 'Click the element to copy for Paper. Esc cancels.' : hatch.template === 'fit' ? 'Click an element to comment on it. Press Esc to stop.' : 'Click an element to comment on it. Press Esc or double-click the canvas to stop.'}
+            </div>
+          )}
           {hover && <div className="pick-box" style={boxStyle(toScreen(hover))} />}
         </>
       )}
@@ -152,7 +169,7 @@ export function CommentLayer({ hatch, screen, zoom }: Props) {
         })}
 
       {draft && (
-        <div className="thread" style={popoverAt(pinPoint(rects[DRAFT]) ?? fallback, rects[DRAFT])} role="dialog" aria-label="New comment">
+        <div ref={draftBox} className="thread" style={popoverAt(pinPoint(rects[DRAFT]) ?? fallback, rects[DRAFT])} role="dialog" aria-label="New comment" data-testid="draft">
           <header>
             <strong>New comment · {draft.label}</strong>
             <button className="icon-button small" aria-label="Discard this comment" onClick={actions.closeThread}>

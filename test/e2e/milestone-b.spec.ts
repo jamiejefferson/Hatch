@@ -70,6 +70,9 @@ test('the user pins a comment to an element, and it lands in the project folder'
 
   const pin = win.getByTestId('pin-1');
   await expect(pin).toBeVisible();
+  // The comment tool stays on after a pin, so the thread opens from the pin once the tool is off.
+  await win.getByTestId('add-comment').click();
+  await pin.click();
   await expect(win.getByTestId('thread')).toContainText('Make this heading say');
 
   // The pin sits on the heading's top right corner at the canvas zoom.

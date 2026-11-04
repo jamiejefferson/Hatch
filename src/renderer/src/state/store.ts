@@ -630,6 +630,8 @@ export const selectedHatch = (s: State): Hatch | null => {
 };
 export const fitHatch = (tab: Tab): Hatch | null => tab.hatches.find((h) => h.template === 'fit') ?? null;
 export const loadStateOf = (s: State, hatchId: string): LoadState => s.load[hatchId] ?? IDLE;
+/** The comment tool stays on through any number of comments until the user turns it off. A grab takes one click, so it never counts. */
+export const commenting = (s: State): boolean => s.picking !== null && s.pickPurpose === 'comment';
 export const hatchLabel = (hatch: Hatch): string => hatch.title || labelForUrl(hatch.url);
 /** A tab is a canvas, so it carries the user's name for it, its folder's or its project's name, and never the title of one page. */
 export function tabLabel(s: State, tab: Tab): string {
@@ -724,8 +726,8 @@ export const actions = {
     }));
   },
   activateTab(tabId: string): void {
-    // A selection belongs to the canvas it was made on.
-    set((s) => ({ workspace: { ...s.workspace, activeTabId: tabId }, ...(s.workspace.activeTabId === tabId ? {} : { selection: [], selectedGroup: null, promptOpen: false }) }));
+    // A selection and the comment tool belong to the canvas they were started on.
+    set((s) => ({ workspace: { ...s.workspace, activeTabId: tabId }, ...(s.workspace.activeTabId === tabId ? {} : { selection: [], selectedGroup: null, promptOpen: false, picking: null }) }));
   },
   closeTab(tabId: string): void {
     const index = state.workspace.tabs.findIndex((t) => t.id === tabId);
@@ -738,7 +740,7 @@ export const actions = {
       let tabs = s.workspace.tabs.filter((t) => t.id !== tabId);
       if (tabs.length === 0) tabs = [blank ?? emptyTab()];
       const activeTabId = s.workspace.activeTabId === tabId ? tabs[Math.min(index, tabs.length - 1)]!.id : s.workspace.activeTabId;
-      return { workspace: { ...s.workspace, tabs, activeTabId } };
+      return { workspace: { ...s.workspace, tabs, activeTabId }, picking: closing.hatches.some((h) => h.id === s.picking) ? null : s.picking };
     });
   },
   /** An empty name returns the tab to its project's name. */
@@ -1142,6 +1144,8 @@ export const actions = {
       return { ...t, selectedHatchId: hatchId, hatches: t.hatches.map((h) => (h.id === hatchId ? h : leaveFit(h))) };
     });
     set({ selection: hatchId ? [hatchId] : [], selectedGroup: null, promptOpen: false });
+    // The comment tool follows the user to the Hatch they move to.
+    if (hatchId && commenting(state)) set({ picking: hatchId });
     // The user's selection opens a closed sidebar on the Hatch tab, which no switch in the top strip opens.
     if (hatchId) set((s) => ({ panel: s.panel === 'comments' ? s.panel : 'hatch', workspace: s.workspace.sidebarOpen ? s.workspace : { ...s.workspace, sidebarOpen: true } }));
   },
@@ -1190,7 +1194,7 @@ export const actions = {
     if (!tabId || !hatch) return;
     remember({ id: newId('closed'), kind: 'hatch', tabId, hatch: leaveFit(hatch) });
     editTab(tabId, (t) => forgetItem({ ...t, hatches: t.hatches.filter((h) => h.id !== hatchId), selectedHatchId: t.selectedHatchId === hatchId ? null : t.selectedHatchId }, hatchId));
-    set((s) => ({ selection: s.selection.filter((x) => x !== hatchId) }));
+    set((s) => ({ selection: s.selection.filter((x) => x !== hatchId), picking: s.picking === hatchId ? null : s.picking }));
     set((s) => {
       const { [hatchId]: _load, ...load } = s.load;
       const { [hatchId]: _request, ...viewRequests } = s.viewRequests;
@@ -1312,7 +1316,7 @@ export const actions = {
     if ((state.missing[hatchId] ?? []).join() !== ids.join()) set((s) => ({ missing: { ...s.missing, [hatchId]: ids } }));
   },
   startPicking(hatchId: string): void {
-    set({ picking: hatchId, pickPurpose: 'comment', draft: null, openThread: null, commentError: null });
+    set({ picking: hatchId, pickPurpose: 'comment', draft: null, openThread: null, commentError: null, placingNote: false });
     actions.showPanel('comments');
     if (!state.settings.showComments) void actions.updateSettings({ showComments: true });
   },
@@ -1330,8 +1334,10 @@ export const actions = {
   stopPicking(): void {
     set({ picking: null });
   },
-  setDraft(draft: State['draft']): void {
-    set({ draft, picking: null });
+  /** The user's click with the comment tool on. A click on another element moves an open draft there, and the words stay in its box. */
+  setDraft(draft: NonNullable<State['draft']>): void {
+    // The page answers a moment after the click, by which time the tool may have gone off.
+    if (state.picking === draft.hatchId) set({ draft, openThread: null, commentError: null });
   },
   async submitDraft(text: string): Promise<void> {
     const { draft } = state;
@@ -1340,10 +1346,11 @@ export const actions = {
     const result = await window.hatch.addComment(hatch.url, { anchor: draft.anchor, label: draft.label, text });
     if (!applyComments(draft.hatchId, result)) return;
     const added = result.ok ? result.value.threads.at(-1) : undefined;
-    set({ draft: null, openThread: added ? { hatchId: draft.hatchId, threadId: added.id } : null });
+    // With the tool still on, the pin shows the comment landed and the next click starts another.
+    set({ draft: null, openThread: added && !commenting(state) ? { hatchId: draft.hatchId, threadId: added.id } : null });
   },
   openThread(hatchId: string, threadId: string): void {
-    set({ openThread: { hatchId, threadId }, draft: null, picking: null, commentError: null });
+    set((s) => ({ openThread: { hatchId, threadId }, draft: null, picking: commenting(s) ? s.picking : null, commentError: null }));
     const hatch = findHatch(hatchId);
     if (hatch && state.comments[hatchId]?.threads.find((t) => t.id === threadId)?.unread) void window.hatch.markCommentSeen(hatch.url, threadId).then((r) => applyComments(hatchId, r));
   },
@@ -1414,7 +1421,7 @@ export const actions = {
   /** The note button: the next click on the canvas places a note. Notes hide in Fit to view, so the button waits there. */
   togglePlacingNote(): void {
     if (fitHatch(activeTab(state))) return;
-    set((s) => ({ placingNote: !s.placingNote }));
+    set((s) => ({ placingNote: !s.placingNote, picking: null }));
   },
   /** The user's click in note mode: a new note at that canvas point, open for typing. */
   placeNote(at: Point): string {

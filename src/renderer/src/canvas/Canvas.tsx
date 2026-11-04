@@ -3,7 +3,7 @@ import { toScreen, type Point, type Rect } from '@shared/geometry';
 import { HEADER_OFFSET } from '@shared/workspace';
 import type { Hatch, Tab } from '@shared/types';
 import { PlusIcon } from '../icons';
-import { actions, fitHatch, NOTE_SIZE, useStore } from '../state/store';
+import { actions, commenting, fitHatch, NOTE_SIZE, useStore } from '../state/store';
 import { startDrag } from './drag';
 import { HatchOverlay } from './HatchOverlay';
 import { HatchPage } from './HatchPage';
@@ -36,6 +36,7 @@ export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
   const latch = useRef<{ target: string; at: number } | null>(null);
   const [marquee, setMarquee] = useState<Box | null>(null);
   const selection = useStore((s) => s.selection);
+  const commentTool = useStore(commenting);
   const panEnd = useRef<ReturnType<typeof setTimeout> | null>(null);
   const viewport = useStore((s) => s.viewport);
   const fit = fitHatch(tab);
@@ -70,7 +71,8 @@ export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
       }
       // One gesture, momentum included, keeps the target it started on, so a pan never turns into a page scroll as a Hatch slides under the pointer.
       const now = performance.now();
-      const shield = (e.target as HTMLElement).closest<HTMLElement>('.shield');
+      // The comment tool's shield passes the scroll to its page too, so the user can reach the next thing to comment on.
+      const shield = (e.target as HTMLElement).closest<HTMLElement>('.shield, .pick-shield');
       // A scroll straight after a tap belongs to the page, so the shield that waits for a second tap lets go.
       if (shield?.classList.contains('armed')) setArmed(null);
       if (!latch.current || now - latch.current.at > GESTURE_GAP_MS) latch.current = { target: shield?.dataset.hatch ?? EMPTY, at: now };
@@ -125,6 +127,16 @@ export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
         if (hatchId && armed === hatchId) {
           setArmed(null);
           return actions.toggleFit(hatchId);
+        }
+        // With the comment tool on, a tap on empty canvas keeps the Hatch selected, and a second tap turns the tool off.
+        if (!hatchId && commentTool) {
+          if (armed === EMPTY) {
+            setArmed(null);
+            return actions.stopPicking();
+          }
+          setArmed(EMPTY);
+          armTimer.current = setTimeout(() => setArmed(null), 400);
+          return;
         }
         // A second tap on empty canvas opens a new Hatch there, with room above it for its title.
         if (!hatchId && armed === EMPTY && !fit) {
