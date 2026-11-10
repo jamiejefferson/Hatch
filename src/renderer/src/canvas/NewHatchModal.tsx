@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { jumpSearch, parseAddress } from '@shared/address';
+import { jumpSearch, labelForUrl, parseAddress } from '@shared/address';
+import { matchRecent } from '@shared/recent';
 import { googleSearch } from '@shared/search';
 import { ArrowRightIcon, SearchIcon } from '../icons';
-import { actions, useStore } from '../state/store';
+import { actions, displayAddress, useStore } from '../state/store';
 
 /** Wait this long after the last key before asking for suggestions. */
 const SUGGEST_DELAY_MS = 120;
@@ -27,6 +28,7 @@ function searchRows(text: string, suggestions: string[]): SearchRow[] {
 export function NewHatchModal() {
   const open = useStore((s) => s.newHatchOpen);
   const links = useStore((s) => s.links);
+  const recentPages = useStore((s) => s.workspace.recent);
   const projects = useStore((s) => s.projects.projects);
   const runningFirst = [...projects].sort((a, b) => Number(b.status === 'running') - Number(a.status === 'running'));
   const dialog = useRef<HTMLDialogElement>(null);
@@ -48,6 +50,10 @@ export function NewHatchModal() {
   // Text that starts like an address, such as javascript:, stays an address, so the box can say why it will not open.
   const searching = text.trim() !== '' && !named && !parseAddress(text).ok && !/^[a-z][a-z0-9+.-]*:/i.test(text.trim());
   const rows = searching ? searchRows(text, suggestions) : [];
+  // Recent narrows to the pages that hold the typed words, so a page seen before is one click away.
+  const recent = matchRecent(recentPages ?? [], text);
+  // A local project's page shows as its hatch: address. The joined string keeps the selection stable between renders.
+  const shown = useStore((s) => recent.map((p) => displayAddress(s, p.url)).join('\n')).split('\n');
 
   // Suggestions follow the typing. An answer that arrives after newer typing is dropped.
   useEffect(() => {
@@ -117,6 +123,24 @@ export function NewHatchModal() {
               </li>
             ))}
           </ul>
+        )}
+
+        {recent.length > 0 && (
+          <>
+            <h2>Recent</h2>
+            <ul className="choice-list recent-list" data-testid="recent-pages">
+              {recent.map((page, i) => (
+                <li key={page.url}>
+                  <button onClick={() => go(page.url)} data-testid="recent-page">
+                    <span className="square" />
+                    <span className="name">{page.title || labelForUrl(page.url)}</span>
+                    <span className="mono url">{shown[i]}</span>
+                    <span className="open">Open</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
 
         {runningFirst.length > 0 && (

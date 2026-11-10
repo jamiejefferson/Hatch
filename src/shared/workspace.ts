@@ -1,6 +1,7 @@
 // Builds, repairs and edits the workspace. Pure functions, so the main process and the renderer share them.
 import { cleanPath, oneCanvasPerFolder } from './project-canvas';
 import { clampZoom } from './geometry';
+import { repairRecent } from './recent';
 import { clampSize, templateForSize } from './templates';
 import type { CanvasContext, Group, Hatch, Note, Tab, TemplateId, Workspace } from './types';
 
@@ -26,9 +27,11 @@ export function repairWorkspace(raw: unknown): Workspace {
   if (!raw || typeof raw !== 'object') return emptyWorkspace();
   const source = raw as Record<string, unknown>;
   const tabs = oneCanvasPerFolder((Array.isArray(source.tabs) ? source.tabs : []).map(repairTab).filter((t): t is Tab => t !== null));
-  if (tabs.length === 0) return emptyWorkspace();
+  const recent = repairRecent(source.recent);
+  const kept = recent.length ? { recent } : {};
+  if (tabs.length === 0) return { ...emptyWorkspace(), ...kept };
   const activeTabId = tabs.some((t) => t.id === source.activeTabId) ? (source.activeTabId as string) : tabs[0]!.id;
-  return { version: 1, tabs, activeTabId, sidebarOpen: source.sidebarOpen !== false, leftOpen: source.leftOpen !== false };
+  return { version: 1, tabs, activeTabId, sidebarOpen: source.sidebarOpen !== false, leftOpen: source.leftOpen !== false, ...kept };
 }
 
 function repairTab(raw: unknown): Tab | null {

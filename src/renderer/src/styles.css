@@ -373,6 +373,7 @@ svg { flex-shrink: 0; display: block; }
 .choice-list .name { font-weight: 600; width: 118px; flex-shrink: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .choice-list .url { flex: 1; min-width: 0; }
 .choice-list .open { font-weight: 600; text-decoration: underline; text-decoration-color: var(--ink); text-decoration-thickness: 2px; }
+.recent-list .name { width: 220px; }
 .choice-list .dot { margin: 0; }
 
 @media (prefers-reduced-motion: no-preference) {

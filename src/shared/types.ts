@@ -86,6 +86,14 @@ export interface Workspace {
   sidebarOpen: boolean;
   /** The left column, which lists canvases, Hatches, projects and links. An older workspace lacks it and shows the column. */
   leftOpen?: boolean;
+  /** The pages the user's Hatches showed lately, newest first, which New Hatch offers. An older workspace lacks it. */
+  recent?: RecentPage[];
+}
+
+/** A page a Hatch showed. */
+export interface RecentPage {
+  url: string;
+  title: string;
 }
 
 export interface SavedLink {

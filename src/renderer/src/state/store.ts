@@ -1,6 +1,7 @@
 // One store for the whole interface. The workspace half persists; the rest lives for the session.
 import { useSyncExternalStore } from 'react';
 import { labelForUrl, parseAddress, parseAddressOrName } from '@shared/address';
+import { notePage, titlePage } from '@shared/recent';
 import { clampZoom, nextZoomStep, panToReveal, placeNewHatch, zoomAround, type Point } from '@shared/geometry';
 import { clampSize, TEMPLATES, templateForSize } from '@shared/templates';
 import { hatchLink } from '@shared/hatch-link';
@@ -1155,6 +1156,7 @@ export const actions = {
     const resolved = resolveAddress(input, !options.byAgent);
     if ('error' in resolved) return resolved;
     const hatch: Hatch = { id: newId('hatch'), url: resolved.url, title: '', x: 0, y: 0, width: 960, height: 752, template: 'desktop', view: 'page' };
+    set((s) => ({ workspace: { ...s.workspace, recent: notePage(s.workspace.recent ?? [], resolved.url) } }));
     editTab(options.tabId ?? state.workspace.activeTabId, (t) => {
       const spot = (!options.byAgent && state.newHatchAt) || placeNewHatch(t.hatches);
       Object.assign(hatch, spot);
@@ -1296,7 +1298,15 @@ export const actions = {
     set({ settings: await window.hatch.setSettings(change) });
   },
   pageChanged(hatchId: string, change: { url?: string; title?: string }): void {
+    const before = findHatch(hatchId);
     editHatch(hatchId, (h) => ({ ...h, ...change }));
+    if (!before) return;
+    // A page the Hatch moves to joins Recent. A start-up load of the page the Hatch already held leaves the order alone.
+    const url = change.url ?? before.url;
+    // A first address that never showed a title was a redirect, so the page it led to takes its place.
+    const recent = (state.workspace.recent ?? []).filter((p, i) => !(change.url && i === 0 && p.url === before.url && !p.title && change.url !== before.url));
+    const next = change.url && change.url !== before.url ? notePage(recent, url, change.title) : change.title ? titlePage(recent, url, change.title) : recent;
+    if (next !== state.workspace.recent) set((s) => ({ workspace: { ...s.workspace, recent: next } }));
   },
   setLoad(hatchId: string, change: Partial<LoadState>): void {
     set((s) => ({ load: { ...s.load, [hatchId]: { ...loadStateOf(s, hatchId), ...change } } }));
