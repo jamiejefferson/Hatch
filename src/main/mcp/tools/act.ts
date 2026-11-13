@@ -1,22 +1,11 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { z } from 'zod';
 import { click, ensureNoDialog, fill, handleDialog, hover, pressKey, scroll, selectOption } from '../../cdp/actions';
 import { HatchError } from '../../cdp/session';
-import { hatchHome } from '../../paths';
+import { saveResult } from '../../results';
 import { settingsStore } from '../../store/stores';
 import { onPage } from './page';
 import { elementFor, optionalRef as ref, target, withPick } from './target';
 import { hatch, intent, tool } from './types';
-
-/** Writes a long evaluate result to ~/.hatch/results, so the agent reads it from disk in one go. */
-async function saveResult(text: string, ext: string): Promise<string> {
-  const dir = join(hatchHome(), 'results');
-  await mkdir(dir, { recursive: true });
-  const file = join(dir, `evaluate-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}-${Math.random().toString(36).slice(2, 6)}.${ext}`);
-  await writeFile(file, text);
-  return file;
-}
 
 /** The element as the Activity panel names it: the reference, or the description in quotes. */
 const named = (a: { ref?: string; target?: string }): string => a.ref ?? JSON.stringify(a.target ?? '');

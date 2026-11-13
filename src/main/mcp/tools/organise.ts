@@ -3,6 +3,7 @@ import { ARRANGE_MODES } from '@shared/arrange';
 import { authorLabel, type CommentThread } from '@shared/comments';
 import { idFromLink } from '@shared/hatch-link';
 import { inTabQueue, tabFor } from '../../agents/agents';
+import { isGoogleDocUrl } from '../../cdp/google-doc';
 import { read } from '../../comments/store';
 import { callInterface } from '../../renderer-rpc';
 import { canvas, intent, tool } from './types';
@@ -11,6 +12,7 @@ import { canvas, intent, tool } from './types';
 // names a group as it stands; the pages stay live. Agents group and arrange only the items they name, never a locked group, and never change a user's note.
 
 interface ContextAnswer {
+  scope: 'context' | 'group' | 'hatch' | 'canvas';
   tabId: string;
   canvas: string;
   prompt: string | null;
@@ -52,22 +54,29 @@ export const organiseTools = [
   tool({
     name: 'get_context',
     description:
-      'Reads a link the user copied in Hatch to several Hatches and notes. A context link reads hatch:@ctx_ and an id: it names the Hatches and notes the user chose, fixed when they copied it, with any prompt they wrote. A group link reads hatch:@group_ and an id: it names a group\'s Hatches and notes as they stand now. Each Hatch comes with the open comments pinned to its page. Pages stay live, so read a Hatch with snapshot or navigate as usual. Call this first whenever the user hands you such a link.',
-    shape: { link: z.string().min(1).describe('The context or group link, such as hatch:@ctx_k3x9a2bq or hatch:@group_p4m2x8rt, or its bare id.'), intent },
+      'Reads any link the user copied in Hatch, which reads hatch:@ and an id. A context link (hatch:@ctx_) names the Hatches and notes the user chose, fixed when they copied it, with any prompt they wrote. A group link (hatch:@group_) names a group\'s Hatches and notes as they stand now. A link to one Hatch names that page and the notes attached to it, and a link to a canvas names every Hatch and note on it. Each Hatch comes with its page\'s address and the open comments pinned to it. Pages stay live, so read a Hatch with snapshot, passing its id as hatch. Call this first whenever the user hands you such a link.',
+    shape: { link: z.string().min(1).describe('The link, such as hatch:@ctx_k3x9a2bq, hatch:@group_p4m2x8rt or hatch:@hatch_m2k8q1zx, or its bare id.'), intent },
     readOnly: true,
     async run(a, ctx) {
       const id = idFromLink(a.link);
-      if (!id.startsWith('ctx_') && !id.startsWith('group_')) throw new Error('That is no context or group link. Those read hatch:@ctx_ or hatch:@group_ and an id; a hatch:@ link to a Hatch or canvas goes to the tool that acts on it.');
       const c = await callInterface<ContextAnswer>('context', { id });
       ctx.at(c.tabId, null);
       const where = `the canvas ${JSON.stringify(c.canvas)} (id ${c.tabId})`;
-      const lines = [c.group ? `The group ${JSON.stringify(c.group.name)} (group ${c.group.id}${c.group.locked ? ', locked by the user' : ''}) on ${where}, as it stands now.` : `Context from ${where}, copied ${c.createdAt}.`];
+      const opener = {
+        group: () => `The group ${JSON.stringify(c.group!.name)} (group ${c.group!.id}${c.group!.locked ? ', locked by the user' : ''}) on ${where}, as it stands now.`,
+        context: () => `Context from ${where}, copied ${c.createdAt}.`,
+        hatch: () => `A Hatch on ${where}.`,
+        canvas: () => `The whole of ${where}, as it stands now.`,
+      }[c.scope]();
+      const lines = [opener];
       if (c.prompt) lines.push('', 'The user asks:', c.prompt);
-      lines.push('', c.group ? 'Its Hatches and notes:' : 'Sources the user chose:');
+      lines.push('', { group: 'Its Hatches and notes:', context: 'Sources the user chose:', hatch: 'The Hatch and its attached notes:', canvas: 'Its Hatches and notes:' }[c.scope]);
+      if (c.items.length === 0) lines.push('  None yet.');
       const comments = await Promise.all(c.items.map((item) => (item.kind === 'hatch' ? openComments(item.url) : Promise.resolve([]))));
       c.items.forEach((item, i) => {
         if (item.kind === 'hatch') {
           lines.push(`  Hatch ${item.id}: ${JSON.stringify(item.title || item.url)} at ${item.url}${item.group && !c.group ? `, in the group ${JSON.stringify(item.group)}` : ''}`);
+          if (isGoogleDocUrl(item.url)) lines.push('    A Google Doc: snapshot with this hatch reads its whole text.');
           for (const t of comments[i]!) lines.push(`    Open comment ${t.id} (#${t.number}) on ${JSON.stringify(t.label)}, ${opening(t)}`);
         } else if (item.kind === 'note') lines.push(`  Note ${item.id} from ${who(item.author)}${item.attachedTo ? `, attached to Hatch ${item.attachedTo}` : ''}: ${JSON.stringify(item.text)}`);
         else lines.push(`  ${item.id}: closed since the user copied the link.`);

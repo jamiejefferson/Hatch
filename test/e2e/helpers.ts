@@ -7,6 +7,32 @@ import { _electron as electron, type ElectronApplication, type Page } from '@pla
 const SITE = resolve('test/fixtures/site');
 const TYPES: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml' };
 
+/** Stand-in Google Docs, which the tests reach as HATCH_GOOGLE_DOCS_HOSTS. Each id behaves as one kind of document. */
+export const DOCS = { plain: 'standindoc000000000000001', textOnly: 'standindoc000000000000002', private: 'standindoc000000000000003', long: 'standindoc000000000000004' };
+export const DOC_OPENING = '# The Slop of the New\n\nI read an article written by an LLM about the English language this morning.\n\n## What went wrong\n\n- Every sentence had three parts.\n';
+export const LONG_DOC = `# A long draft\n\n${Array.from({ length: 600 }, (_, i) => `Paragraph ${i + 1} of the long draft says something worth reading.`).join('\n\n')}\n\nThe last line of the long draft.`;
+
+/** The editor draws its words on a canvas, as Google Docs does, and the export answers only to the sign-in cookie the editor set. */
+function serveDoc(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse, id: string, part: string): void {
+  if (part === 'edit') {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'set-cookie': 'docs_sid=signed-in; Path=/' });
+    res.end('<title>The Slop of the New - Google Docs</title><div role="toolbar"><button>File</button><button>Edit</button><button>Share</button></div><canvas width="800" height="600"></canvas><script>document.querySelector("canvas").getContext("2d").fillText("The Slop of the New", 40, 40)</script>');
+    return;
+  }
+  const format = new URL(req.url ?? '/', 'http://x').searchParams.get('format');
+  const signedIn = /(?:^|; )docs_sid=signed-in/.test(req.headers.cookie ?? '');
+  if (id === DOCS.private || !signedIn) {
+    res.writeHead(401, { 'content-type': 'text/html' }).end('<title>Sign in</title>');
+    return;
+  }
+  if (id === DOCS.textOnly && format === 'md') {
+    res.writeHead(400, { 'content-type': 'text/html' }).end('Bad format');
+    return;
+  }
+  const body = id === DOCS.long ? LONG_DOC : id === DOCS.textOnly ? '\uFEFFThe Slop of the New\r\n\r\n\r\n\r\nPlain text only.' : DOC_OPENING;
+  res.writeHead(200, { 'content-type': format === 'md' ? 'text/markdown; charset=utf-8' : 'text/plain; charset=utf-8' }).end(body);
+}
+
 export function serveSite(): Promise<{ url: string; close(): Promise<void> }> {
   const server: Server = createServer((req, res) => {
     const path = new URL(req.url ?? '/', 'http://x').pathname;
@@ -38,6 +64,8 @@ export function serveSite(): Promise<{ url: string; close(): Promise<void> }> {
       setTimeout(() => res.writeHead(200, { 'content-type': 'text/html' }).end('<title>Compiled</title><h1>Compiled page arrived</h1>'), 12_000);
       return;
     }
+    const doc = /^\/document\/d\/([\w-]+)\/(edit|export)$/.exec(path);
+    if (doc) return serveDoc(req, res, doc[1]!, doc[2]!);
     try {
       const file = join(SITE, path === '/' ? 'index.html' : path);
       if (!file.startsWith(SITE)) throw new Error('outside');

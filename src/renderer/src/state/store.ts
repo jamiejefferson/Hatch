@@ -493,8 +493,12 @@ function serve(method: string, params: unknown): unknown {
       for (const t of state.workspace.tabs) {
         const context = t.contexts?.find((c) => c.id === id);
         const group = context ? null : t.groups?.find((g) => g.id === id);
-        if (!context && !group) continue;
-        const members = context ? context.members : withAttached(t, group!.members);
+        // A link to one Hatch reads that Hatch with its attached notes, and a link to a canvas reads every Hatch and note on it.
+        const hatch = context || group ? null : t.hatches.find((h) => h.id === id);
+        const whole = !context && !group && !hatch && t.id === id;
+        if (!context && !group && !hatch && !whole) continue;
+        const members = context ? context.members : group ? withAttached(t, group.members) : hatch ? withAttached(t, [hatch.id]) : [...t.hatches.map((h) => h.id), ...(t.notes ?? []).map((n) => n.id)];
+        const scope = context ? 'context' : group ? 'group' : hatch ? 'hatch' : 'canvas';
         const items = members.map((m) => {
           const h = t.hatches.find((x) => x.id === m);
           if (h) return { kind: 'hatch', id: m, open: true, title: h.title, url: h.url, group: groupOf(t, m)?.name ?? null };
@@ -502,9 +506,15 @@ function serve(method: string, params: unknown): unknown {
           if (n) return { kind: 'note', id: m, open: true, text: n.text, author: n.author, attachedTo: n.attachedTo ?? null, group: groupOf(t, m)?.name ?? null };
           return { kind: 'gone', id: m, open: false };
         });
-        return { tabId: t.id, canvas: tabLabel(state, t), prompt: context?.prompt ?? null, createdAt: context?.createdAt ?? null, group: group ? { id: group.id, name: group.name, locked: group.locked === true } : null, items };
+        return { scope, tabId: t.id, canvas: tabLabel(state, t), prompt: context?.prompt ?? null, createdAt: context?.createdAt ?? null, group: group ? { id: group.id, name: group.name, locked: group.locked === true } : null, items };
       }
-      throw new Error(id.startsWith('group_') ? 'No open canvas holds that group. The user may have ungrouped it or closed its canvas, so ask them to copy the link again.' : 'No open canvas holds that context. Its canvas may have closed, so ask the user to copy the link again.');
+      throw new Error(
+        id.startsWith('group_')
+          ? 'No open canvas holds that group. The user may have ungrouped it or closed its canvas, so ask them to copy the link again.'
+          : id.startsWith('ctx_')
+            ? 'No open canvas holds that context. Its canvas may have closed, so ask the user to copy the link again.'
+            : 'No open canvas holds a Hatch or a canvas with that id. The user may have closed it, so ask them to copy the link again.',
+      );
     }
     case 'groups': {
       const tab = state.workspace.tabs.find((t) => t.id === (p as { tabId: string }).tabId);

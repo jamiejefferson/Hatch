@@ -5,6 +5,7 @@ import { push } from '../renderer-rpc';
 import { getProxyPort, projectsState } from '../servers/manager';
 import { HatchError, type PageSession } from './session';
 import { describeChanges } from './changes';
+import { docSection } from './google-doc';
 import { buildOutline, findInOutline, renderOutline, type AxNode, type OutlineLine } from './snapshot';
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -46,7 +47,15 @@ export async function addressOf(page: PageSession): Promise<string> {
   return hatchAddress(url, (await projectsState(false)).projects, getProxyPort()) ?? url;
 }
 
-export const snapshot = async (page: PageSession, rootRef?: string, maxChars?: number): Promise<string> => renderOutline(await outlineOf(page, rootRef), maxChars);
+/** A page's outline. A Google Doc's whole outline leads with the document's text, which the outline cannot hold, and keeps the top of Google's controls after it. */
+export async function snapshot(page: PageSession, rootRef?: string, maxChars = 24000): Promise<string> {
+  const doc = rootRef ? null : await docSection(page, maxChars);
+  if (!doc) return renderOutline(await outlineOf(page, rootRef), maxChars);
+  return `${doc}
+
+The agent view, with Google's menus and controls, starts:
+${renderOutline(await outlineOf(page), NEW_PAGE_CHARS)}`;
+}
 /** Repeated components read the same in the outline, so each match carries its place on the page: top-left corner and size, in page pixels. */
 export async function find(page: PageSession, query: string): Promise<string> {
   const found = findInOutline(await outlineOf(page), query);
@@ -211,6 +220,8 @@ const NEW_PAGE_CHARS = 4000;
 
 /** The top of a page's outline, for the reply that brings an agent to a new page, so it needs no snapshot before its first action. */
 export async function arrival(page: PageSession): Promise<string> {
+  const doc = await docSection(page, NEW_PAGE_CHARS).catch(() => null);
+  if (doc) return `${doc}\n\nsnapshot gives the text again with Google's menus and controls after it.`;
   const lines = await outlineOf(page).catch(() => null);
   return lines ? `Its agent view starts:\n${renderOutline(lines, NEW_PAGE_CHARS)}`.trimEnd() : 'Call snapshot to read it.';
 }
