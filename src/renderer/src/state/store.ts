@@ -2,6 +2,7 @@
 import { useSyncExternalStore } from 'react';
 import { labelForUrl, parseAddress, parseAddressOrName } from '@shared/address';
 import { notePage, titlePage } from '@shared/recent';
+import { captureStage, type Stage } from '@shared/capture-stage';
 import { clampZoom, nextZoomStep, panToReveal, placeNewHatch, zoomAround, type Point } from '@shared/geometry';
 import { clampSize, TEMPLATES, templateForSize } from '@shared/templates';
 import { hatchLink } from '@shared/hatch-link';
@@ -138,6 +139,8 @@ export interface State {
   layoutFuture: LayoutSnapshot[];
   /** The notice that says what an arrangement changed and offers Undo. */
   layoutNotice: string | null;
+  /** Pages placed in view, unseen, for the moment of an agent's screenshot (src/shared/capture-stage.ts). */
+  staged: Record<string, true>;
 }
 
 /** Where every Hatch and note sat, and the groups, before a layout edit. Undo puts them back and touches nothing else. */
@@ -207,6 +210,7 @@ let state: State = {
   layoutPast: [],
   layoutFuture: [],
   layoutNotice: null,
+  staged: {},
   fullScreen: false,
   closed: [],
 };
@@ -582,6 +586,23 @@ function serve(method: string, params: unknown): unknown {
       if (!hatch) throw new Error('That Hatch has closed.');
       return effectiveSize(hatch);
     }
+    case 'stageHatch': {
+      // The canvas draws a staged page at its stage, unseen, until the capture ends.
+      const { hatchId, on } = p as { hatchId: string; on: boolean };
+      if (!on) {
+        set((st) => {
+          const { [hatchId]: _gone, ...rest } = st.staged;
+          return { staged: rest };
+        });
+        return false;
+      }
+      const tab = state.workspace.tabs.find((t) => t.hatches.some((h) => h.id === hatchId));
+      const hatch = tab?.hatches.find((h) => h.id === hatchId);
+      if (!tab || !hatch) throw new Error('That Hatch has closed.');
+      if (!stageOf(tab, hatch)) return false;
+      set((st) => ({ staged: { ...st.staged, [hatchId]: true } }));
+      return true;
+    }
     case 'requestView': {
       const { hatchId, view, reason, agent, ask } = p as ViewRequest & { ask: boolean };
       const hatch = findHatch(hatchId);
@@ -626,6 +647,18 @@ function findHatch(hatchId: string): Hatch | null {
   }
   return null;
 }
+/** Fit to view overrides the tab's pan and zoom without losing them. */
+export function viewFor(tab: Tab, fit: Hatch | null): { pan: Point; zoom: number } {
+  if (!fit) return { pan: tab.pan, zoom: tab.zoom };
+  return { pan: { x: -fit.x, y: -fit.y }, zoom: 1 };
+}
+
+/** Where to place a page for an agent's screenshot, or null when it already sits whole in view at full size. */
+export function stageOf(tab: Tab, hatch: Hatch): Stage | null {
+  const view = viewFor(tab, fitHatch(tab));
+  return captureStage({ x: hatch.x, y: hatch.y, ...effectiveSize(hatch) }, view.pan, view.zoom, state.viewport);
+}
+
 /** A Hatch in Fit to view takes its size from the window. */
 export function effectiveSize(hatch: Hatch): { width: number; height: number } {
   if (hatch.template !== 'fit') return { width: hatch.width, height: hatch.height };

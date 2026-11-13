@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { toScreen, type Point, type Rect } from '@shared/geometry';
+import { toScreen, type Rect } from '@shared/geometry';
 import { HEADER_OFFSET } from '@shared/workspace';
 import type { Hatch, Tab } from '@shared/types';
 import { PlusIcon } from '../icons';
-import { actions, commenting, fitHatch, NOTE_SIZE, useStore } from '../state/store';
+import { actions, commenting, fitHatch, NOTE_SIZE, stageOf, useStore, viewFor } from '../state/store';
 import { startDrag } from './drag';
 import { HatchOverlay } from './HatchOverlay';
 import { HatchPage } from './HatchPage';
@@ -17,17 +17,6 @@ const EMPTY = 'canvas';
 /** A pause this long between wheel events ends one scroll gesture. A trackpad's momentum arrives every frame, well inside it. */
 const GESTURE_GAP_MS = 180;
 
-interface View {
-  pan: Point;
-  zoom: number;
-}
-
-/** Fit to view overrides the tab's pan and zoom without losing them. */
-function viewFor(tab: Tab, fit: Hatch | null): View {
-  if (!fit) return { pan: tab.pan, zoom: tab.zoom };
-  return { pan: { x: -fit.x, y: -fit.y }, zoom: 1 };
-}
-
 export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   // The first tap selects a Hatch, which would take its shield away before the second tap lands. The shield stays for the length of a double tap.
@@ -36,6 +25,7 @@ export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
   const latch = useRef<{ target: string; at: number } | null>(null);
   const [marquee, setMarquee] = useState<Box | null>(null);
   const selection = useStore((s) => s.selection);
+  const staged = useStore((s) => s.staged);
   const commentTool = useStore(commenting);
   const panEnd = useRef<ReturnType<typeof setTimeout> | null>(null);
   const viewport = useStore((s) => s.viewport);
@@ -186,7 +176,7 @@ export function Canvas({ tab, active }: { tab: Tab; active: boolean }) {
           const hidden = fit !== null && h !== fit;
           return (
             <div key={h.id}>
-              <HatchPage hatch={h} rect={rect} hidden={hidden} />
+              <HatchPage hatch={h} rect={rect} hidden={hidden} stage={staged[h.id] ? stageOf(tab, h) : null} />
               {(h.id !== tab.selectedHatchId || armed === h.id) && !hidden && h !== fit && (
                 <div className={`shield${armed === h.id ? ' armed' : ''}`} style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }} onPointerDown={(e) => e.button === 0 && panOrSelect(h.id)(e)} onContextMenu={(e) => actions.openContextMenu(e, tab.id, h.id)} data-hatch={h.id} data-testid={`shield-${h.id}`} />
               )}

@@ -44,7 +44,7 @@ export const readTools = [
     run: (a, ctx) =>
       onPage(ctx, a.hatch, async (page) => {
         const shot = await screenshot(page, { ref: a.ref, fullPage: a.full_page, maxWidth: a.max_width });
-        return { text: `${shot.width} × ${shot.height} pixels, saved at ${shot.path}`, image: { base64: shot.base64, mimeType: 'image/png' } };
+        return { text: `${shot.width} × ${shot.height} pixels, saved at ${shot.path}${shot.note ? `\n${shot.note}` : ''}`, image: { base64: shot.base64, mimeType: 'image/png' } };
       }),
   }),
   tool({

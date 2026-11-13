@@ -20,6 +20,9 @@ export function createWindow(bounds?: Rectangle): BrowserWindow {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // A hidden or covered window would stop passing sizes to its pages, so a Hatch resized meanwhile kept laying out at its old size,
+      // and screenshots waited on frames that never came. spikes/hidden-window.mjs checks it on the app itself, because a test's debugger keeps the window drawing.
+      backgroundThrottling: false,
     },
   });
 

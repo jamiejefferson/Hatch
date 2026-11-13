@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import type { Stage } from '@shared/capture-stage';
 import type { Rect } from '@shared/geometry';
 import type { Hatch } from '@shared/types';
 import { actions } from '../state/store';
@@ -10,10 +11,12 @@ interface Props {
   /** Where the page sits on the canvas, in canvas pixels. */
   rect: Rect;
   hidden: boolean;
+  /** Set for the moment of an agent's screenshot: the page sits in view at its real size, unseen. */
+  stage?: Stage | null;
 }
 
 /** One live page. The webview's CSS size is the page's viewport, whatever the canvas zoom. */
-export function HatchPage({ hatch, rect, hidden }: Props) {
+export function HatchPage({ hatch, rect, hidden, stage }: Props) {
   const ref = useRef<WebviewElement>(null);
   // React must never write src again: a second write reloads the page.
   const firstUrl = useRef(hatch.url).current;
@@ -93,7 +96,15 @@ export function HatchPage({ hatch, rect, hidden }: Props) {
       {...({ allowpopups: 'true' } as object)}
       className="hatch-page"
       data-page={hatch.id}
-      style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height, ...(hidden ? { opacity: 0, pointerEvents: 'none' as const } : null) }}
+      style={{
+        left: rect.x,
+        top: rect.y,
+        width: rect.width,
+        height: rect.height,
+        ...(hidden ? { opacity: 0, pointerEvents: 'none' as const } : null),
+        // Moving and scaling a webview never reloads it. Only removing or re-parenting one does.
+        ...(stage ? { left: stage.x, top: stage.y, transform: `scale(${stage.scale})`, transformOrigin: '0 0', opacity: 0, pointerEvents: 'none' as const } : null),
+      }}
     />
   );
 }
